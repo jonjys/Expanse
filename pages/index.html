@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expanse — A square is not an account. It's a mode.</title>
+<meta name="description" content="Connect what you already have. The map shows what your square is from a distance — no clicking needed.">
+<style>
+  :root{
+    --bg:#070a24; --bg2:#0b1033; --bg3:#121845; --line:#1f2759; --line2:#2f3a7a;
+    --txt:#ffffff; --txt2:#b8c0e8; --muted:#8089c0;
+    --cyan:#5ee1ff; --pink:#ff5c7a; --amber:#ffcf4a; --lime:#c8ff3d; --violet:#b39cff; --green:#3dff8a; --red:#ff4d4d;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:"Instrument Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .display{font-family:"Instrument Sans",system-ui,sans-serif;font-weight:800;letter-spacing:-.045em;line-height:.95}
+  .grad-text{background:linear-gradient(90deg,var(--lime) 0%,var(--cyan) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;font-size:12px;font-weight:600}
+  .grid-bg{background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:48px 48px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:9999px;padding:.9rem 1.6rem;font-weight:800;font-size:15px;letter-spacing:-.01em;transition:transform .15s,box-shadow .15s,opacity .15s;cursor:pointer}
+  .btn:hover{transform:translateY(-1px)}
+  .btn-cyan{background:var(--cyan);color:#000;box-shadow:0 0 28px rgba(94,225,255,.45)}
+  .btn-pink{background:var(--pink);color:#fff;box-shadow:0 0 28px rgba(255,92,122,.45)}
+  .btn-grad{background:var(--lime);color:#06102a;box-shadow:0 0 36px rgba(200,255,61,.35)}
+  .btn-ghost{border:2px solid var(--line2);color:var(--txt);font-weight:700}
+  .btn-ghost:hover{border-color:#777}
+  .btn-sm{padding:.55rem 1rem;font-size:13px}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid var(--line2);border-radius:22px}
+  .card-cyan{border-color:rgba(94,225,255,.35);box-shadow:inset 0 0 60px rgba(94,225,255,.06)}
+  .card-pink{border-color:rgba(255,92,122,.35);box-shadow:inset 0 0 60px rgba(255,92,122,.07)}
+  .card-amber{border-color:rgba(255,207,74,.35);box-shadow:inset 0 0 60px rgba(255,207,74,.07)}
+  .card-lime{border-color:rgba(200,255,61,.35);box-shadow:inset 0 0 60px rgba(200,255,61,.06)}
+  .card-violet{border-color:rgba(179,156,255,.35);box-shadow:inset 0 0 60px rgba(179,156,255,.07)}
+  .card-green{border-color:rgba(61,255,138,.35);box-shadow:inset 0 0 60px rgba(61,255,138,.06)}
+  h3{font-weight:800;letter-spacing:-.02em}
+  .stat{font-weight:800;letter-spacing:-.04em;font-size:44px;line-height:1}
+  .step-n{font-weight:800;font-size:64px;line-height:1;letter-spacing:-.05em}
+  .num{font-variant-numeric:tabular-nums}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:999px;font-weight:700;font-size:13px;border:1px solid var(--line2);background:rgba(9,12,40,.9);color:var(--txt2);cursor:pointer;backdrop-filter:blur(8px);white-space:nowrap}
+  .pill:hover{color:#fff;border-color:#fff}
+  .pill.on{color:#06102a;background:var(--lime);border-color:var(--lime)}
+  .pill i{width:8px;height:8px;border-radius:2px;display:inline-block;font-style:normal}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  .live{animation:pulse 2s infinite;background:var(--cyan);width:7px;height:7px;border-radius:50%;display:inline-block;box-shadow:0 0 10px var(--cyan)}
+  .fade-up{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+  .fade-up.in{opacity:1;transform:none}
+
+  /* ---------- MAP ---------- */
+  .hero{position:relative;height:calc(100vh - 64px);min-height:620px;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#141f5c 0%,#0a0f33 45%,#05071c 100%);border-bottom:1px solid var(--line2)}
+  #universe{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  #universe.dragging{cursor:grabbing}
+  #universe.picking{cursor:crosshair}
+  .hud{position:absolute;pointer-events:none;z-index:3}
+  .legend span{display:inline-flex;align-items:center;gap:6px;margin-right:12px}
+  .legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .zctl{position:absolute;right:16px;top:50%;transform:translateY(-50%);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .zctl button{width:38px;height:38px;border-radius:12px;background:rgba(9,12,40,.9);border:1px solid var(--line2);color:#fff;font-size:20px;font-weight:800;backdrop-filter:blur(8px)}
+  .zctl button:hover{border-color:var(--cyan);color:var(--cyan)}
+  .zctl span{writing-mode:vertical-rl;color:var(--muted);font-size:10px;margin-top:6px}
+  .scrollhint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;color:var(--txt2);font-size:10px;padding:6px 12px;border-radius:999px;background:rgba(9,12,40,.8);border:1px solid var(--line);animation:bob 2s infinite}
+  @keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-4px)}}
+  .glow-h{text-shadow:0 0 30px rgba(94,225,255,.35),0 0 2px rgba(255,255,255,.6)}
+  .hero-copy{box-shadow:0 0 0 1px rgba(200,255,61,.15),0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(94,225,255,.12)}
+  @media (max-width:768px){.zctl{right:8px;top:auto;bottom:230px;transform:none}.zctl span{display:none}.scrollhint{display:none}}
+  .tip{position:absolute;pointer-events:none;z-index:7;background:rgba(7,10,36,.95);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.35;transform:translate(12px,12px);display:none;max-width:230px;backdrop-filter:blur(6px)}
+  .toast{position:absolute;left:50%;top:84px;transform:translateX(-50%) translateY(-8px);z-index:9;background:var(--lime);color:#06102a;font-weight:800;font-size:13px;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-overflow:ellipsis;overflow:hidden}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* floating search */
+  .fsearch{position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:8;width:min(640px,calc(100% - 24px))}
+  .fsearch form{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 16px;border-radius:999px;background:rgba(9,12,40,.92);border:2px solid var(--line2);backdrop-filter:blur(12px);box-shadow:0 10px 40px rgba(0,0,0,.4)}
+  .fsearch form:focus-within{border-color:var(--cyan)}
+  .fsearch input{flex:1;background:transparent;outline:none;font-size:15px;color:#fff;min-width:0}
+  .fsearch input::placeholder{color:var(--muted)}
+  .filters{display:flex;gap:6px;margin-top:8px;justify-content:center;flex-wrap:wrap}
+  .results{position:absolute;left:0;right:0;top:100%;margin-top:8px;background:rgba(9,12,40,.96);border:1px solid var(--line2);border-radius:16px;padding:8px;backdrop-filter:blur(10px);display:none;max-height:300px;overflow:auto}
+  .results.open{display:block}
+  .results button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:8px 10px;border-radius:10px;font-size:13px}
+  .results button:hover{background:rgba(255,255,255,.06)}
+  .results .sw{width:10px;height:10px;border-radius:3px;flex:none}
+
+  /* hero copy card */
+  .hero-copy{position:absolute;left:24px;bottom:24px;z-index:5;max-width:460px;background:rgba(7,10,36,.9);border:1px solid var(--line2);border-radius:20px;padding:22px 24px;backdrop-filter:blur(12px)}
+  .hero-copy.hide{display:none}
+
+  /* ---------- DRAWER (side on desktop, sheet on mobile) ---------- */
+  .drawer{position:absolute;z-index:20;background:rgba(9,12,40,.96);border:1px solid var(--line2);backdrop-filter:blur(14px);overflow:auto;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .3s;display:flex;flex-direction:column}
+  .drawer-in{padding:18px;display:flex;flex-direction:column;gap:14px}
+  @media (min-width:769px){
+    .drawer{top:12px;right:12px;bottom:12px;width:380px;border-radius:20px;transform:translateX(calc(100% + 24px))}
+    .drawer.open{transform:none}
+  }
+  @media (max-width:768px){
+    .drawer{left:0;right:0;bottom:0;max-height:62%;border-radius:20px 20px 0 0;transform:translateY(105%)}
+    .drawer.open{transform:none}
+    .grab{width:40px;height:4px;border-radius:99px;background:var(--line2);margin:8px auto 0}
+    .hero-copy{left:12px;right:12px;bottom:12px;max-width:none;padding:16px}
+    .hero-copy p{display:none}
+    .hud.legend{display:none}
+    .filters{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
+  }
+  .grab{display:none}@media (max-width:768px){.grab{display:block}}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .receipt{display:flex;align-items:center;gap:8px;font-size:12px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+  .receipt b{color:#fff}
+  .receipt img{width:14px;height:14px;border-radius:3px;object-fit:contain}
+  .act{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;border:1px solid var(--line2);font-weight:700;font-size:13px;color:#fff;background:rgba(255,255,255,.04);position:relative;cursor:pointer}
+  .act:hover{border-color:#fff}
+  .act.liked{border-color:var(--pink);color:var(--pink)}
+  .act.pop{animation:pop .35s ease}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+  .xpfly{position:absolute;left:50%;top:-6px;transform:translateX(-50%);font-weight:800;font-size:12px;color:var(--lime);animation:fly .9s ease forwards;pointer-events:none}
+  @keyframes fly{0%{opacity:0;transform:translate(-50%,0)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-28px)}}
+  .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--lime),var(--cyan));transition:width .5s}
+  .box{padding:12px;border-radius:14px;background:#0b1033;border:1px solid var(--line)}
+  .chat{display:flex;flex-direction:column;gap:6px;font-size:13px}
+  .chat .q{align-self:flex-end;background:var(--bg3);padding:7px 10px;border-radius:12px 12px 2px 12px;max-width:85%}
+  .chat .a{align-self:flex-start;background:rgba(200,255,61,.1);border:1px solid rgba(200,255,61,.3);padding:7px 10px;border-radius:12px 12px 12px 2px;max-width:90%}
+  .qq{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line2);color:var(--txt2);cursor:pointer}
+  .qq:hover{color:#fff;border-color:var(--lime)}
+  .drawer input,.modal input{width:100%;background:#0b1033;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:#fff;font-size:14px;outline:none}
+  .drawer input:focus,.modal input:focus{border-color:var(--cyan)}
+  .src{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border-radius:999px;border:1px solid var(--line2);font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.05);cursor:pointer}
+  .src img{width:16px;height:16px;border-radius:4px;object-fit:contain;background:#fff}
+  .src.off{opacity:.5}.src.off:hover{opacity:1;border-color:#fff}
+  .src.on{border-color:var(--lime)}
+
+  /* ---------- MODAL ---------- */
+  .modal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(3,5,20,.7);backdrop-filter:blur(6px);padding:16px}
+  .modal.open{display:flex}
+  .modal-in{width:min(520px,100%);background:var(--bg2);border:1px solid var(--line2);border-radius:22px;padding:24px;max-height:90vh;overflow:auto}
+  .steps{display:flex;gap:6px}.steps i{flex:1;height:4px;border-radius:99px;background:var(--line2)}.steps i.on{background:var(--lime)}
+  .modal.mini{align-items:flex-end;justify-content:center;background:transparent;backdrop-filter:none;pointer-events:none}
+  .modal.mini .modal-in{pointer-events:auto;padding:14px 18px;border-radius:999px;width:auto;display:flex;align-items:center;gap:12px;margin-bottom:90px}
+  .opt{display:flex;gap:10px;align-items:center;padding:12px;border-radius:14px;border:1px solid var(--line2);cursor:pointer;text-align:left}
+  .opt:hover,.opt.on{border-color:var(--lime);background:rgba(200,255,61,.06)}
+  .modeicon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:800;flex:none}
+
+  /* demos */
+  .shape-demo{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(4,1fr);gap:4px;aspect-ratio:5/4;max-width:260px}
+  .shape-demo i{border-radius:4px;background:rgba(255,255,255,.06);font-style:normal;display:grid;place-items:center;font-weight:800;color:var(--lime)}
+  .shape-demo i.on{background:#fff}.shape-demo i.nx{border:2px dashed rgba(200,255,61,.6)}
+  .tl{position:relative}.tl::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,transparent,var(--line2),transparent)}
+  .counter{align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid rgba(200,255,61,.4);background:rgba(200,255,61,.08);font-size:12px;font-weight:800;color:var(--lime)}
+</style>
+<script src="https://cdn.moda.app/runtime-libs/tailwind-browser-4.1.13-index.global.min.js"></script><style data-moda-export-fonts="true">@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--regular.ttf") format("truetype"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--italic.ttf") format("truetype"); font-style: italic; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--medium.ttf") format("truetype"); font-style: normal; font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--mediumitalic.ttf") format("truetype"); font-style: italic; font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--semibold.ttf") format("truetype"); font-style: normal; font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--semibolditalic.ttf") format("truetype"); font-style: italic; font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--bold.ttf") format("truetype"); font-style: normal; font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url("../fonts/instrumentsans-wdth-wght--bolditalic.ttf") format("truetype"); font-style: italic; font-weight: 700; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-thin.ttf") format("truetype"); font-style: normal; font-weight: 100; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-thinitalic.ttf") format("truetype"); font-style: italic; font-weight: 100; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-extralight.ttf") format("truetype"); font-style: normal; font-weight: 200; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-extralightitalic.ttf") format("truetype"); font-style: italic; font-weight: 200; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-light.ttf") format("truetype"); font-style: normal; font-weight: 300; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-lightitalic.ttf") format("truetype"); font-style: italic; font-weight: 300; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-regular.ttf") format("truetype"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-italic.ttf") format("truetype"); font-style: italic; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-medium.ttf") format("truetype"); font-style: normal; font-weight: 500; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-mediumitalic.ttf") format("truetype"); font-style: italic; font-weight: 500; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-semibold.ttf") format("truetype"); font-style: normal; font-weight: 600; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-semibolditalic.ttf") format("truetype"); font-style: italic; font-weight: 600; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-bold.ttf") format("truetype"); font-style: normal; font-weight: 700; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("../fonts/ibmplexmono-bolditalic.ttf") format("truetype"); font-style: italic; font-weight: 700; font-display: swap; }</style></head>
+<body class="grid-bg">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40" style="background:var(--bg);border-bottom:1px solid var(--line)">
+  <div class="mx-auto max-w-7xl px-5 h-16 flex items-center justify-between gap-3">
+    <a href="#" class="flex items-center gap-2.5 shrink-0">
+      <span class="w-7 h-7 rounded-full grid place-items-center" style="background:radial-gradient(circle at 35% 35%,#c8ff3d,#5ee1ff 45%,#1a5fff 100%);box-shadow:0 0 18px rgba(94,225,255,.5)"></span>
+      <span class="display text-2xl">Expanse</span>
+    </a>
+    <nav class="hidden lg:flex items-center gap-7 text-sm" style="color:var(--txt2)">
+      <a href="#modes" class="hover:text-white">Modes</a>
+      <a href="#grow" class="hover:text-white">Grow</a>
+      <a href="#beacon" class="hover:text-white">Beacon</a>
+      <a href="#market" class="hover:text-white">Market</a>
+      <a href="#health" class="hover:text-white">Health</a>
+      <a href="#faq" class="hover:text-white">FAQ</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <span class="hidden md:inline-flex counter num"><span class="live" style="background:var(--lime);box-shadow:0 0 10px var(--lime)"></span><span id="dropCount">842</span>/1000 free squares claimed</span>
+      <button id="openClaim" class="btn btn-cyan btn-sm whitespace-nowrap">Claim a square</button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO MAP -->
+<section class="hero" id="map">
+  <canvas id="universe"></canvas>
+
+  <!-- floating search -->
+  <div class="fsearch">
+    <form id="search">
+      <span style="color:var(--muted)">⌕</span>
+      <input id="q" placeholder="Search a name, keyword or city… “cheap sushi near me”" autocomplete="off">
+      <button class="btn btn-grad btn-sm" type="submit">Fly</button>
+    </form>
+    <div class="filters" id="filters">
+      <button class="pill" data-f="sell"><i style="background:var(--amber)"></i>Sell</button>
+      <button class="pill" data-f="create"><i style="background:var(--pink)"></i>Create</button>
+      <button class="pill" data-f="build"><i style="background:var(--cyan)"></i>Build</button>
+      <button class="pill" data-f="hire"><i style="background:var(--green)"></i>Hire me</button>
+      <button class="pill" data-f="forsale"><i style="border:1px solid #fff"></i>For sale</button>
+    </div>
+    <div id="results" class="results"></div>
+  </div>
+
+  <div class="hud legend mono right-5 bottom-5" style="color:var(--txt)">
+    <span><i style="background:var(--amber)"></i>Sell</span><span><i style="background:var(--pink)"></i>Create</span><span><i style="background:var(--cyan)"></i>Build</span><span><i style="background:var(--green)"></i>Hire me</span><span><i style="border:1px dashed #889"></i>Auction</span><span><i style="border:1px solid #556"></i>Free</span>
+  </div>
+  <div class="zctl"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zHome" title="Back to the core">⌂</button><span id="zoomLabel" class="mono num">zoom 1.0x</span></div>
+  <a href="#modes" class="scrollhint mono">Scroll past the map ↓</a>
+  <div class="tip" id="tip"></div>
+  <div id="toast" class="toast"></div>
+
+  <!-- hero copy -->
+  <div class="hero-copy" id="heroCopy">
+    <div class="mono flex items-center gap-2 mb-3" style="color:var(--lime)"><span class="live"></span> Live · <span id="countLabel" class="num">0</span> squares</div>
+    <h1 class="display text-4xl md:text-6xl glow-h">A square is not an account.<br><span class="grad-text">It's a mode.</span></h1>
+    <p class="mt-3 text-base" style="color:var(--txt2)">Connect what you already have. The map shows what your square is from a distance — no clicking needed.</p>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button class="btn btn-grad btn-sm" id="heroClaim">Claim your square</button>
+      <a href="#modes" class="btn btn-ghost btn-sm">The four modes</a>
+    </div>
+    <div class="mono mt-3 text-[10px]" style="color:var(--muted)">Drag or scroll to fly · ⌘/Ctrl + scroll to zoom · Click a square</div>
+  </div>
+
+  <!-- drawer -->
+  <aside class="drawer" id="drawer">
+    <div class="grab"></div>
+    <div class="drawer-in">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap"><span class="badge" id="dMode">Build</span><span class="mono" style="color:var(--muted);font-size:10px" id="dMeta">4×4 · ring 3</span></div>
+          <div class="display text-2xl mt-2 truncate" id="dTitle">Name</div>
+          <div class="text-sm mt-1" style="color:var(--txt2)" id="dTag"></div>
+          <div class="text-xs mt-1" style="color:var(--muted)" id="dOwner"></div>
+        </div>
+        <button id="dClose" class="text-2xl leading-none shrink-0" style="color:var(--txt2)">×</button>
+      </div>
+
+      <div id="dReceipts" class="flex flex-wrap gap-1.5"></div>
+
+      <div id="dAuction" class="box hidden" style="border-color:var(--amber);background:rgba(255,207,74,.07)">
+        <div class="font-bold text-sm" style="color:var(--amber)">Abandoned 90+ days · public auction</div>
+        <div class="text-xs mt-1" style="color:var(--txt2)">The owner didn't respond to reminders. Highest bid at reset takes the spot.</div>
+      </div>
+
+      <div id="dForSale" class="box hidden" style="border-color:rgba(255,255,255,.3)">
+        <div class="flex justify-between items-center"><span class="mono" style="color:var(--txt2)">For sale by owner</span><span class="num font-bold text-lg" id="dSalePrice"></span></div>
+        <div class="flex gap-2 mt-2"><button class="btn btn-cyan btn-sm flex-1" id="dBuy">Buy now</button><button class="btn btn-ghost btn-sm flex-1" id="dBid">Place a bid</button></div>
+      </div>
+
+      <div class="flex gap-2" id="dActions"><button class="btn btn-grad btn-sm flex-1" id="dPrimary">Open</button><button class="act" id="dBidAny" title="Send a purchase offer">Bid</button></div>
+
+      <div class="flex gap-2">
+        <button id="dLike" class="act">♥ Like <span class="num" id="dLikes">0</span><span class="text-[10px]" style="color:var(--muted)">+10</span></button>
+        <button id="dShare" class="act">↗ Share <span class="text-[10px]" style="color:var(--muted)">+25</span></button>
+      </div>
+
+      <div id="dBeacon" class="box hidden">
+        <div class="flex justify-between text-xs"><span class="mono" style="color:var(--lime)">Beacon</span><span style="color:var(--muted)" id="dBeaconSrc">from README.md</span></div>
+        <div class="chat mt-2" id="dChat"></div>
+        <div class="flex flex-wrap gap-1.5 mt-2" id="dQuick"></div>
+        <form id="dAsk" class="mt-2 flex gap-2"><input id="dQ" placeholder="Ask anything…"><button class="btn btn-grad btn-sm" type="submit">Ask</button></form>
+      </div>
+
+      <div id="dLease" class="box hidden" style="border-color:rgba(179,156,255,.4)">
+        <div class="flex justify-between text-xs"><span class="mono" style="color:var(--violet)">Landmark lease</span><span class="num" style="color:var(--txt2)" id="dLeasePrice"></span></div>
+        <div class="text-xs mt-1" style="color:var(--muted)">Rent this 8×8 for 7 days for a launch or event. Owner approves, Expanse takes 10%.</div>
+      </div>
+
+      <div class="box">
+        <div class="flex justify-between text-xs"><span class="mono" style="color:var(--lime)">Growth</span><span class="num" style="color:var(--txt2)" id="dXp">0 / 100 xp</span></div>
+        <div class="bar mt-2"><i id="dBar" style="width:0%"></i></div>
+        <div class="text-xs mt-2" style="color:var(--muted)" id="dGrow"></div>
+        <div class="text-xs mt-1" style="color:var(--txt2)" id="dBackers"></div>
+      </div>
+
+      <div id="dShape" class="hidden">
+        <button id="dShapeBtn" class="act w-full justify-center">✎ Place your free cell</button>
+        <div class="text-xs mt-2" style="color:var(--muted)">Click any free cell touching your square. Earned cells are free, paid cells €1 at the edge.</div>
+      </div>
+
+      <div id="dFree" class="hidden">
+        <div class="flex justify-between text-sm"><span style="color:var(--muted)">Price now</span><span class="num text-lg font-bold" id="dPrice"></span></div>
+        <div class="text-xs mt-1" style="color:var(--muted)">First 1,000 squares are free. After that, price rises toward the core. Own forever, resell anytime.</div>
+        <button id="dClaimHere" class="btn btn-grad w-full mt-3">Claim this spot</button>
+      </div>
+    </div>
+  </aside>
+</section>
+
+<!-- STATS -->
+<section class="mx-auto max-w-6xl px-5 py-16">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="card card-lime p-6"><div class="mono" style="color:var(--lime)">Free squares left</div><div class="stat mt-3 num" id="s1">—</div></div>
+    <div class="card card-cyan p-6"><div class="mono" style="color:var(--cyan)">Squares owned</div><div class="stat mt-3 num" id="s2">—</div></div>
+    <div class="card card-pink p-6"><div class="mono" style="color:var(--pink)">Glowing right now</div><div class="stat mt-3 num" id="s3">—</div></div>
+    <div class="card card-amber p-6"><div class="mono" style="color:var(--amber)">In public auction</div><div class="stat mt-3 num" id="s4">—</div></div>
+  </div>
+</section>
+
+<!-- MODES -->
+<section id="modes" class="mx-auto max-w-6xl px-5 py-20" style="border-top:1px solid var(--line)">
+  <div class="mono mb-4" style="color:var(--lime)">The four modes</div>
+  <h2 class="display text-5xl md:text-7xl max-w-3xl">Don't post here.<br><span style="color:var(--lime)">Plug in and pick a mode.</span></h2>
+  <p class="mt-4 text-lg max-w-2xl" style="color:var(--txt2)">A mode decides how your square looks on the map and what its card leads with. It's set automatically from what you connect, and you can switch any time.</p>
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mt-12">
+    <div class="card card-amber p-6 fade-up"><div class="step-n" style="color:var(--amber);font-size:40px">€</div><h3 class="text-2xl mt-3">Sell</h3><div class="mono mt-1" style="color:var(--muted)">Gumroad · Shopify · a car · a flat</div><p class="mt-3 text-sm" style="color:var(--txt2)"><b class="text-white">On the map:</b> a price tag in the corner.<br><b class="text-white">Card leads with:</b> Buy, straight to your own checkout. We take nothing.</p></div>
+    <div class="card card-pink p-6 fade-up" style="transition-delay:.05s"><div class="step-n" style="color:var(--pink);font-size:40px">◎</div><h3 class="text-2xl mt-3">Create</h3><div class="mono mt-1" style="color:var(--muted)">YouTube · TikTok · Spotify · Insta</div><p class="mt-3 text-sm" style="color:var(--txt2)"><b class="text-white">On the map:</b> a pulsing aura every time you post.<br><b class="text-white">Card leads with:</b> your latest piece, embedded.</p></div>
+    <div class="card card-cyan p-6 fade-up" style="transition-delay:.1s"><div class="step-n" style="color:var(--cyan);font-size:40px">⌘</div><h3 class="text-2xl mt-3">Build</h3><div class="mono mt-1" style="color:var(--muted)">GitHub · apps · SaaS</div><p class="mt-3 text-sm" style="color:var(--txt2)"><b class="text-white">On the map:</b> neon edge that glows on fresh commits.<br><b class="text-white">Card leads with:</b> a beacon that answers from your README.</p></div>
+    <div class="card card-green p-6 fade-up" style="transition-delay:.15s"><div class="step-n" style="color:var(--green);font-size:40px">●</div><h3 class="text-2xl mt-3">Hire me</h3><div class="mono mt-1" style="color:var(--muted)">Freelancers · trades · “fix my bike Malmö”</div><p class="mt-3 text-sm" style="color:var(--txt2)"><b class="text-white">On the map:</b> green dot = available, red = booked.<br><b class="text-white">Card leads with:</b> Book, and a beacon that knows your calendar.</p></div>
+  </div>
+  <div class="card p-6 mt-8 grid md:grid-cols-3 gap-6 items-center">
+    <div class="md:col-span-2"><h3 class="text-2xl">Receipts, not claims</h3><p class="mt-2 text-sm" style="color:var(--txt2)">A square only shows what we can read off an API: “212 sold via Gumroad”, “14 commits this week”, “last post 2h ago”, “ships from Malmö”. Nothing the owner typed. Dead accounts fade; living ones glow.</p></div>
+    <div class="flex flex-wrap gap-1.5"><span class="receipt"><img src="../images/c4de7753-4421-4f3d-962f-c544b2b5f2ee.png" alt=""><b>212</b> sold</span><span class="receipt"><img src="../images/d3912c8c-85dc-480d-915c-f4bd9e5f8153.jpg" alt=""><b>14</b> commits / wk</span><span class="receipt"><img src="../images/a5324916-feee-47d5-85b3-5d71c04cea6c.svg" alt="">posted <b>2h</b> ago</span><span class="receipt">● <b>available</b> in May</span></div>
+  </div>
+</section>
+
+<!-- GROW -->
+<section id="grow" class="mx-auto max-w-6xl px-5 py-20" style="border-top:1px solid var(--line)">
+  <div class="mono mb-4" style="color:var(--lime)">Grow your square</div>
+  <h2 class="display text-5xl md:text-7xl max-w-3xl">Money buys size.<br><span style="color:var(--lime)">Activity earns it.</span></h2>
+  <p class="mt-4 text-lg max-w-2xl" style="color:var(--txt2)">Fill the bar with likes, shares and updates to grow your shape for free. Every full bar unlocks one cell. Place it wherever it touches your square: a tall sign, a wide banner, an arrow at your shop.</p>
+  <div class="grid md:grid-cols-3 gap-5 mt-12">
+    <div class="card card-pink p-6"><div class="step-n" style="color:var(--pink);font-size:40px">♥</div><h3 class="text-xl mt-3">Likes · +10 xp</h3><p class="mt-2 text-sm" style="color:var(--txt2)">One per person per day. The first 50 likers of a new square are logged forever as its early backers.</p></div>
+    <div class="card card-cyan p-6"><div class="step-n" style="color:var(--cyan);font-size:40px">↗</div><h3 class="text-xl mt-3">Direct visits · +25 xp</h3><p class="mt-2 text-sm" style="color:var(--txt2)">Every square has its own link, built as a link-in-bio with an OG image of your square and mode. Unique visits through it count.</p></div>
+    <div class="card card-lime p-6"><div class="step-n" style="color:var(--lime);font-size:40px">✎</div><h3 class="text-xl mt-3">Updates · +50 xp</h3><p class="mt-2 text-sm" style="color:var(--txt2)">A push, a new video, a new product. You never post on Expanse; posting where you already post is the update.</p></div>
+  </div>
+  <div class="grid md:grid-cols-2 gap-8 mt-8 items-center">
+    <div class="card p-6">
+      <div class="shape-demo"><i class="on" style="grid-column:2;grid-row:1"></i><i class="on" style="grid-column:2;grid-row:2"></i><i class="on" style="grid-column:1;grid-row:3"></i><i class="on" style="grid-column:2;grid-row:3"></i><i class="on" style="grid-column:3;grid-row:3"></i><i class="on" style="grid-column:4;grid-row:3"></i><i class="on" style="grid-column:2;grid-row:4"></i><i class="on" style="grid-column:3;grid-row:4"></i><i class="nx" style="grid-column:5;grid-row:3">+</i><i class="nx" style="grid-column:1;grid-row:2">+</i><i class="nx" style="grid-column:3;grid-row:2">+</i></div>
+      <div class="mt-3 text-xs" style="color:var(--muted)">A 2×2 that grew into an arrow. The + cells are where the next free cell can go.</div>
+    </div>
+    <div>
+      <h3 class="text-2xl">“You unlocked 1 free cell!”</h3>
+      <p class="mt-2" style="color:var(--txt2)">When the bar fills, you get a notice in your dashboard and choose where to place it. Try it: there's a white square marked <b style="color:#fff">You</b> near the edge of the map. Open it, like and share it, and watch the bar fill.</p>
+      <button class="btn btn-grad mt-5" id="tryShape">Open my demo square</button>
+    </div>
+  </div>
+</section>
+
+<!-- BEACON -->
+<section id="beacon" class="mx-auto max-w-6xl px-5 py-20" style="border-top:1px solid var(--line)">
+  <div class="grid md:grid-cols-2 gap-10 items-center">
+    <div>
+      <div class="mono mb-4" style="color:var(--cyan)">AI beacon</div>
+      <h2 class="display text-5xl md:text-7xl">Visitors don't read.<br><span style="color:var(--cyan)">They ask.</span></h2>
+      <p class="mt-4 text-lg" style="color:var(--txt2)">Build squares index the README of the connected repo. Hire-me squares read availability from Google Calendar or Calendly plus a one-line job description. The card shows three ready questions; the answer is two short sentences, right in the card, no reload.</p>
+      <ul class="mt-6 space-y-3 text-sm" style="color:var(--txt2)">
+        <li class="flex gap-3"><span class="mono shrink-0 w-20" style="color:var(--cyan)">Build</span>“What does this app do?” · “Which stack?” · “Works with Next 15?”</li>
+        <li class="flex gap-3"><span class="mono shrink-0 w-20" style="color:var(--green)">Hire me</span>“Free in May?” · “Hourly rate?” · “Do you travel?”</li>
+        <li class="flex gap-3"><span class="mono shrink-0 w-20" style="color:var(--amber)">Read-only</span>We never post for you. One-click disconnect, data gone.</li>
+      </ul>
+    </div>
+    <div class="card card-cyan p-6">
+      <div class="mono mb-3" style="color:var(--cyan)">Connect once</div>
+      <div class="grid grid-cols-5 gap-3" id="connectLogos"></div>
+      <div class="box mt-5 text-sm">
+        <div class="mono mb-2" style="color:var(--lime)">Example · DeployCheck (Build)</div>
+        <div class="chat"><div class="q">Does it work with Next 15?</div><div class="a">Yes, from v2.3. Run <code>npx deploycheck</code> in a Next 15 app and it reads the app router automatically.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARKET -->
+<section id="market" class="mx-auto max-w-6xl px-5 py-20" style="border-top:1px solid var(--line)">
+  <div class="mono mb-4" style="color:var(--amber)">Market</div>
+  <h2 class="display text-5xl md:text-7xl max-w-3xl">Claim your location <span style="color:var(--amber)">before someone else does.</span></h2>
+  <p class="mt-4 text-lg max-w-2xl" style="color:var(--txt2)">Buy early, list later, or build a landmark. The first 1,000 squares are free. After that, every cell costs a base price that rises toward the core.</p>
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mt-12">
+    <div class="card card-lime p-6"><div class="mono" style="color:var(--lime)">Grid sales</div><div class="text-3xl font-extrabold mt-3 tracking-tight">€1 <span class="text-base" style="color:var(--muted)">/ cell at the edge</span></div><p class="mt-3 text-sm" style="color:var(--txt2)">2×2 from €4, 4×4 from €16, 8×8 landmark from €64. The belt is €25+ per cell. The core only changes hands by resale.</p></div>
+    <div class="card card-amber p-6"><div class="mono" style="color:var(--amber)">Resale royalty</div><div class="text-3xl font-extrabold mt-3 tracking-tight">5–10%</div><p class="mt-3 text-sm" style="color:var(--txt2)">Mark your square “For sale” at any price. Expanse takes a cut of every owner-to-owner trade.</p></div>
+    <div class="card card-violet p-6"><div class="mono" style="color:var(--violet)">Landmark leasing</div><div class="text-3xl font-extrabold mt-3 tracking-tight">7 days</div><p class="mt-3 text-sm" style="color:var(--txt2)">Brands rent an 8×8 landmark for a launch or event. Owner sets the rent and approves; Expanse takes a booking fee.</p></div>
+    <div class="card card-cyan p-6"><div class="mono" style="color:var(--cyan)">Bids</div><div class="text-3xl font-extrabold mt-3 tracking-tight">Any square</div><p class="mt-3 text-sm" style="color:var(--txt2)">Lock money in a bid on a square you want. The owner gets an email: “Someone wants your square at Stureplan for $500.”</p></div>
+  </div>
+</section>
+
+<!-- HEALTH -->
+<section id="health" class="mx-auto max-w-6xl px-5 py-20" style="border-top:1px solid var(--line)">
+  <div class="grid md:grid-cols-2 gap-10 items-center">
+    <div>
+      <div class="mono mb-4" style="color:var(--pink)">Proof of presence</div>
+      <h2 class="display text-5xl md:text-7xl">Dead squares<br><span style="color:var(--pink)">don't get to squat.</span></h2>
+      <p class="mt-4 text-lg" style="color:var(--txt2)">The map stays alive because presence is measured, not declared.</p>
+    </div>
+    <div class="space-y-4">
+      <div class="card p-5 flex gap-4 items-start"><span class="mono shrink-0 w-16" style="color:var(--amber)">30 d</span><div><b>Glow fades.</b><div class="text-sm mt-1" style="color:var(--txt2)">No commits, no posts, no calendar movement for 30 days and the aura, neon and pulse tone out.</div></div></div>
+      <div class="card p-5 flex gap-4 items-start"><span class="mono shrink-0 w-16" style="color:var(--pink)">60 d</span><div><b>XP decays.</b><div class="text-sm mt-1" style="color:var(--txt2)">The growth bar starts draining slowly. Earned cells can be lost again.</div></div></div>
+      <div class="card p-5 flex gap-4 items-start"><span class="mono shrink-0 w-16" style="color:var(--red)">90 d</span><div><b>Public auction.</b><div class="text-sm mt-1" style="color:var(--txt2)">Fully abandoned and no reply to reminders: the square is relisted and the highest bidder takes the address.</div></div></div>
+    </div>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5 mt-12">
+    <div class="card card-lime p-6"><div class="mono" style="color:var(--lime)">Referral loop</div><h3 class="text-xl mt-3">Invite 3, get a cell</h3><p class="mt-2 text-sm" style="color:var(--txt2)">To take part in the first-24h free drop you share your referral link. Three friends claim, and a free + cell lands on your square.</p></div>
+    <div class="card card-pink p-6"><div class="mono" style="color:var(--pink)">Early Backer badge</div><h3 class="text-xl mt-3">Find them before they're big</h3><p class="mt-2 text-sm" style="color:var(--txt2)">The first 50 people who like or share a new square are written into its history. When it grows from 2×2 to an 8×8 landmark, all 50 get a badge on their profile and bonus XP.</p></div>
+  </div>
+</section>
+
+<!-- CLAIM CTA -->
+<section id="claim" class="relative overflow-hidden" style="border-top:1px solid var(--line)">
+  <div class="relative mx-auto max-w-3xl px-5 py-24 text-center">
+    <div class="counter num mb-6 inline-flex"><span id="dropCount2">842</span>/1000 free squares claimed</div>
+    <h2 class="display text-5xl md:text-8xl">Pick a spot.<br><span class="grad-text">Plug it in.</span></h2>
+    <p class="mt-5 text-lg" style="color:var(--txt2)">Location, email, one connected account, a mode. Four steps, no card.</p>
+    <button class="btn btn-pink mt-8" id="openClaim2">Claim a square</button>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="mx-auto max-w-3xl px-5 py-20" style="border-top:1px solid var(--line)">
+  <h2 class="display text-5xl md:text-6xl mb-10">Questions</h2>
+  <div class="space-y-4">
+    <details class="card p-5"><summary class="cursor-pointer font-bold text-lg">Is Expanse a social network?</summary><p class="mt-3 text-sm" style="color:var(--txt2)">No. You never post here. You connect Gumroad, GitHub, YouTube, your shop or your calendar, pick a mode, and the square mirrors what you already do. Everything points outward to your own platforms.</p></details>
+    <details class="card p-5"><summary class="cursor-pointer font-bold text-lg">What's a mode?</summary><p class="mt-3 text-sm" style="color:var(--txt2)">Sell, Create, Build or Hire me. It sets how your square renders on the map (price tag, pulse, neon edge, status dot) and what the card leads with (Buy, Latest, Ask, Book). Set automatically from what you connect, switch any time.</p></details>
+    <details class="card p-5"><summary class="cursor-pointer font-bold text-lg">Can I grow without paying?</summary><p class="mt-3 text-sm" style="color:var(--txt2)">Yes. Likes (+10), direct visits (+25) and updates (+50) fill the bar. Every full bar is one free cell you place yourself. A busy free square can outgrow a quiet €64 one.</p></details>
+    <details class="card p-5"><summary class="cursor-pointer font-bold text-lg">What if I stop using it?</summary><p class="mt-3 text-sm" style="color:var(--txt2)">After 30 days of no activity the glow fades, after 60 the XP drains, after 90 days without answering reminders the square goes to public auction. Connect one account and keep doing what you do; that's enough.</p></details>
+    <details class="card p-5"><summary class="cursor-pointer font-bold text-lg">Do I own it?</summary><p class="mt-3 text-sm" style="color:var(--txt2)">Yes, as long as it's alive. Resell to anyone at any price; Expanse takes 5–10% of the trade. Landmarks can also be leased out for events.</p></details>
+  </div>
+</section>
+
+<footer class="mx-auto max-w-6xl px-5 py-10 flex flex-col md:flex-row justify-between gap-4 text-sm" style="border-top:1px solid var(--line);color:var(--muted)">
+  <div>© 2026 Expanse · A Nytto Labs project</div>
+  <div class="mono">Pick a square. Pick a mode.</div>
+</footer>
+
+<!-- CLAIM MODAL -->
+<div class="modal" id="claim">
+  <div class="modal-in">
+    <div class="flex items-center justify-between"><div class="mono" style="color:var(--lime)" id="cStepLabel">Step 1 of 4 · Location</div><button id="cClose" class="text-2xl leading-none" style="color:var(--txt2)">×</button></div>
+    <div class="steps mt-3" id="cSteps"><i class="on"></i><i></i><i></i><i></i></div>
+    <div id="cBody" class="mt-5"></div>
+  </div>
+</div>
+
+<!-- BID MODAL -->
+<div class="modal" id="bid">
+  <div class="modal-in">
+    <div class="flex items-center justify-between"><div class="mono" style="color:var(--cyan)">Send a purchase offer</div><button id="bClose" class="text-2xl leading-none" style="color:var(--txt2)">×</button></div>
+    <div class="display text-2xl mt-3" id="bTitle"></div>
+    <div class="text-sm mt-1" style="color:var(--txt2)">Your money is locked until the owner answers. They get an email right away.</div>
+    <div class="mt-4"><div class="mono mb-1" style="color:var(--muted)">Your bid (€)</div><input id="bAmt" type="number" min="1" value="500"></div>
+    <div class="mt-3"><div class="mono mb-1" style="color:var(--muted)">Your email</div><input id="bMail" type="email" placeholder="you@email.com"></div>
+    <button class="btn btn-cyan w-full mt-5" id="bSend">Lock bid &amp; notify owner</button>
+  </div>
+</div>
+<script>
+(function(){
+  // ================= DATA =================
+  const MODES={
+    sell:{label:'Sell',color:'#ffcf4a',bg:'rgba(255,207,74,.15)',action:'Buy'},
+    create:{label:'Create',color:'#ff5c7a',bg:'rgba(255,92,122,.15)',action:'See latest'},
+    build:{label:'Build',color:'#5ee1ff',bg:'rgba(94,225,255,.15)',action:'Ask the README'},
+    hire:{label:'Hire me',color:'#3dff8a',bg:'rgba(61,255,138,.15)',action:'Book'}
+  };
+  const SRC={gumroad:['Gumroad','/api/v2/images/ref/c4de7753-4421-4f3d-962f-c544b2b5f2ee?v=3476478e476da6c2'],github:['GitHub','/api/v2/images/ref/d3912c8c-85dc-480d-915c-f4bd9e5f8153?v=ac3b41e1ed3a197e'],x:['X','/api/v2/images/ref/a5070bc5-cbc2-4301-94f0-0b7509fd1086?v=ff1453c9aaf21e74'],instagram:['Instagram','/api/v2/images/ref/2ef6bd7c-1896-41a9-a4b4-071913f8ee94?v=ebd703969dd29e79'],youtube:['YouTube','/api/v2/images/ref/f521b29b-cb10-49b3-9dbb-e70ae4d62806?v=0da825e6ed42bada'],tiktok:['TikTok','/api/v2/images/ref/a5324916-feee-47d5-85b3-5d71c04cea6c?v=db8cf0c46ffcb533'],spotify:['Spotify','/api/v2/images/ref/61e52094-6f98-404d-8379-095d5452c57c?v=6cb32e8a00506f12'],shopify:['Shopify','/api/v2/images/ref/a2d31fd1-87d2-4651-ad27-f7f13317f808?v=50cc6d78b0158ff7'],linkedin:['LinkedIn','/api/v2/images/ref/039dd3eb-0d15-42ce-91a7-3c99c777d61a?v=879c65fdb0144c49'],twitch:['Twitch','/api/v2/images/ref/f86d9846-d287-4b63-a539-84782c1f3d56?v=9f4b28ce8b1f154b']};
+  const CITIES=['Stockholm','Göteborg','Malmö','Uppsala','Lund','Umeå','Oslo','Copenhagen','Berlin','Helsinki'];
+  const NAMES={
+    sell:['Volvo 240','Tesla Model 3','Saab 900 Turbo','Polestar 2','VW Bus 1974','Lund Vintage','Fiskbod Smögen','Hemslöjd Umeå','Nordlys Prints','Icon Pack Vol.3','Notion CRM kit','Bageri Söder','Sushi Yama','Pho Hanoi','Pizzeria Luna','2-rok Vasastan','Vinyl crate #12'],
+    create:['Kajsa & The Tides','Lo-Fi Tomten','Nattklubb 404','Pernilla P','Studio Mira','Blue Hour','Dödsrit','Vera Ek','Ink & Salt','Fjällvandra','Mats Cooks','Pixel Diaries'],
+    build:['DeployCheck','VATify','CSV Cleaner','Pixelnote','Shiplog','Tabby','Fjord Analytics','Orbit Notes','QR Reorder','SyncStock','Kronor.js','Lagom UI'],
+    hire:['Fix my bike Malmö','Elin · UX','Jonas · Plumber','Sara · Photographer','Nils · Fullstack','Amira · Copy','Hugo · Electrician','Maja · Illustrator','Leo · Video edit','Petra · Accountant']
+  };
+  const KW={sell:'for sale buy price shop cheap cars volvo sushi lunch near me',create:'music band video art prints youtube tiktok',build:'app saas tool github developer open source',hire:'freelance hire available book fix plumber designer developer'};
+  const R=(a,b)=>a+Math.random()*(b-a), RI=(a,b)=>Math.floor(R(a,b+1)), pick=a=>a[RI(0,a.length-1)];
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
+
+  const occ=new Map(); // "x,y" -> square id
+  const SQ=[]; let idc=0;
+  const key=(x,y)=>x+','+y;
+  function canPlace(x,y,s){for(let i=0;i<s;i++)for(let j=0;j<s;j++)if(occ.has(key(x+i,y+j)))return false;return true}
+  function add(sq){sq.id=idc++;sq.cells.forEach(c=>occ.set(key(c[0],c[1]),sq.id));SQ.push(sq);return sq}
+  function make(x,y,size,mode,extra){
+    const cells=[];for(let i=0;i<size;i++)for(let j=0;j<size;j++)cells.push([x+i,y+j]);
+    const m=mode||pick(['sell','sell','create','build','hire']);
+    const last=Math.random()<.65?RI(0,20):Math.random()<.6?RI(31,59):Math.random()<.5?RI(60,89):RI(90,140);
+    const sq={x,y,size,cells,mode:m,name:pick(NAMES[m]),city:pick(CITIES),owner:'@'+pick(['anna','erik','maja','jonas','lisa','oskar','sofia','karl','emil','nora']),xp:RI(5,95),likes:RI(0,900),lastActive:last,forSale:Math.random()<.08?RI(40,900):0,avail:Math.random()<.7,price:['89 kr','€12','€4,900','199 kr','€29','€2,100'][RI(0,5)],links:[],backers:RI(3,50)};
+    if(m==='sell')sq.links=[pick(['gumroad','shopify','gumroad']),pick(['instagram','x'])];
+    if(m==='create')sq.links=[pick(['youtube','tiktok','spotify','instagram']),pick(['instagram','x','twitch'])];
+    if(m==='build')sq.links=['github',pick(['x','linkedin'])];
+    if(m==='hire')sq.links=[pick(['linkedin','instagram']),'calendar'];
+    sq.receipts=receipts(sq);
+    Object.assign(sq,extra||{});
+    return add(sq);
+  }
+  function receipts(sq){
+    const d=sq.lastActive;
+    const ago=d===0?'today':d===1?'1d ago':d+'d ago';
+    if(sq.mode==='sell')return [[sq.links[0],RI(12,800)+' sold'],[null,'ships from '+sq.city],[null,'last sale '+ago]];
+    if(sq.mode==='create')return [[sq.links[0],RI(1,60)+'k followers'],[sq.links[0],'posted '+ago],[null,RI(2,40)+' pieces']];
+    if(sq.mode==='build')return [['github',(d<30?RI(3,40):0)+' commits / wk'],['github',RI(20,4000)+' stars'],[null,'last push '+ago]];
+    return [[null,sq.avail?'available now':'booked until '+pick(['May','June','Sept'])],[null,RI(5,80)+' bookings'],[null,'in '+sq.city]];
+  }
+  // world generation: spiral out from core
+  (function gen(){
+    let placed=0;const target=1400;let r=0;
+    while(placed<target&&r<160){
+      const n=Math.max(8,Math.floor(r*5));
+      for(let k=0;k<n;k++){
+        const a=rnd()*Math.PI*2;const x=Math.round(Math.cos(a)*r),y=Math.round(Math.sin(a)*r);
+        const p=rnd();const size=r<6?(p<.3?8:p<.7?4:2):p<.04?8:p<.22?4:p<.6?2:1;
+        if(canPlace(x,y,size)&&rnd()<(r<40?.9:.55)){make(x,y,size);placed++}
+      }
+      r+=1.6;
+    }
+  })();
+  // featured squares, always present
+  const F=[
+    make(2,-14,8,'sell',{name:'Sushi Yama',city:'Stockholm',tag:'Cheap sushi lunch, Söder · from 89 kr',links:['shopify','instagram'],lastActive:0,xp:88,likes:1284,price:'from 89 kr',receipts:[['shopify','1,912 sold'],[null,'ships from Stockholm'],[null,'last sale today']],kw:'sushi cheap lunch stockholm near me',lease:'€240 / 7 days'}),
+    make(-18,4,4,'build',{name:'DeployCheck',city:'Göteborg',tag:'Catch Vercel deploy errors before they ship',links:['github','x'],lastActive:0,xp:62,likes:430,receipts:[['github','14 commits / wk'],['github','2,310 stars'],[null,'last push 2h ago']],kw:'vercel deploy check app nytto'}),
+    make(14,10,4,'create',{name:'Kajsa & The Tides',city:'Malmö',tag:'Indie folk · new single out',links:['spotify','tiktok'],lastActive:0,xp:41,likes:960,receipts:[['spotify','38k listeners'],['tiktok','posted 2h ago'],[null,'12 tracks']],kw:'music band indie folk malmö'}),
+    make(-6,18,2,'hire',{name:'Fix my bike Malmö',city:'Malmö',tag:'Mobile bike repair · same day',links:['instagram','calendar'],lastActive:1,avail:true,xp:70,likes:88,receipts:[[null,'available now'],[null,'61 bookings'],[null,'in Malmö']],kw:'fix bike repair malmö hire'}),
+    make(22,-6,4,'sell',{name:'Volvo 240 GL',city:'Uppsala',tag:'1991 · 21,000 km · one owner',links:['gumroad','x'],lastActive:3,price:'€4,900',forSale:0,xp:30,likes:210,receipts:[[null,'€4,900'],[null,'listed 3d ago'],[null,'in Uppsala']],kw:'volvo car under 5k cheap'}),
+    make(-24,-20,4,'sell',{name:'Icon Pack Vol.3',city:'Berlin',tag:'480 icons · Figma + SVG',links:['gumroad','x'],lastActive:0,price:'€29',xp:55,likes:620,receipts:[['gumroad','212 sold'],[null,'updated today'],[null,'4.9 ★']],kw:'icons figma gumroad design'}),
+    make(30,18,2,'build',{name:'Old SaaS',city:'Oslo',tag:'(abandoned)',links:['github'],lastActive:120,xp:4,likes:12,receipts:[['github','0 commits / wk'],[null,'last push 120d ago']],kw:''})
+  ];
+  const YOU=make(46,22,2,'build',{name:'You',owner:'you',city:'Here',tag:'Your demo square',links:['github'],lastActive:0,xp:80,likes:3,receipts:[['github','1 commit / wk'],[null,'claimed today']],kw:'you demo',you:true,backers:2});
+  F.forEach(s=>s.featured=true);
+
+  // ================= CAMERA / CANVAS =================
+  const cv=document.getElementById('universe'),ctx=cv.getContext('2d');
+  const CELL=16;let W,H,DPR;
+  const cam={x:4,y:0,z:1};const tcam={x:4,y:0,z:1};let anim=false;
+  function resize(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
+  addEventListener('resize',()=>{resize()});resize();
+  const isMobile=()=>innerWidth<=768;
+  function focusPoint(){ // screen point that should hold the focused square
+    if(drawerOpen){return isMobile()?{x:W/2,y:H*0.19}:{x:(W-392)/2,y:H/2}}
+    return {x:W/2,y:H/2}
+  }
+  function toScreen(wx,wy){const f=focusPoint();return {x:f.x+(wx-cam.x)*CELL*cam.z,y:f.y+(wy-cam.y)*CELL*cam.z}}
+  function toWorld(sx,sy){const f=focusPoint();return {x:cam.x+(sx-f.x)/(CELL*cam.z),y:cam.y+(sy-f.y)/(CELL*cam.z)}}
+
+  let filter=null,hover=null,selected=null,picking=false,shaping=false,pickCb=null,drawerOpen=false,idle=performance.now(),flying=false;
+  const t0=performance.now();
+  function alphaFor(sq){const d=sq.lastActive;if(d<=30)return 1;return Math.max(.3,1-(d-30)/90)}
+  function glowStrength(sq){const d=sq.lastActive;return d<=3?1:d<=30?1-(d-3)/27:0}
+  function matches(sq){if(!filter)return true;if(filter==='forsale')return sq.forSale>0||sq.lastActive>90;return sq.mode===filter}
+
+  const STARS=[];for(let i=0;i<420;i++)STARS.push([rnd()*2000-1000,rnd()*2000-1000,rnd(),rnd()*6.28]);
+  const NEB=[[0,0,120,'94,225,255'],[-60,-40,90,'255,92,122'],[70,50,100,'255,207,74'],[40,-70,80,'179,156,255'],[-80,60,80,'61,255,138']];
+  function draw(){
+    const now=(performance.now()-t0)/1000;
+    ctx.clearRect(0,0,W,H);
+    // nebula
+    for(const n of NEB){const c=toScreen(n[0],n[1]);const r=n[2]*CELL*cam.z;if(c.x+r<0||c.x-r>W||c.y+r<0||c.y-r>H)continue;const g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,r);g.addColorStop(0,'rgba('+n[3]+',.16)');g.addColorStop(1,'rgba('+n[3]+',0)');ctx.fillStyle=g;ctx.fillRect(c.x-r,c.y-r,r*2,r*2)}
+    // stars (parallax)
+    {const f=focusPoint();const px=cam.x*CELL*Math.sqrt(cam.z)*.35,py=cam.y*CELL*Math.sqrt(cam.z)*.35;ctx.fillStyle='#fff';for(const st of STARS){let x=((st[0]-px)%W+W)%W,y=((st[1]-py)%H+H)%H;const tw=.35+.65*Math.abs(Math.sin(now*1.3+st[3]));ctx.globalAlpha=tw*(.25+st[2]*.6);const r=.6+st[2]*1.3;ctx.fillRect(x,y,r,r)}ctx.globalAlpha=1}
+    const z=cam.z,s=CELL*z;
+    const tl=toWorld(0,0),br=toWorld(W,H);
+    // faint grid when zoomed in
+    if(z>1.4){ctx.strokeStyle='rgba(255,255,255,.05)';ctx.lineWidth=1;ctx.beginPath();
+      for(let x=Math.floor(tl.x);x<=br.x;x++){const p=toScreen(x,0).x;ctx.moveTo(p,0);ctx.lineTo(p,H)}
+      for(let y=Math.floor(tl.y);y<=br.y;y++){const p=toScreen(0,y).y;ctx.moveTo(0,p);ctx.lineTo(W,p)}ctx.stroke()}
+    // core ring
+    const c=toScreen(0,0);ctx.beginPath();ctx.arc(c.x,c.y,8*s,0,Math.PI*2);ctx.strokeStyle='rgba(94,225,255,.18)';ctx.lineWidth=1;ctx.setLineDash([4,6]);ctx.stroke();ctx.setLineDash([]);
+    const pad=10;
+    for(const sq of SQ){
+      if(sq.x+sq.w<tl.x-pad||sq.x>br.x+pad||sq.y+sq.h<tl.y-pad||sq.y>br.y+pad)continue;
+      const dim=!matches(sq);
+      const M=MODES[sq.mode];const col=sq.you?'#ffffff':M.color;
+      const a=(dim?.12:1)*alphaFor(sq);
+      ctx.globalAlpha=a;
+      const g=glowStrength(sq);
+      const p=toScreen(sq.x,sq.y);const bw=sq.w*s,bh=sq.h*s;
+      // --- mode effects (only when not dimmed, zoom >= .35)
+      if(!dim&&z>=.35&&g>0){
+        if(sq.mode==='create'){const pulse=.5+.5*Math.sin(now*2.2+sq.id);ctx.save();ctx.globalAlpha=a*g*(.35+.45*pulse);ctx.fillStyle=col;ctx.beginPath();ctx.roundRect(p.x-s*(.4+.5*pulse),p.y-s*(.4+.5*pulse),bw+s*(.8+pulse),bh+s*(.8+pulse),s*.6);ctx.fill();ctx.restore()}
+        if(sq.mode==='build'){ctx.save();ctx.shadowColor=col;ctx.shadowBlur=(16+10*Math.sin(now*3+sq.id))*g*Math.max(.6,z);ctx.strokeStyle=col;ctx.lineWidth=Math.max(1.5,s*.12);ctx.globalAlpha=a*g;ctx.strokeRect(p.x-1,p.y-1,bw+2,bh+2);ctx.restore()}
+      }
+      if(!dim&&sq.size>=4&&z>=.3){ctx.save();ctx.shadowColor=col;ctx.shadowBlur=(sq.size>=8?34:18)*Math.max(.5,Math.min(2,z))*(0.5+0.5*g);ctx.globalAlpha=a*.9;ctx.fillStyle=col;ctx.beginPath();ctx.roundRect(p.x+1,p.y+1,bw-2,bh-2,Math.min(6,s*.2));ctx.fill();ctx.restore()}
+      // --- cells
+      ctx.fillStyle=col;
+      if(sq.cells.length===sq.size*sq.size){ctx.beginPath();ctx.roundRect(p.x+1,p.y+1,bw-2,bh-2,Math.min(4,s*.2));ctx.fill()}
+      else{for(const cl of sq.cells){const q=toScreen(cl[0],cl[1]);ctx.fillRect(q.x+1,q.y+1,s-2,s-2)}}
+      // abandoned: dashed auction outline
+      if(sq.lastActive>90){ctx.setLineDash([3,3]);ctx.strokeStyle='#ffcf4a';ctx.lineWidth=1;ctx.strokeRect(p.x+.5,p.y+.5,bw-1,bh-1);ctx.setLineDash([])}
+      // for sale ring
+      if(sq.forSale){ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1,s*.08);ctx.strokeRect(p.x-1,p.y-1,bw+2,bh+2)}
+      // --- badges (LOD: zoom >= .5 for size>=2, >=1.2 for 1x1)
+      const showBadge=!dim&&(sq.size>=2?z>=.5:z>=1.2);
+      if(showBadge){
+        const bs=Math.max(5,Math.min(s*.55,14));
+        if(sq.mode==='hire'){ctx.beginPath();ctx.arc(p.x+bw-bs*.7,p.y+bs*.7,bs*.42,0,Math.PI*2);ctx.fillStyle=sq.avail?'#3dff8a':'#ff4d4d';ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='#06102a';ctx.stroke()}
+        if(sq.mode==='sell'){ // price tag corner
+          const tw=bs*1.5,th=bs*.9;ctx.fillStyle='#06102a';ctx.beginPath();ctx.roundRect(p.x+bw-tw-2,p.y+2,tw,th,2);ctx.fill();ctx.fillStyle='#ffcf4a';ctx.font='800 '+Math.max(6,th*.75)+'px "Instrument Sans",system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('€',p.x+bw-tw/2-2,p.y+2+th/2+.5)}
+      }
+      // --- labels (LOD)
+      const showName=!dim&&(sq.size>=8?z>=.5:sq.size>=4?z>=.8:sq.size>=2?z>=1.6:z>=3);
+      if(showName){
+        ctx.fillStyle='#06102a';ctx.textAlign='left';ctx.textBaseline='top';
+        const fs=Math.max(8,Math.min(bw/ (sq.name.length*.6+1),s*.9));
+        ctx.font='800 '+fs+'px "Instrument Sans",system-ui,sans-serif';ctx.fillText(sq.name,p.x+s*.25,p.y+s*.25,bw-s*.4);
+        if(sq.size>=4&&z>=1.0&&sq.tag){ctx.font='500 '+Math.max(7,fs*.6)+'px "Instrument Sans",system-ui,sans-serif';ctx.fillStyle='rgba(6,16,42,.8)';ctx.fillText(sq.tag,p.x+s*.25,p.y+s*.25+fs*1.2,bw-s*.4)}
+        if(sq.mode==='sell'&&sq.size>=4&&z>=1.0){ctx.font='800 '+Math.max(7,fs*.7)+'px "Instrument Sans",system-ui,sans-serif';ctx.textBaseline='bottom';ctx.fillText(sq.price,p.x+s*.25,p.y+bh-s*.25)}
+      }
+      ctx.globalAlpha=1;
+      if(sq===hover||sq===selected){ctx.strokeStyle='#fff';ctx.lineWidth=sq===selected?3:1.5;ctx.strokeRect(p.x-2,p.y-2,bw+4,bh+4)}
+    }
+    // shaping: show + candidates
+    if(shaping&&selected){ctx.strokeStyle='rgba(200,255,61,.8)';ctx.setLineDash([3,3]);ctx.lineWidth=1.5;for(const cl of adjacent(selected)){const q=toScreen(cl[0],cl[1]);ctx.strokeRect(q.x+2,q.y+2,s-4,s-4);ctx.fillStyle='rgba(200,255,61,.9)';ctx.font='800 '+s*.6+'px "Instrument Sans",system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('+',q.x+s/2,q.y+s/2)}ctx.setLineDash([])}
+    if(picking){const p=toWorld(mouse.x,mouse.y);const cx=Math.floor(p.x),cy=Math.floor(p.y);const q=toScreen(cx,cy);ctx.strokeStyle=occ.has(key(cx,cy))?'#ff4d4d':'#c8ff3d';ctx.lineWidth=2;ctx.strokeRect(q.x,q.y,s*2,s*2)}
+    {const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75);v.addColorStop(0,'rgba(7,10,36,0)');v.addColorStop(1,'rgba(7,10,36,.75)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H)}
+    document.getElementById('zoomLabel').textContent='zoom '+z.toFixed(1)+'x';
+  }
+  SQ.forEach(sq=>{sq.w=sq.size;sq.h=sq.size});
+  function adjacent(sq){const out=[];const seen=new Set();for(const c of sq.cells)for(const d of [[1,0],[-1,0],[0,1],[0,-1]]){const x=c[0]+d[0],y=c[1]+d[1];const k=key(x,y);if(!occ.has(k)&&!seen.has(k)){seen.add(k);out.push([x,y])}}return out}
+
+  // camera animation
+  function flyTo(x,y,z,ms){tcam.x=x;tcam.y=y;tcam.z=z||cam.z;const s={x:cam.x,y:cam.y,z:cam.z};const st=performance.now();ms=ms||900;flying=true;idle=performance.now();
+    (function step(){const t=Math.min(1,(performance.now()-st)/ms);const e=1-Math.pow(1-t,3);cam.x=s.x+(tcam.x-s.x)*e;cam.y=s.y+(tcam.y-s.y)*e;cam.z=s.z*Math.pow(tcam.z/s.z,e);if(t<1)requestAnimationFrame(step);else flying=false})()}
+  function centerOn(sq,z){flyTo(sq.x+sq.w/2,sq.y+sq.h/2,z||Math.max(cam.z,sq.size>=4?2.2:3),800)}
+  
+
+  // ================= INPUT =================
+  const mouse={x:0,y:0};let drag=null,moved=false;
+  const tip=document.getElementById('tip');
+  function sqAt(sx,sy){const p=toWorld(sx,sy);const id=occ.get(key(Math.floor(p.x),Math.floor(p.y)));return id===undefined?null:SQ[id]}
+  cv.addEventListener('pointerdown',e=>{idle=performance.now();drag={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y};moved=false;cv.classList.add('dragging');cv.setPointerCapture(e.pointerId)});
+  cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;
+    if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)moved=true;cam.x=drag.cx-dx/(CELL*cam.z);cam.y=drag.cy-dy/(CELL*cam.z);tip.style.display='none';return}
+    const sq=sqAt(mouse.x,mouse.y);hover=sq;
+    if(sq&&!picking&&!shaping){const M=MODES[sq.mode];tip.style.display='block';tip.style.left=mouse.x+'px';tip.style.top=mouse.y+'px';tip.innerHTML='<b>'+esc(sq.name)+'</b> <span style="color:'+M.color+'">'+M.label+'</span><br><span style="color:var(--muted)">'+sq.size+'×'+sq.size+' · '+esc(sq.receipts[0][1])+'</span>'}else tip.style.display='none'});
+  cv.addEventListener('pointerup',e=>{cv.classList.remove('dragging');const was=drag;drag=null;if(moved||!was)return;
+    const sq=sqAt(mouse.x,mouse.y);
+    if(picking){const p=toWorld(mouse.x,mouse.y);const cx=Math.floor(p.x),cy=Math.floor(p.y);if(!canPlace(cx,cy,2)){toast('That spot is taken. Pick a free one.');return}picking=false;cv.classList.remove('picking');pickCb&&pickCb(cx,cy);return}
+    if(shaping&&selected){const p=toWorld(mouse.x,mouse.y);const cx=Math.floor(p.x),cy=Math.floor(p.y);if(adjacent(selected).some(c=>c[0]===cx&&c[1]===cy)){selected.cells.push([cx,cy]);occ.set(key(cx,cy),selected.id);recomputeBounds(selected);selected.freeCells--;toast('Cell placed. Your shape grew.');if(selected.freeCells<=0){shaping=false;document.getElementById('dShape').classList.add('hidden')}}else toast('Only cells touching your square.');return}
+    if(sq)openDrawer(sq);else{const p=toWorld(mouse.x,mouse.y);openFree(Math.floor(p.x),Math.floor(p.y))}});
+  cv.addEventListener('pointerleave',()=>{tip.style.display='none';hover=null});
+  function zoomAt(sx,sy,f){const before=toWorld(sx,sy);cam.z=Math.min(8,Math.max(.18,cam.z*f));const after=toWorld(sx,sy);cam.x+=before.x-after.x;cam.y+=before.y-after.y}
+  cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();const sx=e.clientX-r.left,sy=e.clientY-r.top;idle=performance.now();
+    if(e.ctrlKey||e.metaKey){zoomAt(sx,sy,e.deltaY<0?1.12:.89);return}
+    const k=(e.deltaMode===1?16:1)/(CELL*cam.z);cam.x+=e.deltaX*k;cam.y+=e.deltaY*k},{passive:false});
+  document.getElementById('zIn').onclick=()=>zoomAt(W/2,H/2,1.4);document.getElementById('zOut').onclick=()=>zoomAt(W/2,H/2,1/1.4);document.getElementById('zHome').onclick=()=>flyTo(4,0,1,900);
+  addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const st=6/cam.z;if(e.key==='ArrowLeft')cam.x-=st;else if(e.key==='ArrowRight')cam.x+=st;else if(e.key==='ArrowUp')cam.y-=st;else if(e.key==='ArrowDown')cam.y+=st;else if(e.key==='+'||e.key==='=')zoomAt(W/2,H/2,1.3);else if(e.key==='-')zoomAt(W/2,H/2,1/1.3);else if(e.key==='Escape'){closeDrawer();return}else return;idle=performance.now();e.preventDefault()});
+  // pinch
+  let pinch=null;cv.addEventListener('touchstart',e=>{if(e.touches.length===2){pinch={d:Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY),z:cam.z};drag=null}},{passive:true});
+  cv.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);cam.z=Math.min(8,Math.max(.18,pinch.z*d/pinch.d))}},{passive:true});
+  cv.addEventListener('touchend',()=>{pinch=null});
+  function recomputeBounds(sq){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const c of sq.cells){x0=Math.min(x0,c[0]);y0=Math.min(y0,c[1]);x1=Math.max(x1,c[0]);y1=Math.max(y1,c[1])}sq.x=x0;sq.y=y0;sq.w=x1-x0+1;sq.h=y1-y0+1}
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  // ================= TOAST =================
+  const toastEl=document.getElementById('toast');let tt;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>toastEl.classList.remove('on'),2600)}
+
+  // ================= DRAWER =================
+  const $=id=>document.getElementById(id);
+  const drawer=$('drawer');
+  function openDrawer(sq){
+    selected=sq;shaping=false;drawerOpen=true;drawer.classList.add('open');$('heroCopy').classList.add('hide');restoreDrawerBits();
+    const M=MODES[sq.mode];
+    $('dMode').textContent=M.label;$('dMode').style.cssText='color:'+M.color+';background:'+M.bg;
+    const ring=Math.round(Math.hypot(sq.x,sq.y)/4);
+    $('dMeta').textContent=sq.size+'×'+sq.size+(sq.cells.length>sq.size*sq.size?' +'+(sq.cells.length-sq.size*sq.size):'')+' · ring '+ring+' · '+sq.city;
+    $('dTitle').textContent=sq.name;$('dTag').textContent=sq.tag||(M.label+' · '+sq.city);
+    $('dOwner').textContent='Owner '+sq.owner+' · active '+(sq.lastActive===0?'today':sq.lastActive+'d ago');
+    $('dReceipts').innerHTML=sq.receipts.map(r=>'<span class="receipt">'+(r[0]&&SRC[r[0]]?'<img src="'+SRC[r[0]][1]+'" alt="">':'')+esc(r[1]).replace(/^(\S+)/,'<b>$1</b>')+'</span>').join('');
+    $('dAuction').classList.toggle('hidden',sq.lastActive<=90);
+    $('dForSale').classList.toggle('hidden',!sq.forSale);if(sq.forSale)$('dSalePrice').textContent='€'+sq.forSale;
+    $('dActions').classList.toggle('hidden',!!sq.you);
+    $('dPrimary').textContent=sq.mode==='sell'?'Buy · '+sq.price:sq.mode==='create'?'See latest':sq.mode==='build'?'Open repo':sq.avail?'Book a slot':'Join waitlist';
+    $('dPrimary').onclick=()=>toast(sq.mode==='sell'?'Opening the owner\'s checkout (demo)':sq.mode==='hire'?'Opening calendar (demo)':'Opening '+SRC[sq.links[0]]?.[0]+' (demo)');
+    $('dBeacon').classList.toggle('hidden',!(sq.mode==='build'||sq.mode==='hire'));
+    $('dBeaconSrc').textContent=sq.mode==='build'?'from README.md':'from calendar + bio';
+    $('dChat').innerHTML='';
+    const qs=sq.mode==='build'?['What does this app do?','Which tech stack?','Works with Next 15?']:['Free in May?','Hourly rate?','Do you travel?'];
+    $('dQuick').innerHTML=qs.map(q=>'<button class="qq" type="button">'+q+'</button>').join('');
+    $('dQuick').querySelectorAll('.qq').forEach(b=>b.onclick=()=>ask(b.textContent));
+    $('dLease').classList.toggle('hidden',!sq.lease);if(sq.lease)$('dLeasePrice').textContent=sq.lease;
+    $('dLikes').textContent=sq.likes;
+    const liked=localStorage.getItem('liked:'+sq.id)===today();$('dLike').classList.toggle('liked',liked);
+    $('dBackers').textContent=sq.backers<50?'Early backers: '+sq.backers+'/50 slots left open':'Early backers: full (50)';
+    $('dShape').classList.toggle('hidden',!(sq.you&&sq.freeCells>0));
+    $('dFree').classList.add('hidden');
+    updateXp(sq);
+    centerOn(sq);
+    if(sq.lastActive>90)$('dGrow').textContent='Decayed. XP is draining until relisting.';
+  }
+  function openFree(cx,cy){
+    selected=null;drawerOpen=true;drawer.classList.add('open');$('heroCopy').classList.add('hide');
+    const ring=Math.round(Math.hypot(cx,cy)/4);
+    $('dMode').textContent='Free';$('dMode').style.cssText='color:#fff;background:rgba(255,255,255,.1)';
+    $('dMeta').textContent='ring '+ring;$('dTitle').textContent='Available';$('dTag').textContent='Nobody owns this spot yet.';$('dOwner').textContent='';
+    $('dReceipts').innerHTML='';['dAuction','dForSale','dActions','dBeacon','dLease','dShape'].forEach(i=>$(i).classList.add('hidden'));
+    $('dLike').parentElement.classList.add('hidden');$('dXp').parentElement.parentElement.classList.add('hidden');
+    $('dFree').classList.remove('hidden');
+    const free=dropLeft()>0;$('dPrice').textContent=free?'Free':'€'+(ring>8?1:ring>2?25:'—')+' / cell';
+    $('dClaimHere').onclick=()=>{startClaim({x:cx,y:cy})};
+    flyTo(cx+1,cy+1,Math.max(cam.z,2.5),700);
+  }
+  function restoreDrawerBits(){$('dLike').parentElement.classList.remove('hidden');$('dXp').parentElement.parentElement.classList.remove('hidden')}
+  function closeDrawer(){drawer.classList.remove('open');drawerOpen=false;selected=null;shaping=false;$('heroCopy').classList.remove('hide');restoreDrawerBits()}
+  $('dClose').onclick=closeDrawer;
+  function today(){return new Date().toISOString().slice(0,10)}
+  function updateXp(sq){const pct=Math.min(100,sq.xp);$('dXp').textContent=sq.xp+' / 100 xp';$('dBar').style.width=pct+'%';$('dGrow').textContent=(100-sq.xp)+' xp to the next free cell.'}
+  function gain(sq,n,btn){sq.xp+=n;const f=document.createElement('span');f.className='xpfly';f.textContent='+'+n+' xp';btn.appendChild(f);setTimeout(()=>f.remove(),900);btn.classList.remove('pop');void btn.offsetWidth;btn.classList.add('pop');
+    if(sq.xp>=100){sq.xp-=100;sq.freeCells=(sq.freeCells||0)+1;toast('You unlocked 1 free cell! Choose where to place it.');if(sq.you)$('dShape').classList.remove('hidden')}
+    if(selected===sq)updateXp(sq)}
+  $('dLike').onclick=()=>{if(!selected)return;const k='liked:'+selected.id;if(localStorage.getItem(k)===today()){toast('One like per day per square.');return}localStorage.setItem(k,today());selected.likes++;$('dLikes').textContent=selected.likes;$('dLike').classList.add('liked');if(selected.backers<50){selected.backers++;toast('You are early backer #'+selected.backers+' of '+selected.name);$('dBackers').textContent='Early backers: '+selected.backers+'/50'}gain(selected,10,$('dLike'))};
+  $('dShare').onclick=()=>{if(!selected)return;const url=location.origin+location.pathname+'#sq='+selected.id;(navigator.clipboard?navigator.clipboard.writeText(url):Promise.resolve()).then(()=>toast('Link copied. Each unique visit through it earns +25.'));gain(selected,25,$('dShare'))};
+  $('dBuy').onclick=()=>toast('Checkout (demo). Expanse takes 5–10% of the trade.');
+  $('dBid').onclick=$('dBidAny').onclick=()=>{if(!selected)return;$('bTitle').textContent=selected.name+' · '+selected.size+'×'+selected.size+' · '+selected.city;$('bid').classList.add('open')};
+  $('bClose').onclick=()=>$('bid').classList.remove('open');
+  $('bSend').onclick=()=>{if(!$('bMail').value){toast('Add your email so we can tell you when the owner answers.');return}$('bid').classList.remove('open');toast('Bid locked. Email sent: “Someone wants your square in '+(selected?selected.city:'')+' for €'+$('bAmt').value+'”')};
+  $('dShapeBtn').onclick=()=>{shaping=!shaping;$('dShapeBtn').textContent=shaping?'✓ Done placing':'✎ Place your free cell';if(shaping)toast('Click a dashed + cell on the map.')};
+  $('dAsk').onsubmit=e=>{e.preventDefault();const q=$('dQ').value.trim();if(!q)return;$('dQ').value='';ask(q)};
+  function ask(q){const sq=selected;if(!sq)return;const c=$('dChat');c.insertAdjacentHTML('beforeend','<div class="q">'+esc(q)+'</div>');
+    const l=q.toLowerCase();let a;
+    if(sq.mode==='build'){a=/stack|tech|built|language/.test(l)?'TypeScript, Node 20 and a small Postgres. Deploys on Vercel; the CLI is a single binary.':/next|15|work/.test(l)?'Yes, from v2.3. It reads the app router automatically, nothing to configure.':/do|what|app/.test(l)?sq.name+' checks your Vercel build before it ships and fails closed on missing env vars. One command, no account needed.':'Short answer from the README: yes, see the Quick start section. Ask the owner on GitHub for details.'}
+    else{a=/may|free|avail|when/.test(l)?(sq.avail?'Yes. Three open slots in May, earliest Tuesday the 5th. Book straight from the calendar below.':'Fully booked until June. Join the waitlist and you get a mail when a slot opens.'):/rate|price|cost|hour/.test(l)?'From 650 kr/hour, fixed quotes for jobs over a day. Invoice with F-skatt.':/travel|where|area/.test(l)?'Based in '+sq.city+', travels within 30 km at no extra cost.':'Best to ask that in the booking note; the beacon only knows the calendar and the bio.'}
+    setTimeout(()=>{c.insertAdjacentHTML('beforeend','<div class="a">'+esc(a)+'</div>');c.scrollTop=c.scrollHeight},450)}
+
+  // ================= SEARCH / FLY / FILTERS =================
+  const results=$('results');
+  function search(q){q=q.toLowerCase().trim();if(!q)return [];const city=CITIES.find(c=>q.includes(c.toLowerCase()));const terms=q.replace(/near me|cheap|under|€|\$|\d+k/g,'').split(/\s+/).filter(Boolean);
+    return SQ.map(s=>{let sc=0;const hay=(s.name+' '+(s.tag||'')+' '+(s.kw||'')+' '+KW[s.mode]+' '+s.city+' '+MODES[s.mode].label).toLowerCase();for(const t of terms)if(t.length>1&&hay.includes(t))sc+=t.length;if(city&&s.city===city)sc+=4;if(s.featured)sc+=2;if(/cheap|under/.test(q)&&s.mode==='sell')sc+=2;if(s.name.toLowerCase().includes(q))sc+=20;return [sc,s]}).filter(r=>r[0]>2).sort((a,b)=>b[0]-a[0]).slice(0,6).map(r=>r[1])}
+  $('search').onsubmit=e=>{e.preventDefault();const r=search($('q').value);if(!r.length){toast('Nothing there yet. Claim that spot?');return}results.classList.remove('open');openDrawer(r[0]);if(r.length>1)toast(r.length+' matches. Flew to the best one.')};
+  $('q').oninput=()=>{const r=search($('q').value);if(!r.length){results.classList.remove('open');return}results.innerHTML=r.map(s=>'<button type="button" data-id="'+s.id+'"><span class="sw" style="background:'+MODES[s.mode].color+'"></span><b>'+esc(s.name)+'</b><span style="color:var(--muted)">'+MODES[s.mode].label+' · '+s.city+' · '+esc(s.receipts[0][1])+'</span></button>').join('');results.classList.add('open');results.querySelectorAll('button').forEach(b=>b.onclick=()=>{results.classList.remove('open');openDrawer(SQ[+b.dataset.id])})};
+  document.addEventListener('click',e=>{if(!e.target.closest('.fsearch'))results.classList.remove('open')});
+  $('filters').querySelectorAll('.pill').forEach(b=>b.onclick=()=>{const f=b.dataset.f;filter=filter===f?null:f;$('filters').querySelectorAll('.pill').forEach(x=>x.classList.toggle('on',x.dataset.f===filter));if(filter)toast('Showing '+b.textContent.trim()+' squares. Click again to clear.')});
+
+  // ================= DROP COUNTER / STATS =================
+  let claimed=842;function dropLeft(){return 1000-claimed}
+  function renderCount(){$('dropCount').textContent=claimed;$('dropCount2').textContent=claimed;$('s1').textContent=dropLeft();$('s2').textContent=SQ.length.toLocaleString();$('s3').textContent=SQ.filter(s=>s.lastActive<=3).length;$('s4').textContent=SQ.filter(s=>s.lastActive>90).length;$('countLabel').textContent=SQ.length.toLocaleString()}
+  renderCount();setInterval(()=>{if(claimed<999&&Math.random()<.5){claimed++;renderCount()}},6000);
+
+  // ================= CLAIM FLOW =================
+  const claim=$('claim');let cState={};
+  function startClaim(loc){cState={loc:loc||null,step:loc?2:1,email:'',platform:null,mode:null};renderClaim()}
+  function renderClaim(){
+    const b=$('cBody');const st=cState.step;claim.classList.add('open');claim.classList.remove('mini');
+    $('cSteps').querySelectorAll('i').forEach((i,k)=>i.classList.toggle('on',k<st));
+    $('cStepLabel').textContent='Step '+st+' of 4 · '+['Location','Email','Connect','Mode'][st-1];
+    if(st===1)b.innerHTML='<div class="display text-3xl">Pick your spot on the map</div><p class="text-sm mt-2" style="color:var(--txt2)">Any free 2×2 near the edge is free while the drop lasts. Closer to the core costs more later.</p><button class="btn btn-grad w-full mt-5" id="cPick">Pick on the map</button>';
+    if(st===2)b.innerHTML='<div class="display text-3xl">Where do we send the key?</div><p class="text-sm mt-2" style="color:var(--txt2)">Spot reserved at ('+cState.loc.x+', '+cState.loc.y+') for 10 minutes. No card, no password; we email a magic link.</p><input id="cMail" type="email" class="mt-5" placeholder="you@email.com" /><button class="btn btn-grad w-full mt-3" id="cNext2">Continue</button>';
+    if(st===3)b.innerHTML='<div class="display text-3xl">Plug one thing in</div><p class="text-sm mt-2" style="color:var(--txt2)">Read-only. Your square mirrors it; you never post here.</p><div class="grid grid-cols-2 gap-2 mt-5">'+Object.entries(SRC).map(([k,v])=>'<button class="opt" data-p="'+k+'"><img src="'+v[1]+'" class="w-7 h-7 rounded-md bg-white object-contain p-0.5" alt=""><b class="text-sm">'+v[0]+'</b></button>').join('')+'<button class="opt" data-p="calendar"><span class="modeicon" style="background:rgba(61,255,138,.15);color:var(--green)">▦</span><b class="text-sm">Calendar</b></button></div>';
+    if(st===4){const sug=suggestMode(cState.platform);b.innerHTML='<div class="display text-3xl">Pick a starting mode</div><p class="text-sm mt-2" style="color:var(--txt2)">We suggest <b style="color:'+MODES[sug].color+'">'+MODES[sug].label+'</b> from what you connected. Switch any time.</p><div class="grid gap-2 mt-5">'+Object.entries(MODES).map(([k,m])=>'<button class="opt'+(k===sug?' on':'')+'" data-m="'+k+'"><span class="modeicon" style="background:'+m.bg+';color:'+m.color+'">'+({sell:'€',create:'◎',build:'⌘',hire:'●'})[k]+'</span><div><b class="text-sm">'+m.label+'</b><div class="text-xs" style="color:var(--muted)">Card leads with: '+m.action+'</div></div></button>').join('')+'</div><button class="btn btn-grad w-full mt-4" id="cFinish">Claim my square</button>'}
+    if(st===5)b.innerHTML='<div class="display text-3xl">It\'s yours.</div><p class="text-sm mt-2" style="color:var(--txt2)">Your square is live at the edge. Share your referral link: three friends claim and a free + cell lands on your square.</p><div class="box mt-4 text-xs break-all" style="color:var(--lime)">expanse.app/r/'+Math.random().toString(36).slice(2,8)+'</div><button class="btn btn-grad w-full mt-4" id="cDone">Fly to my square</button>';
+    const q=s=>b.querySelector(s);
+    if(q('#cPick'))q('#cPick').onclick=()=>{claim.classList.add('mini');b.innerHTML='<span class="mono" style="color:var(--lime)">Click a free spot on the map</span><button class="act" id="cCancel">Cancel</button>';b.querySelector('#cCancel').onclick=()=>{picking=false;cv.classList.remove('picking');claim.classList.remove('open','mini')};picking=true;cv.classList.add('picking');closeDrawer();document.getElementById('map').scrollIntoView({behavior:'smooth'});pickCb=(x,y)=>{cState.loc={x,y};cState.step=2;renderClaim()}};
+    if(q('#cNext2'))q('#cNext2').onclick=()=>{const v=q('#cMail').value;if(!/.+@.+\..+/.test(v)){toast('Enter a valid email.');return}cState.email=v;cState.step=3;renderClaim()};
+    b.querySelectorAll('[data-p]').forEach(o=>o.onclick=()=>{cState.platform=o.dataset.p;cState.step=4;renderClaim()});
+    b.querySelectorAll('[data-m]').forEach(o=>o.onclick=()=>{b.querySelectorAll('[data-m]').forEach(x=>x.classList.remove('on'));o.classList.add('on');cState.mode=o.dataset.m});
+    if(q('#cFinish'))q('#cFinish').onclick=()=>{const m=cState.mode||suggestMode(cState.platform);const l=cState.loc;const sq=make(l.x,l.y,2,m,{name:'Your new square',owner:'you',city:'Here',tag:'Connected: '+(SRC[cState.platform]?SRC[cState.platform][0]:'Calendar'),links:[cState.platform],lastActive:0,xp:50,likes:0,backers:0,you:true,receipts:[[SRC[cState.platform]?cState.platform:null,'connected today'],[null,'claimed in the free drop']]});sq.w=2;sq.h=2;claimed++;renderCount();cState.sq=sq;cState.step=5;renderClaim()};
+    if(q('#cDone'))q('#cDone').onclick=()=>{claim.classList.remove('open');document.getElementById('map').scrollIntoView({behavior:'smooth'});openDrawer(cState.sq)};
+  }
+  function suggestMode(p){return p==='gumroad'||p==='shopify'?'sell':p==='github'?'build':p==='calendar'||p==='linkedin'?'hire':'create'}
+  $('cClose').onclick=()=>{claim.classList.remove('open','mini');picking=false;cv.classList.remove('picking')};
+  ['openClaim','openClaim2','heroClaim'].forEach(i=>$(i).onclick=()=>startClaim());
+  $('tryShape').onclick=()=>{document.getElementById('map').scrollIntoView({behavior:'smooth'});setTimeout(()=>openDrawer(YOU),300)};
+
+  // connect logos
+  $('connectLogos').innerHTML=Object.entries(SRC).map(([k,v])=>'<div class="flex flex-col items-center gap-1"><img src="'+v[1]+'" alt="'+v[0]+'" class="w-12 h-12 rounded-xl bg-white object-contain p-2"><span class="text-[10px]" style="color:var(--muted)">'+v[0]+'</span></div>').join('');
+
+  // deep link visit = +25
+  const m=location.hash.match(/#sq=(\d+)/);if(m&&SQ[+m[1]]){const sq=SQ[+m[1]];const k='visit:'+sq.id;if(!localStorage.getItem(k)){localStorage.setItem(k,'1');sq.xp+=25;setTimeout(()=>toast('Direct visit counted: +25 xp for '+sq.name),800)}setTimeout(()=>openDrawer(sq),300)}
+  else{cam.z=.7;setTimeout(()=>flyTo(4,0,1.0,1600),300)}
+
+  (function loop(){if(!drag&&!flying&&!drawerOpen&&!picking&&performance.now()-idle>4000){const t=performance.now()/1000;cam.x+=Math.cos(t*.25)*.012/cam.z;cam.y+=Math.sin(t*.19)*.012/cam.z}draw();requestAnimationFrame(loop)})();
+  // fade-ups
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.15});document.querySelectorAll('.fade-up').forEach(el=>io.observe(el));
+})();
+</script>
+
+</body></html>
