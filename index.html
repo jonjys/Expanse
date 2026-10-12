@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Expanse — Claim your square of the internet</title>
-<meta name="description" content="Expanse is a living map of people who sell, create, build and get hired. Pick a spot, plug in what you already use, and your square glows every time you ship.">
-<meta name="theme-color" content="#060920">
+<title>Expanse — The internet, as a universe</title>
+<meta name="description" content="Expanse is a living universe of people who sell, create, build and get hired. Every glowing square is someone. Claim your spot — the closer to the core, the more eyes.">
+<meta name="theme-color" content="#02030c">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Expanse">
-<meta property="og:title" content="Expanse — Claim your square of the internet">
-<meta property="og:description" content="A living map of people who sell, create, build and get hired. Your square glows every time you ship.">
+<meta property="og:title" content="Expanse — The internet, as a universe">
+<meta property="og:description" content="Every glowing square is someone. Claim your spot before the inner rings fill up.">
 <meta property="og:image" content="https://expanse-inky.vercel.app/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preload" href="fonts/instrument-sans-700.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/instrument-sans-400.woff2" as="font" type="font/woff2" crossorigin>
-<script>document.documentElement.classList.add('js')</script>
+<link rel="preload" href="fonts/instrument-sans-500.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://gjmkhnrgznorxxaemsmo.supabase.co" crossorigin>
 <style>
 @font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans-400.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans-500.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
@@ -27,134 +27,158 @@
 @font-face{font-family:"IBM Plex Mono";src:url(fonts/ibm-plex-mono-600.woff2) format("woff2");font-weight:600 700;font-style:normal;font-display:swap}
 
 :root{
-  --bg:#060920;--bg2:#0a0f2e;--line:#181f4d;--line2:#28316b;
-  --txt:#fff;--txt2:#bcc4ec;--muted:#8a93c8;
+  --bg:#02030c;--panel:rgba(8,11,34,.88);--line:rgba(140,160,255,.13);--line2:rgba(150,170,255,.24);
+  --txt:#fff;--txt2:#c3caf0;--muted:#8b94c9;
   --lime:#c8ff3d;--cyan:#5ee1ff;--pink:#ff5c7a;--amber:#ffcf4a;--green:#3dff8a;--violet:#b39cff;--red:#ff5a5a;
   --ease:cubic-bezier(.2,.8,.2,1);
-  --nav:64px;
-  --side:max(24px,calc((100% - 1360px) / 2 + 24px));
+  --sb:env(safe-area-inset-bottom);
 }
 *,*::before,*::after{box-sizing:border-box}
 *{margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:var(--nav)}
-body{background:var(--bg);color:var(--txt);font:400 16px/1.55 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+html,body{height:100%;overflow:hidden;background:var(--bg);overscroll-behavior:none}
+body{color:var(--txt);font:400 15px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-tap-highlight-color:transparent}
 button,input{font:inherit;color:inherit}
 button{background:none;border:0;cursor:pointer}
 a{color:inherit;text-decoration:none}
-svg,canvas{display:block}
-::selection{background:var(--lime);color:#071026}
 :focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 [hidden]{display:none!important}
-.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 24px}
-.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+::selection{background:var(--lime);color:#071026}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
 .display{font-weight:700;letter-spacing:-.045em;line-height:.92}
 .grad{background:linear-gradient(92deg,var(--lime) 0%,var(--cyan) 55%,#8fb2ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.glass{background:var(--panel);border:1px solid var(--line2);-webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);box-shadow:0 24px 70px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
 
-/* ---------- buttons ---------- */
-.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.5em;height:52px;padding:0 26px;border-radius:999px;font-weight:700;font-size:16px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;isolation:isolate;transition:transform .2s var(--ease),box-shadow .2s var(--ease),border-color .2s,background .2s}
+#app{position:fixed;inset:0;overflow:hidden;isolation:isolate;background:radial-gradient(ellipse 75% 85% at 60% 50%,#141d5e 0%,#080c2e 42%,#02030c 100%)}
+#app::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(2,3,12,0) 50%,rgba(2,3,12,.72) 100%)}
+@media (max-width:760px){#app{background:radial-gradient(ellipse 120% 70% at 50% 36%,#141d5e 0%,#080c2e 42%,#02030c 100%)}}
+#world{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;outline:none;-webkit-user-select:none;user-select:none}
+#world.pointy{cursor:pointer}
+#world.dive{cursor:zoom-in}
+#world.dragging{cursor:grabbing}
+#app::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.flash{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(circle at var(--fx,50%) var(--fy,50%),rgba(200,255,61,.4),rgba(94,225,255,.08) 22%,transparent 46%)}
+.flash.go{animation:flash 1.2s ease-out}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+
+/* buttons */
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.5em;height:50px;padding:0 24px;border-radius:999px;font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;isolation:isolate;transition:transform .2s var(--ease),box-shadow .2s var(--ease),border-color .2s,background .2s,opacity .2s}
 .btn:hover{transform:translateY(-2px)}
 .btn:active{transform:translateY(0) scale(.98)}
-.btn-primary{background:var(--lime);color:#071026;box-shadow:0 0 0 1px rgba(200,255,61,.5),0 12px 40px -8px rgba(200,255,61,.6)}
-.btn-primary:hover{box-shadow:0 0 0 1px rgba(200,255,61,.7),0 16px 56px -6px rgba(200,255,61,.85)}
-.btn-primary::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);transform:translateX(-120%);animation:sheen 5s var(--ease) infinite 2s}
+.btn:disabled{opacity:.6;pointer-events:none}
+.btn-primary{background:var(--lime);color:#071026;box-shadow:0 0 0 1px rgba(200,255,61,.5),0 12px 40px -8px rgba(200,255,61,.65)}
+.btn-primary:hover{box-shadow:0 0 0 1px rgba(200,255,61,.7),0 16px 56px -6px rgba(200,255,61,.9)}
+.btn-primary::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);transform:translateX(-120%);animation:sheen 5s var(--ease) infinite 2.5s}
 @keyframes sheen{0%,72%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
-.btn-ghost{border:1.5px solid var(--line2);background:rgba(255,255,255,.03);color:#fff}
-.btn-ghost:hover{border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.06)}
-.btn-sm{height:42px;padding:0 18px;font-size:14px}
-
-/* ---------- nav ---------- */
-.nav{position:sticky;top:0;z-index:60;height:var(--nav);background:rgba(6,9,32,.74);-webkit-backdrop-filter:blur(16px) saturate(150%);backdrop-filter:blur(16px) saturate(150%);border-bottom:1px solid rgba(255,255,255,.06)}
-.nav .wrap{max-width:1360px;height:100%;display:flex;align-items:center;justify-content:space-between;gap:20px}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:22px;letter-spacing:-.045em}
-.orb{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#c8ff3d,#5ee1ff 45%,#1a5fff);box-shadow:0 0 20px rgba(94,225,255,.6)}
-.links{display:flex;gap:30px;font-size:14px;font-weight:500;color:var(--txt2)}
-.links a{transition:color .15s}.links a:hover{color:#fff}
-.nav .btn{height:40px;padding:0 18px;font-size:14px}
-@media (max-width:900px){.links{display:none}}
-
-/* ---------- hero / map ---------- */
-.hero{position:relative;height:calc(100vh - var(--nav));height:calc(100svh - var(--nav));min-height:600px;max-height:1080px;overflow:hidden;isolation:isolate;background:radial-gradient(ellipse 70% 70% at 64% 46%,#17236e 0%,#0b1138 42%,#04061a 100%);border-bottom:1px solid var(--line)}
-#world{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:pan-y;outline:none;-webkit-tap-highlight-color:transparent}
-#world:focus-visible{outline:2px solid var(--cyan);outline-offset:-3px}
-#world.pointy{cursor:pointer}
-#world.dragging{cursor:grabbing}
-.shade{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,rgba(4,6,26,.95) 0%,rgba(4,6,26,.86) 30%,rgba(4,6,26,.45) 50%,rgba(4,6,26,0) 64%),linear-gradient(0deg,rgba(4,6,26,.8) 0%,rgba(4,6,26,0) 28%);transition:opacity .5s var(--ease)}
-.hero.ui .shade{opacity:.2}
-.hero-copy{position:absolute;z-index:5;left:var(--side);bottom:clamp(32px,7vh,76px);width:min(760px,calc(100% - 48px));pointer-events:none;transition:opacity .45s var(--ease),transform .45s var(--ease)}
-.hero-copy .btn,.hero-copy a{pointer-events:auto}
-.hero.ui .hero-copy{opacity:0;transform:translateY(16px)}
-.hero.ui .hero-copy .btn,.hero.ui .hero-copy a{pointer-events:none}
-.live{display:inline-flex;align-items:center;gap:10px;color:var(--lime);height:32px;padding:0 14px 0 12px;border-radius:999px;border:1px solid rgba(200,255,61,.28);background:rgba(200,255,61,.07);margin-bottom:22px;font-size:11px;animation:fadeup .8s var(--ease) both}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime);animation:blink 2s ease-in-out infinite}
+.btn-ghost{border:1.5px solid var(--line2);background:rgba(255,255,255,.04);color:#fff}
+.btn-ghost:hover{border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.08)}
+.btn-sm{height:40px;padding:0 16px;font-size:14px}
+.iconbtn{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:18px;font-weight:600;border:1px solid var(--line2);background:rgba(8,11,34,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:border-color .15s,color .15s}
+.iconbtn:hover{border-color:var(--cyan);color:var(--cyan)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime);flex:none;animation:blink 2s ease-in-out infinite}
 @keyframes blink{50%{opacity:.35}}
-.hero h1{font-size:clamp(46px,6.6vw,104px);text-shadow:0 0 60px rgba(94,225,255,.16)}
-.hero h1 .ln{display:block;overflow:hidden;padding:0 .04em .07em 0;margin-bottom:-.07em}
-.hero h1 .ln>span{display:inline-block;animation:rise 1.1s var(--ease) both .1s}
-.hero h1 .ln+.ln>span{animation-delay:.24s}
-@keyframes rise{from{transform:translateY(110%);opacity:0}to{transform:none;opacity:1}}
-.hero .sub{margin-top:24px;max-width:540px;font-size:clamp(17px,1.45vw,20px);line-height:1.5;color:var(--txt2);animation:fadeup .9s var(--ease) .45s both}
-.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px;animation:fadeup .9s var(--ease) .6s both}
-.hero .hint{margin-top:22px;color:var(--muted);font-size:10.5px;animation:fadeup .9s var(--ease) .75s both}
-@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
-.search{position:absolute;z-index:8;top:18px;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px))}
-@media (min-width:1100px){.search{left:auto;right:84px;transform:none;width:440px}}
-.search form{display:flex;align-items:center;gap:8px;height:52px;padding:6px 6px 6px 18px;border-radius:999px;background:rgba(8,12,40,.84);border:1.5px solid var(--line2);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 12px 40px rgba(0,0,0,.35);transition:border-color .2s}
+/* top bar */
+.bar{position:absolute;z-index:30;top:0;left:0;right:0;display:flex;align-items:center;gap:14px;padding:16px 20px;pointer-events:none;background:linear-gradient(180deg,rgba(2,3,12,.8),rgba(2,3,12,0))}
+.bar>*{pointer-events:auto}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:22px;letter-spacing:-.045em;flex:none}
+.orb{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#c8ff3d,#5ee1ff 45%,#1a5fff);box-shadow:0 0 20px rgba(94,225,255,.6)}
+.chip{transition:opacity .4s;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(200,255,61,.3);background:rgba(200,255,61,.08);color:var(--lime);font-size:10.5px;white-space:nowrap;flex:none}
+#app:not(.explore) .chip{opacity:0;pointer-events:none}
+.search{position:relative;flex:1;max-width:420px;margin:0 auto}
+.search form{display:flex;align-items:center;gap:8px;height:44px;padding:4px 4px 4px 16px;border-radius:999px;transition:border-color .2s}
 .search form:focus-within{border-color:var(--cyan)}
-.search .ico{color:var(--muted);font-size:18px;line-height:1}
-.search input{flex:1;min-width:0;height:100%;background:transparent;border:0;outline:0;font-size:15px}
+.search .ico{color:var(--muted);font-size:17px;line-height:1}
+.search input{flex:1;min-width:0;height:100%;background:transparent;border:0;outline:0;font-size:14px}
 .search input::placeholder{color:var(--muted)}
-.search .btn{height:40px;padding:0 18px;font-size:14px}
-.filters{display:flex;gap:6px;margin-top:10px;justify-content:center;flex-wrap:wrap}
-@media (min-width:1100px){.filters{justify-content:flex-end}}
-.pill{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:999px;font-weight:600;font-size:13px;border:1px solid var(--line2);background:rgba(8,12,40,.84);color:var(--txt2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);white-space:nowrap;transition:color .15s,border-color .15s,background .15s}
-.pill:hover{color:#fff;border-color:rgba(255,255,255,.6)}
-.pill[aria-pressed="true"]{background:var(--lime);border-color:var(--lime);color:#071026}
-.pill i{width:8px;height:8px;border-radius:2px}
-.results{position:absolute;left:0;right:0;top:60px;padding:6px;border-radius:18px;background:rgba(8,12,40,.97);border:1px solid var(--line2);box-shadow:0 20px 50px rgba(0,0,0,.5);max-height:320px;overflow:auto}
+.search .btn{height:34px;padding:0 14px;font-size:13px}
+.results{position:absolute;left:0;right:0;top:52px;padding:6px;border-radius:18px;max-height:340px;overflow:auto}
 .results button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;text-align:left;font-size:14px}
 .results button:hover,.results button:focus-visible{background:rgba(255,255,255,.07);outline:none}
 .results .sw{width:10px;height:10px;border-radius:3px;flex:none}
 .results small{color:var(--muted);margin-left:auto;font-size:12px;white-space:nowrap;padding-left:10px}
-@media (max-width:760px){.filters{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:10px -16px 0;padding:0 16px}.filters::-webkit-scrollbar{display:none}}
+.bar-r{display:flex;align-items:center;gap:8px;margin-left:auto;flex:none}
+.bar .btn-ghost{background:rgba(8,11,34,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#searchBtn{display:none}
+#infoBtn .q{display:none}
+@media (max-width:900px){
+  .bar{padding:12px 12px;gap:8px}
+  .chip{display:none}
+  .search{display:none;position:absolute;left:12px;right:12px;top:62px;max-width:none;margin:0}
+  .search.open{display:block}
+  #searchBtn{display:grid}
+  #infoBtn .lbl{display:none}
+  #infoBtn .q{display:inline}
+  #infoBtn{width:40px;padding:0}
+}
 
-.zoom{position:absolute;z-index:8;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
-.zoom button{width:42px;height:42px;border-radius:14px;background:rgba(8,12,40,.86);border:1px solid var(--line2);font-size:20px;font-weight:600;display:grid;place-items:center;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:border-color .15s,color .15s}
-.zoom button:hover{border-color:var(--cyan);color:var(--cyan)}
-@media (max-width:760px){.zoom{top:136px;transform:none;right:12px}.zoom button{width:38px;height:38px;border-radius:12px;font-size:18px}}
-.legend{position:absolute;z-index:4;right:24px;bottom:22px;display:flex;gap:16px;align-items:center;color:var(--txt2);font-size:10.5px;pointer-events:none;transition:opacity .3s}
+/* ticker */
+.ticker{position:absolute;z-index:20;left:20px;top:76px;display:flex;align-items:center;gap:10px;max-width:min(520px,calc(100% - 40px));height:34px;padding:0 14px 0 5px;border-radius:999px;font-size:13px;color:var(--txt2);cursor:pointer;opacity:0;transition:opacity .45s,transform .45s var(--ease)}
+.ticker.on{opacity:1}
+.ticker.swap{opacity:0;transform:translateY(-5px)}
+.ticker .tag{height:24px;padding:0 9px;border-radius:999px;display:inline-flex;align-items:center;font-size:9.5px;flex:none}
+.ticker .tag.live{background:var(--lime);color:#071026}
+.ticker .tag.prev{background:rgba(255,255,255,.08);color:var(--muted)}
+.ticker .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:900px){.ticker{left:12px;right:auto;top:64px;max-width:calc(100% - 24px)}.search.open~.ticker{display:none}}
+
+/* hero */
+.hero{position:absolute;z-index:15;left:max(32px,env(safe-area-inset-left));bottom:36px;width:min(660px,calc(100% - 64px));pointer-events:none;opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.ready .hero{opacity:1;transform:none}
+.hero .btn{pointer-events:auto}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--lime);height:32px;padding:0 14px 0 12px;border-radius:999px;border:1px solid rgba(200,255,61,.28);background:rgba(200,255,61,.07);margin-bottom:20px}
+.hero h1{font-size:clamp(44px,6.4vw,108px);text-shadow:0 0 60px rgba(94,225,255,.22),0 2px 30px rgba(2,3,12,.8)}
+.hero .sub{margin-top:20px;max-width:540px;font-size:clamp(16px,1.4vw,19px);line-height:1.5;color:var(--txt2);text-shadow:0 1px 20px rgba(2,3,12,.9)}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.hero .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;color:var(--muted);font-size:10.5px}
+.hero .meta b{color:#fff;font-weight:600}
+.explore .hero,.ui .hero{opacity:0!important;transform:translateY(20px)!important}
+.explore .hero .btn,.ui .hero .btn{pointer-events:none}
+.dock{position:absolute;z-index:16;left:20px;bottom:20px;display:flex;align-items:center;gap:12px;padding:6px 6px 6px 18px;border-radius:999px;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.dock span{font-size:12px;color:var(--txt2);white-space:nowrap}
+.dock span b{color:var(--lime)}
+.explore:not(.ui) .dock{opacity:1;transform:none;pointer-events:auto}
+@media (max-width:760px){
+  .hero{left:16px;right:16px;width:auto;bottom:calc(18px + var(--sb))}
+  .hero .eyebrow{margin-bottom:14px}
+  .hero .sub{margin-top:14px;font-size:15.5px}
+  .hero .ctas{margin-top:18px}
+  .hero .ctas .btn-primary{flex:1 1 100%}
+  .hero .ctas .btn-ghost{display:none}
+  .hero .meta{margin-top:14px}
+  .dock{left:12px;right:12px;bottom:calc(12px + var(--sb));justify-content:space-between}
+}
+
+/* map chrome */
+.zoom{position:absolute;z-index:20;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
+.minimap{position:absolute;z-index:20;right:20px;bottom:20px;width:150px;height:150px;border-radius:50%;cursor:pointer;opacity:0;transform:scale(.9);pointer-events:none;transition:opacity .4s,transform .4s var(--ease);box-shadow:0 0 0 1px var(--line2),0 20px 50px rgba(0,0,0,.5)}
+.minimap.on{opacity:1;transform:none;pointer-events:auto}
+.legend{position:absolute;z-index:14;right:20px;bottom:20px;display:flex;gap:14px;align-items:center;font-size:10px;color:var(--txt2);pointer-events:none;transition:right .4s var(--ease),opacity .3s}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:8px;height:8px;border-radius:2px}
-.legend .tagp{color:var(--muted);border:1px solid var(--line2);padding:4px 9px;border-radius:999px}
-.hero.ui .legend{opacity:0}
-.search{transition:opacity .3s}
-@media (max-width:760px){.hero.ui .search{opacity:0;pointer-events:none}}
+.has-mini .legend{right:186px}
+.ui .legend{opacity:0}
 @media (max-width:1100px){.legend{display:none}}
-.tip{position:absolute;z-index:9;left:0;top:0;pointer-events:none;padding:9px 12px;border-radius:12px;background:rgba(6,9,32,.95);border:1px solid var(--line2);font-size:13px;line-height:1.35;max-width:260px;box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;transition:opacity .12s}
+@media (max-width:760px){.minimap{display:none}.zoom{top:118px;transform:none;right:12px}.zoom .iconbtn{width:38px;height:38px}}
+.tip{position:absolute;z-index:25;left:0;top:0;pointer-events:none;padding:9px 12px;border-radius:12px;background:rgba(4,6,22,.95);border:1px solid var(--line2);font-size:13px;line-height:1.35;max-width:280px;box-shadow:0 10px 30px rgba(0,0,0,.45);opacity:0;transition:opacity .12s}
 .tip.on{opacity:1}
+.tip b{font-weight:700}
 .tip small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-.wheelhint{position:absolute;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);padding:12px 18px;border-radius:14px;background:rgba(6,9,32,.9);border:1px solid var(--line2);font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s}
-.wheelhint.on{opacity:1}
-.flash{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;background:radial-gradient(circle at var(--fx,50%) var(--fy,50%),rgba(200,255,61,.38),rgba(94,225,255,.08) 22%,transparent 45%)}
-.flash.go{animation:flash 1.1s ease-out}
-@keyframes flash{0%{opacity:1}100%{opacity:0}}
 
-/* ---------- panels (square card + claim) ---------- */
-.panel{position:absolute;z-index:20;background:rgba(9,13,42,.94);border:1px solid var(--line2);-webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);border-radius:24px;padding:22px;opacity:0;visibility:hidden;transition:opacity .3s var(--ease),transform .4s var(--ease),visibility 0s .4s}
+/* panels */
+.panel{position:absolute;z-index:40;border-radius:24px;padding:22px;opacity:0;visibility:hidden;transition:opacity .3s var(--ease),transform .4s var(--ease),visibility 0s .4s}
 .panel.open{opacity:1;visibility:visible;transform:none;transition:opacity .3s var(--ease),transform .4s var(--ease),visibility 0s}
 .panel:focus{outline:none}
-.pop{right:80px;top:132px;width:360px;max-height:calc(100% - 156px);overflow:auto;transform:translateX(24px)}
-.claim{left:var(--side);bottom:32px;width:430px;transform:translateY(24px)}
+.pop{right:80px;top:84px;width:370px;max-height:calc(100% - 108px);overflow:auto;transform:translateX(24px)}
+.claim{left:24px;bottom:24px;width:450px;max-height:calc(100% - 110px);overflow:auto;transform:translateY(24px)}
 @media (max-width:760px){
-  .panel{left:0;right:0;bottom:0;top:auto;width:auto;max-height:66%;overflow:auto;border-radius:24px 24px 0 0;padding:16px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(40px)}
+  .panel{left:0;right:0;bottom:0;top:auto;width:auto;max-height:70%;overflow:auto;border-radius:24px 24px 0 0;padding:14px 18px calc(18px + var(--sb));transform:translateY(40px)}
   .panel::before{content:"";display:block;width:40px;height:4px;border-radius:9px;background:var(--line2);margin:0 auto 14px}
 }
-.x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--txt2);font-size:22px;line-height:1;transition:background .15s,color .15s}
+.x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--txt2);font-size:22px;line-height:1;transition:background .15s,color .15s;z-index:2}
 .x:hover{background:rgba(255,255,255,.08);color:#fff}
-.badge{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.pmeta{color:var(--muted);font-size:10.5px;margin-left:8px}
+.badge{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.pmeta{color:var(--muted);font-size:10px;margin-left:8px}
 .pname{font-size:34px;margin-top:14px;padding-right:30px;overflow-wrap:anywhere}
 .ptag{color:var(--txt2);margin-top:10px;font-size:15px}
 .pwho{color:var(--muted);margin-top:4px;font-size:13px}
@@ -163,290 +187,213 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .rc::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c,var(--lime))}
 .prow{display:flex;gap:8px;margin-top:18px}
 .prow .btn{flex:1;min-width:0}
-.chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);font-weight:600;font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s,transform .2s var(--ease)}
+.chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);font-weight:600;font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s}
 .chip-btn:hover{border-color:rgba(255,255,255,.6)}
 .chip-btn.on{border-color:var(--pink);color:var(--pink)}
-.chip-btn.pop-anim{animation:pp .35s var(--ease)}
+.chip-btn.pp{animation:pp .35s var(--ease)}
 @keyframes pp{40%{transform:scale(1.15)}}
 .nextto{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:12px;padding:14px 16px;border-radius:16px;border:1px dashed rgba(200,255,61,.45);background:rgba(200,255,61,.05);color:var(--lime);font-weight:700;font-size:14px;text-align:left;transition:background .15s,border-color .15s}
 .nextto:hover{background:rgba(200,255,61,.11);border-style:solid}
-.fine{margin-top:12px;font-size:12px;color:var(--muted)}
-.linkbtn{font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;margin-top:10px}
+.fine{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.45}
+.linkbtn{font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;margin-top:10px;display:inline-block;margin-right:14px}
 .linkbtn:hover{color:#fff}
-.steps{display:flex;gap:6px;margin:4px 44px 16px 0}
+.steps{display:flex;gap:6px;margin:2px 44px 16px 0}
 .steps i{flex:1;height:4px;border-radius:9px;background:var(--line2);transition:background .3s,box-shadow .3s}
 .steps i.on{background:var(--lime);box-shadow:0 0 10px rgba(200,255,61,.5)}
-.c-eyebrow{color:var(--muted);font-size:11px}
+.c-eyebrow{color:var(--muted);font-size:10.5px}
 .c-title{font-size:34px;margin-top:10px}
-#cStep3 .c-title{font-size:46px}
-.c-text{color:var(--txt2);margin-top:10px;font-size:15px}
+.c-text{color:var(--txt2);margin-top:8px;font-size:14.5px}
 .c-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
 .c-row .btn-primary{flex:1}
+.zone{display:inline-flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap}
+.zbadge{height:24px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#071026;background:var(--cyan)}
+.sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:16px}
+.sizes button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border-radius:14px;border:1.5px solid var(--line2);font-weight:700;font-size:14px;transition:border-color .15s,background .15s}
+.sizes button small{font-weight:500;font-size:11px;color:var(--muted)}
+.sizes button:hover{border-color:rgba(255,255,255,.5)}
+.sizes button[aria-pressed="true"]{border-color:var(--lime);background:rgba(200,255,61,.09)}
+.sizes button[aria-pressed="true"] small{color:var(--lime)}
+.price{display:flex;align-items:center;gap:12px;margin-top:16px}
+.price b{font-size:42px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.price span{color:var(--muted);font-size:12.5px;line-height:1.35}
 .field{display:block;margin-top:16px}
-.field span{display:block;color:var(--muted);font-size:11px;margin-bottom:8px}
-.field input{width:100%;height:52px;padding:0 16px;border-radius:14px;background:rgba(4,6,26,.7);border:1.5px solid var(--line2);outline:0;font-size:17px;font-weight:600;transition:border-color .15s}
+.field span{display:block;color:var(--muted);font-size:10.5px;margin-bottom:8px}
+.field input{width:100%;height:52px;padding:0 16px;border-radius:14px;background:rgba(2,3,12,.7);border:1.5px solid var(--line2);outline:0;font-size:17px;font-weight:600;transition:border-color .15s}
 .field input:focus{border-color:var(--lime)}
-.field input.shake{animation:shake .4s}
+.shake{animation:shake .4s}
 @keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
-.c-label{color:var(--muted);font-size:11px;margin-top:16px}
 .mpick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
 .mpick button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:11px 4px;border-radius:14px;border:1.5px solid var(--line2);font-size:12.5px;font-weight:700;transition:border-color .15s,background .15s}
 .mpick button i{width:22px;height:22px;border-radius:6px;background:var(--c)}
 .mpick button:hover{border-color:rgba(255,255,255,.5)}
 .mpick button[aria-pressed="true"]{border-color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent)}
-.reserve{display:flex;gap:8px;margin-top:18px}
-.reserve .btn{flex:none}
+.summary{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.summary i{width:30px;height:30px;border-radius:8px;flex:none;background:var(--c);box-shadow:0 0 18px var(--c)}
+.summary div{min-width:0;flex:1}
+.summary b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.summary small{color:var(--muted);font-size:12.5px}
+.summary .amt{font-size:22px;font-weight:700;letter-spacing:-.03em;flex:none}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-.held{margin-top:18px;padding:12px 14px;border-radius:14px;background:rgba(200,255,61,.08);border:1px solid rgba(200,255,61,.35);color:var(--lime);font-weight:600;font-size:14px}
-.reserve input{flex:1;min-width:0;height:42px;padding:0 14px;border-radius:12px;background:rgba(4,6,26,.7);border:1.5px solid var(--line2);outline:0}
-.reserve input:focus{border-color:var(--lime)}
-.reserve input.shake{animation:shake .4s}
+.refs{margin-top:16px;padding:14px 16px;border-radius:16px;border:1px solid rgba(200,255,61,.3);background:rgba(200,255,61,.06)}
+.refs b{color:var(--lime)}
+.refs .dots{display:flex;gap:6px;margin-top:10px}
+.refs .dots i{flex:1;height:6px;border-radius:9px;background:rgba(255,255,255,.1)}
+.refs .dots i.on{background:var(--lime);box-shadow:0 0 10px rgba(200,255,61,.6)}
+.refs small{display:block;color:var(--txt2);font-size:12.5px;margin-top:8px}
 
-.toast{position:fixed;z-index:90;left:50%;top:calc(var(--nav) + 16px);transform:translate(-50%,-10px);width:max-content;max-width:min(92vw,560px);padding:11px 18px;border-radius:18px;background:var(--lime);color:#071026;font-weight:700;font-size:14px;line-height:1.35;text-align:center;box-shadow:0 12px 40px rgba(200,255,61,.35);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s var(--ease)}
-.toast.on{opacity:1;transform:translate(-50%,0)}
-@media (min-width:761px){.toast{top:auto;bottom:28px;transform:translate(-50%,10px)}}
-
-/* ---------- sections ---------- */
-.block{position:relative;padding:clamp(84px,12vw,150px) 0;border-top:1px solid var(--line)}
-.kicker{display:block;color:var(--lime);margin-bottom:20px}
-.block h2.display{font-size:clamp(42px,6.2vw,90px)}
-.lead{margin-top:24px;max-width:620px;font-size:clamp(17px,1.5vw,20px);color:var(--txt2)}
-.js .reveal{opacity:0;transform:translateY(26px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
-.js .reveal.in{opacity:1;transform:none}
-
-.strip{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(94,225,255,.035),transparent)}
-.stats{display:grid;grid-template-columns:repeat(4,1fr)}
-.stats>div{padding:44px 28px;border-left:1px solid var(--line)}
-.stats>div:first-child{border-left:0;padding-left:0}
-.stats b{display:block;font-size:clamp(60px,7.4vw,104px);font-weight:700;letter-spacing:-.06em;line-height:.85}
-.stats span{display:block;margin-top:14px;color:var(--txt2);font-size:15px}
-@media (max-width:760px){.stats{grid-template-columns:1fr 1fr}.stats>div{padding:30px 16px;border-left:0;border-top:1px solid var(--line)}.stats>div:nth-child(-n+2){border-top:0}.stats>div:nth-child(odd){padding-left:0}.stats>div:nth-child(even){border-left:1px solid var(--line)}}
-
-.grid3,.grid4{display:grid;gap:18px;margin-top:60px}
-.grid3{grid-template-columns:repeat(3,1fr)}
-.grid4{grid-template-columns:repeat(4,1fr)}
-@media (max-width:1000px){.grid4{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:760px){.grid3,.grid4{grid-template-columns:1fr}}
-.card{position:relative;border-radius:24px;border:1px solid var(--line2);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));padding:24px;overflow:hidden;isolation:isolate;transition:border-color .3s,transform .4s var(--ease)}
-.card::after{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .35s;background:radial-gradient(380px circle at var(--mx,50%) var(--my,50%),rgba(var(--rgb,200,255,61),.13),transparent 62%)}
-.card:hover{border-color:rgba(var(--rgb,200,255,61),.45)}
-.card:hover::after{opacity:1}
-.card h3{font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:8px}
-.card p{color:var(--txt2);font-size:15px;margin-top:10px}
-.stepn{color:var(--muted);font-size:11px}
-.viz{position:relative;height:184px;margin-bottom:22px;border-radius:16px;background-color:rgba(4,6,26,.55);background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:14px 14px;border:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
-
-.mini{display:grid;grid-template-columns:repeat(9,17px);grid-auto-rows:17px;grid-auto-flow:dense;gap:4px}
-.mini i{border-radius:4px;background:rgba(255,255,255,.05)}
-.mini i.c{background:var(--c);opacity:.85}
-.mini i.me{grid-column:6/span 2;grid-row:3/span 2;border:2px dashed var(--lime);background:rgba(200,255,61,.1);display:grid;place-items:center;color:var(--lime);font-weight:700;font-style:normal;font-size:15px;animation:mep 1.6s ease-in-out infinite}
-@keyframes mep{50%{box-shadow:0 0 0 6px rgba(200,255,61,.12),0 0 26px rgba(200,255,61,.45)}}
-.plugs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:0 16px}
-.plugs span{height:32px;padding:0 12px;display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--line2);font-size:13px;font-weight:600;color:var(--txt2);animation:plug 5.6s infinite;animation-delay:calc(var(--i) * .7s)}
-@keyframes plug{0%,6%{color:var(--txt2);background:transparent;border-color:var(--line2);box-shadow:none}10%,26%{color:#071026;background:var(--lime);border-color:var(--lime);box-shadow:0 0 24px rgba(200,255,61,.5)}34%,100%{color:var(--txt2);background:transparent;border-color:var(--line2);box-shadow:none}}
-.glowsq{position:relative;width:78px;height:78px;border-radius:12px;background:var(--cyan);animation:gp 3.2s ease-in-out infinite}
-.glowsq::before{content:"";position:absolute;inset:-2px;border-radius:14px;border:2px solid var(--cyan);animation:ring 3.2s ease-out infinite}
-@keyframes gp{0%,100%{box-shadow:0 0 18px rgba(94,225,255,.25)}14%{box-shadow:0 0 70px rgba(94,225,255,.95)}}
-@keyframes ring{0%{transform:scale(1);opacity:.9}55%,100%{transform:scale(2.3);opacity:0}}
-.rfloat{position:absolute;left:50%;top:26px;margin-left:52px;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:9px;background:rgba(6,9,32,.95);border:1px solid var(--line2);font-size:12px;color:var(--txt2);white-space:nowrap;animation:rf 3.2s ease-in-out infinite}
-.rfloat::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--cyan)}
-@keyframes rf{0%,8%{opacity:0;transform:translateY(6px)}16%,80%{opacity:1;transform:none}100%{opacity:0}}
-
-.mcard .viz{height:168px}
-.msq{position:relative;width:86px;height:86px;border-radius:12px;background:var(--c)}
-.m-sell .tag{position:absolute;top:7px;right:7px;padding:3px 8px;border-radius:6px;background:#071026;color:var(--amber);font-weight:700;font-size:12px;animation:tagb 2.6s var(--ease) infinite}
-@keyframes tagb{0%,100%{transform:none}8%{transform:translateY(-5px) rotate(-8deg)}18%{transform:none}}
-.m-sell{box-shadow:0 0 40px rgba(255,207,74,.35)}
-.m-create{z-index:0}
-.m-create::before,.m-create::after{content:"";position:absolute;inset:0;border-radius:14px;background:var(--pink);z-index:-1;animation:aura 2.4s ease-out infinite}
-.m-create::after{animation-delay:1.2s}
-@keyframes aura{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.9);opacity:0}}
-.m-build{background:rgba(94,225,255,.16);border:2px solid var(--cyan);animation:neon 3.4s infinite}
-@keyframes neon{0%,100%{box-shadow:0 0 22px rgba(94,225,255,.55),inset 0 0 18px rgba(94,225,255,.3)}40%{box-shadow:0 0 54px rgba(94,225,255,1),inset 0 0 30px rgba(94,225,255,.55)}43%{box-shadow:0 0 8px rgba(94,225,255,.25),inset 0 0 6px rgba(94,225,255,.1)}46%{box-shadow:0 0 54px rgba(94,225,255,1),inset 0 0 30px rgba(94,225,255,.55)}}
-.m-hire{box-shadow:0 0 40px rgba(61,255,138,.3)}
-.m-hire .sdot{position:absolute;top:8px;right:8px;width:16px;height:16px;border-radius:50%;border:3px solid #071026;background:var(--green);animation:avail 6s steps(1) infinite}
-@keyframes avail{0%{background:var(--green);box-shadow:0 0 12px var(--green)}66%{background:var(--red);box-shadow:0 0 12px var(--red)}}
-.via{color:var(--muted);font-size:10.5px;margin-top:8px}
-.mcard dl{margin-top:16px;display:grid;gap:12px}
-.mcard dt{color:var(--muted);font-size:10.5px}
-.mcard dd{color:var(--txt2);font-size:15px;margin-top:3px}
-
-.split{display:grid;grid-template-columns:1.05fr 1fr;gap:72px;align-items:center}
-@media (max-width:900px){.split{grid-template-columns:1fr;gap:44px}}
-.xp{display:grid;gap:10px;margin-top:34px;max-width:470px}
-.xp>div{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;border:1px solid var(--line2);background:rgba(255,255,255,.025)}
-.xp .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-size:17px;background:rgba(var(--rgb),.14);color:rgb(var(--rgb));flex:none}
-.xp .pts{margin-left:auto;font-weight:700;color:var(--lime);font-variant-numeric:tabular-nums}
-.xp small{display:block;color:var(--muted);font-size:13px}
-.growbox{padding:34px}
-.shape{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;aspect-ratio:7/5;max-width:440px;margin:0 auto}
-.shape i{border-radius:8px;background:rgba(255,255,255,.04);transition:background .35s,box-shadow .5s,transform .5s var(--ease),outline-color .3s;outline:2px dashed transparent;outline-offset:-2px}
-.shape i.on{background:#fff;box-shadow:0 0 18px rgba(200,255,61,.28)}
-.shape i.new{background:var(--lime);box-shadow:0 0 34px rgba(200,255,61,.95);transform:scale(1.1)}
-.shape i.nx{outline-color:rgba(200,255,61,.45)}
-.bar{height:10px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:28px}
-.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--lime),var(--cyan));border-radius:inherit}
-.growmeta{display:flex;justify-content:space-between;margin-top:10px;font-size:13px;color:var(--muted)}
-.growmeta b{color:var(--lime)}
-
-.corewrap{position:relative;aspect-ratio:1;max-width:560px;width:100%;margin:0 auto}
-.corewrap svg{width:100%;height:100%;overflow:visible}
-.sonar{transform-origin:0 0;animation:sonar 4.2s cubic-bezier(.2,.6,.3,1) infinite}
-.sonar.s2{animation-delay:2.1s}
-@keyframes sonar{0%{transform:scale(.12);opacity:.9}100%{transform:scale(1);opacity:0}}
-.twk{animation:twk 3.6s ease-in-out infinite;animation-delay:var(--d)}
-@keyframes twk{0%,100%{opacity:1}50%{opacity:.35}}
-.youm{animation:youp 1.8s ease-in-out infinite}
-@keyframes youp{50%{opacity:.45}}
-.rings{display:grid;gap:2px;margin-top:34px;max-width:480px}
-.rings div{display:flex;gap:16px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)}
-.rings b{width:96px;flex:none}
-.rings span{color:var(--txt2);font-size:15px}
-
-.states .viz{height:150px}
-.st{width:70px;height:70px;border-radius:12px;background:var(--c)}
-.st-glow{animation:gp2 2.6s ease-in-out infinite}
-@keyframes gp2{0%,100%{box-shadow:0 0 30px rgba(200,255,61,.5)}50%{box-shadow:0 0 70px rgba(200,255,61,.95)}}
-.st-fade{opacity:.35}
-.st-free{background:transparent;border:2px dashed rgba(255,255,255,.35)}
-
-.faq{max-width:840px}
+/* info sheet */
+.sheet{position:absolute;inset:0;z-index:60;display:grid;place-items:center;padding:20px;background:rgba(2,3,12,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s .3s}
+.sheet.open{opacity:1;visibility:visible;transition:opacity .3s,visibility 0s}
+.sheet-in{position:relative;width:min(880px,100%);max-height:min(88vh,940px);overflow:auto;border-radius:28px;padding:40px;transform:translateY(16px) scale(.985);transition:transform .45s var(--ease)}
+.sheet-in:focus{outline:none}
+.sheet.open .sheet-in{transform:none}
+.sheet h2{font-size:clamp(36px,5vw,64px);margin-top:12px}
+.sheet h3{font-size:24px;font-weight:700;letter-spacing:-.03em;margin:40px 0 12px}
+.sheet p{color:var(--txt2)}
+.sheet .lead{font-size:17px;margin-top:16px;max-width:660px}
+.kick{color:var(--lime)}
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:26px}
+.mgrid div{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.mgrid i{display:block;width:26px;height:26px;border-radius:7px;background:var(--c);box-shadow:0 0 20px var(--c);margin-bottom:12px}
+.mgrid b{display:block}
+.mgrid small{display:block;color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.4}
+.ptable{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
+.ptable th{text-align:left;font-weight:600;color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;padding:0 0 10px}
+.ptable td{padding:12px 0;border-top:1px solid var(--line)}
+.ptable td:first-child{font-weight:600}
+.ptable td:first-child i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);margin-right:10px;vertical-align:1px}
+.ptable td+td{color:var(--txt2)}
+.xpr{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+.xpr div{padding:14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.xpr b{display:block;font-size:22px;color:var(--lime);letter-spacing:-.03em}
+.xpr small{color:var(--txt2);font-size:13px}
 .faq details{border-bottom:1px solid var(--line)}
-.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:26px 0;font-size:clamp(18px,2vw,23px);font-weight:600;letter-spacing:-.02em}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;font-size:17px;font-weight:600;letter-spacing:-.01em}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";flex:none;font-size:30px;font-weight:400;line-height:1;color:var(--lime);transition:transform .3s var(--ease)}
+.faq summary::after{content:"+";flex:none;font-size:26px;font-weight:400;line-height:1;color:var(--lime);transition:transform .3s var(--ease)}
 .faq details[open] summary::after{transform:rotate(45deg)}
-.faq p{padding:0 0 26px;color:var(--txt2);max-width:680px;font-size:16px}
-
-.final{position:relative;overflow:hidden;isolation:isolate;text-align:center;padding:clamp(110px,15vw,200px) 0;border-top:1px solid var(--line)}
-.final::before{content:"";position:absolute;left:50%;top:50%;width:min(1000px,140vw);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:conic-gradient(from 0deg,rgba(200,255,61,0),rgba(200,255,61,.24),rgba(94,225,255,.22),rgba(255,92,122,.16),rgba(200,255,61,0));filter:blur(90px);opacity:.75;animation:spinc 20s linear infinite;z-index:-1}
-@keyframes spinc{to{transform:translate(-50%,-50%) rotate(360deg)}}
-.final h2{font-size:clamp(54px,9.4vw,148px)}
-.final .lead{margin:26px auto 0;text-align:center}
-.final .btn{height:62px;padding:0 34px;font-size:18px;margin-top:42px}
-.final .mono{margin-top:22px;color:var(--muted);font-size:11px}
-footer{border-top:1px solid var(--line);padding:32px 0 calc(32px + env(safe-area-inset-bottom));color:var(--muted);font-size:14px}
-footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-footer .logo{font-size:18px;color:#fff}
-footer .orb{width:20px;height:20px}
-
+.faq p{padding:0 0 16px;font-size:15px;max-width:680px}
+.sheet .foot{margin-top:36px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:13px}
 @media (max-width:760px){
-  :root{--nav:60px}
-  .hero{min-height:560px}
-  .shade{background:linear-gradient(0deg,rgba(4,6,26,.97) 0%,rgba(4,6,26,.9) 36%,rgba(4,6,26,.35) 56%,rgba(4,6,26,0) 68%)}
-  .hero-copy{left:16px;width:calc(100% - 32px);bottom:22px}
-  .live{margin-bottom:16px}
-  .hero .sub{margin-top:16px;font-size:16px}
-  .hero .ctas{margin-top:20px}
-  .hero .ctas .btn-primary{flex:1 1 100%}
-  .hero .ctas .btn-ghost{display:none}
-  .hero .hint{margin-top:16px}
-  .wrap{padding:0 20px}
-  .card{padding:20px}
+  .sheet{padding:0;place-items:end stretch}
+  .sheet-in{border-radius:24px 24px 0 0;max-height:92%;padding:28px 20px calc(28px + var(--sb))}
+  .mgrid,.xpr{grid-template-columns:1fr 1fr}
 }
+
+/* intro */
+.intro{position:absolute;inset:0;z-index:90;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 55%,#0a0f33 0%,#02030c 60%);transition:opacity 1.3s ease,visibility 0s 1.3s;cursor:pointer}
+.intro.out{opacity:0;visibility:hidden}
+.intro-in{text-align:center}
+.intro-logo{font-weight:700;font-size:clamp(26px,5vw,54px);letter-spacing:.6em;padding-left:.6em;animation:introLogo 1.7s var(--ease) both}
+@keyframes introLogo{from{opacity:0;letter-spacing:1.3em;filter:blur(10px)}to{opacity:1;letter-spacing:.6em;filter:none}}
+.intro-sub{margin-top:18px;color:var(--muted);animation:fadeup 1s .7s both}
+.intro-skip{position:absolute;bottom:calc(28px + var(--sb));left:0;right:0;text-align:center;color:var(--muted);font-size:10px;animation:fadeup 1s 1.2s both}
+@keyframes fadeup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.toast{position:absolute;z-index:95;left:50%;bottom:28px;transform:translate(-50%,10px);width:max-content;max-width:min(92vw,560px);padding:11px 18px;border-radius:18px;background:var(--lime);color:#071026;font-weight:700;font-size:14px;line-height:1.35;text-align:center;box-shadow:0 12px 40px rgba(200,255,61,.35);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s var(--ease)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:760px){.toast{bottom:auto;top:70px;transform:translate(-50%,-10px)}}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.001ms!important}
-  html{scroll-behavior:auto}
 }
 </style>
 </head>
 <body>
-
-<header class="nav">
-  <div class="wrap">
-    <a href="#" class="logo" aria-label="Expanse home"><span class="orb"></span>Expanse</a>
-    <nav class="links" aria-label="Sections">
-      <a href="#how">How it works</a>
-      <a href="#modes">Modes</a>
-      <a href="#core">The core</a>
-      <a href="#faq">FAQ</a>
-    </nav>
-    <button class="btn btn-primary" data-claim data-mine-label="My square">Claim a square</button>
-  </div>
-</header>
-
-<main>
-<section class="hero" id="map" aria-label="The Expanse map">
-  <canvas id="world" tabindex="0" role="img" aria-label="Interactive map of squares. Drag to explore, use plus and minus to zoom, or search above."></canvas>
-  <div class="shade"></div>
+<div id="app">
+  <canvas id="world" tabindex="0" role="img" aria-label="The Expanse universe: thousands of glowing squares in a spiral galaxy. Scroll or pinch to zoom, drag to fly, click a square to open it."></canvas>
   <div class="flash" id="flash"></div>
 
-  <div class="search">
-    <form id="searchForm" role="search">
-      <span class="ico" aria-hidden="true">⌕</span>
-      <label class="sr" for="q">Search the map</label>
-      <input id="q" placeholder="Search squares, cities… try “sushi”" autocomplete="off" spellcheck="false">
-      <button class="btn btn-primary" type="submit">Fly</button>
-    </form>
-    <div class="results" id="results" hidden></div>
-    <div class="filters" id="filters" role="group" aria-label="Filter by mode">
-      <button class="pill" data-f="sell" aria-pressed="false"><i style="background:var(--amber)"></i>Sell</button>
-      <button class="pill" data-f="create" aria-pressed="false"><i style="background:var(--pink)"></i>Create</button>
-      <button class="pill" data-f="build" aria-pressed="false"><i style="background:var(--cyan)"></i>Build</button>
-      <button class="pill" data-f="hire" aria-pressed="false"><i style="background:var(--green)"></i>Hire me</button>
+  <header class="bar">
+    <a href="#" class="logo" id="logo" aria-label="Expanse — back to the whole universe"><span class="orb"></span>Expanse</a>
+    <div class="chip mono" id="chip" hidden><span class="dot"></span><span id="chipTxt"></span></div>
+    <div class="search" id="search">
+      <form id="searchForm" class="glass" role="search">
+        <span class="ico" aria-hidden="true">⌕</span>
+        <label class="sr" for="q">Search the universe</label>
+        <input id="q" placeholder="Search squares, cities… try “sushi”" autocomplete="off" spellcheck="false">
+        <button class="btn btn-primary" type="submit">Fly</button>
+      </form>
+      <div class="results glass" id="results" hidden></div>
     </div>
-  </div>
+    <div class="bar-r">
+      <button class="iconbtn" id="searchBtn" aria-label="Search">⌕</button>
+      <button class="btn btn-ghost btn-sm" id="infoBtn" aria-label="How it works"><span class="lbl">How it works</span><span aria-hidden="true" class="q">?</span></button>
+      <button class="btn btn-primary btn-sm" data-claim data-mine-label="My square">Claim your spot</button>
+    </div>
+  </header>
+
+  <div class="ticker glass" id="ticker" role="status" aria-live="polite"><span class="tag mono" id="tickTag"></span><span class="txt" id="tickTxt"></span></div>
+
+  <section class="hero" id="hero" aria-labelledby="heroTitle">
+    <div class="eyebrow mono"><span class="dot"></span><span id="heroLive">Founding spots are open</span></div>
+    <h1 class="display" id="heroTitle">The internet,<br><span class="grad">as a universe.</span></h1>
+    <p class="sub">Every glowing square is someone — a shop, a song, a startup. Claim your spot and it lights up every time you ship. The closer to the core, the more eyes.</p>
+    <div class="ctas">
+      <button class="btn btn-primary" data-claim data-mine-label="Fly to my square">Claim your spot</button>
+      <button class="btn btn-ghost" data-info>How it works</button>
+    </div>
+    <div class="meta mono"><span>From <b>€1</b> / cell</span><span>Core <b>invite only</b></span><span id="heroHint">Scroll to zoom · drag to fly</span></div>
+  </section>
+
+  <div class="dock glass" id="dock"><span id="dockTxt">Founding prices end at <b>1,000</b> spots</span><button class="btn btn-primary btn-sm" data-claim data-mine-label="My square">Claim your spot</button></div>
 
   <div class="zoom">
-    <button id="zIn" aria-label="Zoom in">+</button>
-    <button id="zOut" aria-label="Zoom out">−</button>
-    <button id="zHome" aria-label="Back to the core">⌂</button>
+    <button class="iconbtn" id="zIn" aria-label="Zoom in">+</button>
+    <button class="iconbtn" id="zOut" aria-label="Zoom out">−</button>
+    <button class="iconbtn" id="zHome" aria-label="Show the whole universe">◎</button>
   </div>
-
+  <canvas class="minimap" id="minimap" width="300" height="300" aria-label="Minimap — click to fly there"></canvas>
   <div class="legend mono" aria-hidden="true">
-    <span class="tagp">Preview map</span>
-    <span><i style="background:var(--amber)"></i>Sell</span><span><i style="background:var(--pink)"></i>Create</span><span><i style="background:var(--cyan)"></i>Build</span><span><i style="background:var(--green)"></i>Hire me</span>
+    <span><i style="background:var(--amber)"></i>Sell</span><span><i style="background:var(--pink)"></i>Create</span><span><i style="background:var(--cyan)"></i>Build</span><span><i style="background:var(--green)"></i>Hire me</span><span><i style="background:#fff;box-shadow:0 0 8px #fff"></i>Reserved</span>
   </div>
-
   <div class="tip" id="tip" role="tooltip"></div>
-  <div class="wheelhint" id="wheelhint"></div>
-
-  <div class="hero-copy">
-    <div class="live mono"><span class="dot"></span>Preview · founding squares are free</div>
-    <h1 class="display"><span class="ln"><span>Claim your square</span></span><span class="ln"><span>of the <span class="grad">internet.</span></span></span></h1>
-    <p class="sub">A living map of people who sell, create, build and get hired. Plug in what you already use — your square glows every time you ship.</p>
-    <div class="ctas">
-      <button class="btn btn-primary" data-claim data-mine-label="Fly to my square">Claim my square — free</button>
-      <a class="btn btn-ghost" href="#how">How it works</a>
-    </div>
-    <div class="hint mono" id="hint">Drag to explore · Ctrl + scroll to zoom · Click any empty spot</div>
-  </div>
 
   <!-- square card -->
-  <aside class="panel pop" id="pop" tabindex="-1" aria-label="Square details">
+  <aside class="panel pop glass" id="pop" tabindex="-1" aria-label="Square details">
     <button class="x" data-close aria-label="Close">×</button>
     <div><span class="badge" id="pMode"></span><span class="mono pmeta" id="pMeta"></span></div>
     <h2 class="display pname" id="pName"></h2>
     <p class="ptag" id="pTag"></p>
     <p class="pwho" id="pWho"></p>
     <div class="receipts" id="pRec"></div>
-    <div class="prow">
+    <div class="refs" id="pRefs" hidden></div>
+    <div class="prow" id="pRow">
       <button class="btn btn-primary btn-sm" id="pGo"></button>
       <button class="chip-btn" id="pLike" aria-label="Like">♥ <span id="pLikes"></span></button>
-      <button class="chip-btn" id="pShare">↗ Share</button>
+      <button class="chip-btn" id="pShare" aria-label="Share this square">↗</button>
     </div>
+    <button class="btn btn-ghost btn-sm" id="pCard" style="width:100%;margin-top:8px" hidden>Get my square card</button>
     <button class="nextto" id="pNext"><span id="pNextTxt">Claim the spot next to this</span><span aria-hidden="true">→</span></button>
-    <button class="linkbtn" id="pRemove" hidden>Remove my square</button>
-    <p class="fine" id="pFine">Example square on the preview map.</p>
+    <button class="linkbtn" id="pRemove" hidden>Remove from this device</button>
+    <p class="fine" id="pFine"></p>
   </aside>
 
   <!-- claim flow -->
-  <aside class="panel claim" id="claim" tabindex="-1" aria-label="Claim a square">
+  <aside class="panel claim glass" id="claim" tabindex="-1" aria-label="Claim your spot">
     <button class="x" data-close aria-label="Close">×</button>
-    <div class="steps" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="steps" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <div id="cStep1">
-      <div class="mono c-eyebrow">Step 1 of 2 · Your spot</div>
-      <h2 class="display c-title" id="cRing">Ring 2.</h2>
-      <p class="c-text" id="cWhere"></p>
+      <div class="mono c-eyebrow">Step 1 of 3 · Your spot</div>
+      <div class="zone" style="margin-top:12px"><span class="zbadge" id="cZone">Inner ring</span><span class="mono c-eyebrow" id="cCloser"></span></div>
+      <h2 class="display c-title" id="cTitle">Close to the core.</h2>
+      <div class="sizes" id="cSizes" role="group" aria-label="Size">
+        <button data-s="1" aria-pressed="false">1×1<small></small></button>
+        <button data-s="2" aria-pressed="true">2×2<small></small></button>
+        <button data-s="4" aria-pressed="false">4×4<small></small></button>
+        <button data-s="8" aria-pressed="false">8×8<small></small></button>
+      </div>
+      <div class="price"><b id="cPrice">€76</b><span>founding price<br>pay nothing today</span></div>
       <div class="c-row">
-        <button class="btn btn-primary" id="cTake">Take this spot →</button>
+        <button class="btn btn-primary" id="cNext1">Make it yours →</button>
         <button class="btn btn-ghost btn-sm" id="cCore">Closest to core</button>
       </div>
+      <p class="fine" id="cMoveHint">Click anywhere on the map to move your spot.</p>
     </div>
     <div id="cStep2" hidden>
-      <div class="mono c-eyebrow">Step 2 of 2 · Make it yours</div>
-      <label class="field"><span class="mono">Name on your square</span><input id="cName" maxlength="24" placeholder="Your name, brand or project" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
-      <div class="mono c-label">Mode</div>
+      <div class="mono c-eyebrow">Step 2 of 3 · Make it yours</div>
+      <label class="field"><span class="mono">Name on your square</span><input id="cName" maxlength="24" placeholder="Your name, brand or project" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
+      <div class="mono c-eyebrow" style="margin-top:16px">Mode</div>
       <div class="mpick" id="cModes" role="group" aria-label="Mode">
         <button data-m="sell" style="--c:var(--amber)" aria-pressed="false"><i></i>Sell</button>
         <button data-m="create" style="--c:var(--pink)" aria-pressed="false"><i></i>Create</button>
@@ -454,228 +401,136 @@ footer .orb{width:20px;height:20px}
         <button data-m="hire" style="--c:var(--green)" aria-pressed="false"><i></i>Hire me</button>
       </div>
       <div class="c-row">
-        <button class="btn btn-primary" id="cPlace">Put me on the map ✦</button>
-        <button class="btn btn-ghost btn-sm" id="cBack">Back</button>
+        <button class="btn btn-primary" id="cNext2">Continue →</button>
+        <button class="btn btn-ghost btn-sm" id="cBack2">Back</button>
       </div>
     </div>
     <div id="cStep3" hidden>
-      <div class="mono c-eyebrow" style="color:var(--lime)">You're in</div>
-      <h2 class="display c-title">You're on the map.</h2>
-      <p class="c-text" id="cDone"></p>
-      <form class="reserve" id="cReserve" novalidate hidden>
-        <label class="sr" for="cMail">Email</label>
-        <input id="cMail" type="email" inputmode="email" placeholder="you@email.com" autocomplete="email" required>
+      <div class="mono c-eyebrow">Step 3 of 3 · Reserve</div>
+      <h2 class="display c-title">Lock in your spot.</h2>
+      <div class="summary" id="cSummary"><i></i><div><b id="sName"></b><small id="sWhere"></small></div><span class="amt" id="sAmt"></span></div>
+      <form id="cReserve" novalidate>
+        <label class="field"><span class="mono">Your email</span><input id="cMail" type="email" inputmode="email" placeholder="you@email.com" autocomplete="email" required></label>
         <input class="hp" id="cWeb" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <button class="btn btn-primary btn-sm" type="submit" id="cHold">Hold my spot</button>
+        <div class="c-row"><button class="btn btn-primary" type="submit" id="cHold">Reserve for €76</button><button class="btn btn-ghost btn-sm" type="button" id="cBack3">Back</button></div>
       </form>
-      <p class="held" id="cHeld" hidden></p>
+      <p class="fine"><b style="color:#fff">Pay nothing today.</b> When founding claims open you get first access at this price — or you just let it go. We only use your email for that. Stored in the EU, never sold or shared; reply to any email from us to have it deleted.</p>
+      <button class="linkbtn" id="cSkip">Not now — keep it on this device</button>
+    </div>
+    <div id="cStep4" hidden>
+      <div class="mono c-eyebrow" style="color:var(--lime)" id="dEyebrow">You're in</div>
+      <h2 class="display c-title" id="dTitle">You're on the map.</h2>
+      <p class="c-text" id="dText"></p>
+      <div class="refs" id="dRefs" hidden></div>
       <div class="c-row">
-        <button class="btn btn-ghost" id="cShare">Share my square ↗</button>
-        <button class="btn btn-ghost btn-sm" id="cExplore">Explore</button>
+        <button class="btn btn-primary" id="dShare">Share my square ↗</button>
+        <button class="btn btn-ghost btn-sm" id="dCard">Square card</button>
       </div>
-      <p class="fine" id="cFine"></p>
+      <button class="linkbtn" id="dReserve" hidden>Reserve it with your email →</button>
+      <button class="linkbtn" id="dExplore">Explore the universe</button>
     </div>
   </aside>
-</section>
 
-<section class="strip" aria-label="Expanse in numbers">
-  <div class="wrap stats">
-    <div class="reveal"><b style="color:var(--lime)">0</b><span>posts needed</span></div>
-    <div class="reveal" style="transition-delay:.08s"><b style="color:var(--cyan)">0</b><span>followers required</span></div>
-    <div class="reveal" style="transition-delay:.16s"><b style="color:var(--pink)">4</b><span>ways to glow</span></div>
-    <div class="reveal" style="transition-delay:.24s"><b style="color:var(--amber)">1</b><span>square with your name on it</span></div>
-  </div>
-</section>
-
-<section class="block" id="how">
-  <div class="wrap">
-    <span class="kicker mono">How it works</span>
-    <h2 class="display reveal">Don't post here.<br><span class="grad">Just show up.</span></h2>
-    <p class="lead reveal">Expanse isn't another feed to feed. It's a map that mirrors what you already do — and lights you up while you do it.</p>
-    <div class="grid3">
-      <article class="card reveal" style="--rgb:200,255,61">
-        <div class="viz"><div class="mini" id="mini"></div></div>
-        <div class="mono stepn">01</div>
-        <h3>Pick a spot</h3>
-        <p>Every square is a place on one shared map. The closer to the core, the more eyes. The inner rings fill first.</p>
-      </article>
-      <article class="card reveal" style="--rgb:94,225,255;transition-delay:.08s">
-        <div class="viz"><div class="plugs"><span style="--i:0">GitHub</span><span style="--i:1">YouTube</span><span style="--i:2">Shopify</span><span style="--i:3">Spotify</span><span style="--i:4">TikTok</span><span style="--i:5">Gumroad</span><span style="--i:6">Etsy</span><span style="--i:7">Calendly</span></div></div>
-        <div class="mono stepn">02</div>
-        <h3>Plug in</h3>
-        <p>Connect what you already use. Read-only — we never post for you, and you can disconnect anytime.</p>
-      </article>
-      <article class="card reveal" style="--rgb:94,225,255;transition-delay:.16s">
-        <div class="viz"><div class="glowsq"></div><span class="rfloat">pushed 2h ago</span></div>
-        <div class="mono stepn">03</div>
-        <h3>Glow</h3>
-        <p>Ship a commit, drop a video, make a sale — your square lights up. Keep going and it grows.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section class="block" id="modes">
-  <div class="wrap">
-    <span class="kicker mono">The four modes</span>
-    <h2 class="display reveal">Four ways<br><span class="grad">to glow.</span></h2>
-    <p class="lead reveal">Your mode decides how your square looks from a distance and what it leads with up close. It's picked from what you connect — switch anytime.</p>
-    <div class="grid4">
-      <article class="card mcard reveal" style="--rgb:255,207,74">
-        <div class="viz"><div class="msq m-sell" style="--c:var(--amber)"><span class="tag">€</span></div></div>
-        <h3 style="color:var(--amber)">Sell</h3>
-        <div class="mono via">Shops · products · a car · a flat</div>
-        <dl><div><dt class="mono">On the map</dt><dd>A price tag in the corner.</dd></div><div><dt class="mono">Leads with</dt><dd>Buy — straight to your own checkout.</dd></div></dl>
-      </article>
-      <article class="card mcard reveal" style="--rgb:255,92,122;transition-delay:.06s">
-        <div class="viz"><div class="msq m-create" style="--c:var(--pink)"></div></div>
-        <h3 style="color:var(--pink)">Create</h3>
-        <div class="mono via">YouTube · TikTok · Spotify · Insta</div>
-        <dl><div><dt class="mono">On the map</dt><dd>A pulse every time you post.</dd></div><div><dt class="mono">Leads with</dt><dd>Your latest piece.</dd></div></dl>
-      </article>
-      <article class="card mcard reveal" style="--rgb:94,225,255;transition-delay:.12s">
-        <div class="viz"><div class="msq m-build"></div></div>
-        <h3 style="color:var(--cyan)">Build</h3>
-        <div class="mono via">GitHub · apps · SaaS</div>
-        <dl><div><dt class="mono">On the map</dt><dd>A neon edge that flares on fresh commits.</dd></div><div><dt class="mono">Leads with</dt><dd>Your project and what just shipped.</dd></div></dl>
-      </article>
-      <article class="card mcard reveal" style="--rgb:61,255,138;transition-delay:.18s">
-        <div class="viz"><div class="msq m-hire" style="--c:var(--green)"><span class="sdot"></span></div></div>
-        <h3 style="color:var(--green)">Hire me</h3>
-        <div class="mono via">Freelancers · trades · studios</div>
-        <dl><div><dt class="mono">On the map</dt><dd>Green dot when you're free, red when you're booked.</dd></div><div><dt class="mono">Leads with</dt><dd>Book.</dd></div></dl>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section class="block" id="grow">
-  <div class="wrap split">
-    <div>
-      <span class="kicker mono">Grow</span>
-      <h2 class="display reveal">Size is earned.<br><span class="grad">Not bought.</span></h2>
-      <p class="lead reveal">Activity fills your bar. A full bar unlocks one more cell — put it anywhere touching your square. Grow a tower, a banner, an arrow pointing at your shop.</p>
-      <div class="xp reveal">
-        <div style="--rgb:255,92,122"><span class="ic">♥</span><div><b>Likes</b><small>One per person per day</small></div><span class="pts">+10</span></div>
-        <div style="--rgb:94,225,255"><span class="ic">↗</span><div><b>Visits</b><small>Unique visits through your link</small></div><span class="pts">+25</span></div>
-        <div style="--rgb:200,255,61"><span class="ic">✦</span><div><b>Updates</b><small>A push, a post, a sale — wherever you already ship</small></div><span class="pts">+50</span></div>
+  <!-- how it works -->
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-in glass" tabindex="-1">
+      <button class="x" data-sheet-close aria-label="Close">×</button>
+      <div class="mono kick">How Expanse works</div>
+      <h2 class="display" id="sheetTitle">A universe of people.<br><span class="grad">One square each.</span></h2>
+      <p class="lead">Every glowing square is someone — a shop, a band, a startup, a freelancer. You claim a spot, plug in what you already use, and your square lights up every time you ship. No feed. No posting. No followers needed.</p>
+      <div class="mgrid">
+        <div style="--c:var(--amber)"><i></i><b>Sell</b><small>A price tag on the map. Leads with Buy, straight to your own checkout.</small></div>
+        <div style="--c:var(--pink)"><i></i><b>Create</b><small>Pulses every time you post. Leads with your latest piece.</small></div>
+        <div style="--c:var(--cyan)"><i></i><b>Build</b><small>A neon edge that flares on fresh commits. Leads with what just shipped.</small></div>
+        <div style="--c:var(--green)"><i></i><b>Hire me</b><small>Green when you're free, red when you're booked. Leads with Book.</small></div>
       </div>
-    </div>
-    <div class="card growbox reveal" style="--rgb:200,255,61">
-      <div class="shape" id="shape" aria-hidden="true"></div>
-      <div class="bar"><i id="growBar"></i></div>
-      <div class="growmeta"><span id="growXp">0 / 100 xp</span><b id="growMsg"></b></div>
-    </div>
-  </div>
-</section>
 
-<section class="block" id="core">
-  <div class="wrap split">
-    <div>
-      <span class="kicker mono" style="color:var(--cyan)">The core</span>
-      <h2 class="display reveal">The best spots<br><span class="grad">go first.</span></h2>
-      <p class="lead reveal">Expanse grows from the center out. The first squares take the inner rings — everyone after lands a little further out. The map can always get bigger. The core can't.</p>
-      <div class="rings reveal">
-        <div><b class="mono" style="color:var(--lime)">Core</b><span>The first squares on the map. Most eyes, most clicks.</span></div>
-        <div><b class="mono" style="color:var(--cyan)">Inner ring</b><span>Early. Close enough to catch the traffic.</span></div>
-        <div><b class="mono" style="color:var(--violet)">Belt</b><span>Where the map gets busy as it grows.</span></div>
-        <div><b class="mono" style="color:var(--muted)">Edge</b><span>Always open. The map keeps expanding.</span></div>
+      <h3>Location is everything</h3>
+      <p>The universe grows from the core out. The closer you are, the more people fly past you — and the fewer spots are left. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four.</p>
+      <table class="ptable">
+        <thead><tr><th>Zone</th><th>Founding price</th><th>2×2 example</th></tr></thead>
+        <tbody>
+          <tr><td style="--c:#fff"><i></i>Core</td><td>Invite only</td><td>—</td></tr>
+          <tr><td style="--c:var(--lime)"><i></i>Inner ring</td><td>€19 / cell</td><td>€76</td></tr>
+          <tr><td style="--c:var(--cyan)"><i></i>Belt</td><td>€9 / cell</td><td>€36</td></tr>
+          <tr><td style="--c:var(--violet)"><i></i>Outer rim</td><td>€4 / cell</td><td>€16</td></tr>
+          <tr><td style="--c:var(--muted)"><i></i>Edge</td><td>€1 / cell</td><td>€4</td></tr>
+        </tbody>
+      </table>
+      <p class="fine">Founding prices are for the first 1,000 reserved spots. Reserving costs nothing today — you pay when founding claims open.</p>
+
+      <h3>Activity makes you bigger</h3>
+      <div class="xpr">
+        <div><b>+10</b><small>per like</small></div>
+        <div><b>+25</b><small>per visit through your link</small></div>
+        <div><b>+50</b><small>per update — a push, a post, a sale</small></div>
+        <div><b>+1 cell</b><small>for 3 friends who reserve through your link</small></div>
       </div>
-      <button class="btn btn-primary" data-claim data-mine-label="Fly to my square" style="margin-top:34px">Find my closest spot →</button>
-    </div>
-    <div class="corewrap reveal"><svg id="coreSvg" viewBox="-270 -270 540 540" aria-hidden="true"></svg></div>
-  </div>
-</section>
+      <p style="margin-top:14px">A full bar unlocks one more cell, placed anywhere touching your square. Busy squares grow and glow. Quiet ones fade.</p>
 
-<section class="block" id="alive">
-  <div class="wrap">
-    <span class="kicker mono" style="color:var(--pink)">Receipts, not claims</span>
-    <h2 class="display reveal">Nothing typed.<br><span class="grad">Nothing faked.</span></h2>
-    <p class="lead reveal">A square only shows what it can read from the accounts you connect — “212 sold”, “14 commits this week”, “posted 2h ago”. Active squares glow. Quiet ones fade. The map always shows who's really out there.</p>
-    <div class="grid3 states">
-      <article class="card reveal" style="--rgb:200,255,61">
-        <div class="viz"><div class="st st-glow" style="--c:var(--lime)"></div></div>
-        <div class="mono stepn" style="color:var(--lime)">Glowing</div>
-        <h3>Active this week</h3>
-        <p>Full glow, pulses on every update, shows up first in search.</p>
-      </article>
-      <article class="card reveal" style="--rgb:94,225,255;transition-delay:.08s">
-        <div class="viz"><div class="st st-fade" style="--c:var(--cyan)"></div></div>
-        <div class="mono stepn" style="color:var(--cyan)">Fading</div>
-        <h3>Quiet for a month</h3>
-        <p>The glow tones down. One update and it's back.</p>
-      </article>
-      <article class="card reveal" style="--rgb:179,156,255;transition-delay:.16s">
-        <div class="viz"><div class="st st-free"></div></div>
-        <div class="mono stepn" style="color:var(--violet)">Freed</div>
-        <h3>Gone for months</h3>
-        <p>The spot can open up for someone new. We always email you first.</p>
-      </article>
+      <h3>Questions</h3>
+      <div class="faq">
+        <details><summary>Do I pay now?</summary><p>No. Reserving a spot costs nothing today. When founding claims open, you get first access at the founding price you reserved — or you simply let it go.</p></details>
+        <details><summary>What does “founding” mean?</summary><p>The first 1,000 reserved spots. They get founding prices and are marked as founding spots on the map.</p></details>
+        <details><summary>Is this a social network?</summary><p>No. You never post on Expanse. Your square mirrors what you already do elsewhere, and every click goes out to your own shop, channel, repo or calendar. We only ever get read-only access to what you choose to connect.</p></details>
+        <details><summary>Do I own my square?</summary><p>Your square is your spot on the map for as long as you use it. It's a place to be seen — not property, not an investment, and not something to trade.</p></details>
+        <details><summary>What if I go quiet?</summary><p>Your square fades. If it stays quiet for months, the spot can be freed for someone new — we email you before that happens.</p></details>
+        <details><summary>What do you do with my email?</summary><p>One thing: tell you when founding claims open. It's stored in the EU (Stockholm), never sold or shared, and you can have it deleted anytime by replying to any email from us.</p></details>
+        <details><summary>Is everything on the map real?</summary><p>The universe you see is a preview of what Expanse will look like. White beacons are real founding reservations, and everything marked LIVE in the feed is real.</p></details>
+      </div>
+      <div class="foot"><span>© 2026 Expanse · A Nytto Labs project</span><button class="btn btn-primary btn-sm" data-claim data-mine-label="Fly to my square">Claim your spot</button></div>
     </div>
   </div>
-</section>
 
-<section class="block" id="faq">
-  <div class="wrap faq">
-    <span class="kicker mono">FAQ</span>
-    <h2 class="display reveal" style="margin-bottom:40px">Questions.</h2>
-    <details><summary>Is it free?</summary><p>Yes. Claiming a square is free while Expanse is in preview. No card, no signup to look around.</p></details>
-    <details><summary>Is this a social network?</summary><p>No. You never post on Expanse. Your square mirrors what you already do elsewhere, and every click goes out to your own shop, channel, repo or calendar.</p></details>
-    <details><summary>What do you get access to?</summary><p>Read-only access to the accounts you choose to connect, so your square can show public numbers like commits, posts or sales. We never post for you, and you can disconnect anytime.</p></details>
-    <details><summary>What do you do with my email?</summary><p>Leaving your email is optional. If you do, we use it for one thing: telling you when founding claims open. It's stored in the EU (Stockholm), never sold or shared, and you can have it deleted anytime by replying to any email from us.</p></details>
-    <details><summary>Do I own my square?</summary><p>Your square is your spot on the map for as long as you use it. It's a place to be seen — not property, not an investment, and not something to trade. You can move, rename or remove it whenever you like.</p></details>
-    <details><summary>What if I go quiet?</summary><p>Your square fades. If it stays quiet for months, the spot can be freed for someone new — we email you before that happens.</p></details>
-    <details><summary>Is everything on the map real?</summary><p>Not yet. The map you see is a preview filled with example squares, so you can feel how it works. Things will change as we build it — founding squares get to shape it with us.</p></details>
+  <div class="intro" id="intro" aria-hidden="true">
+    <div class="intro-in"><div class="intro-logo">EXPANSE</div><div class="intro-sub mono">A universe of people</div></div>
+    <div class="intro-skip mono">Click to skip</div>
   </div>
-</section>
-
-<section class="final" id="claim-cta">
-  <div class="wrap">
-    <h2 class="display reveal">Pick a spot.<br><span class="grad">Light it up.</span></h2>
-    <p class="lead reveal">Takes twenty seconds. Free in preview. The closer you get to the core, the more people see you.</p>
-    <button class="btn btn-primary" data-claim data-mine-label="Fly to my square ✦">Claim my square ✦</button>
-    <div class="mono">No card · no password · no posting</div>
-  </div>
-</section>
-</main>
-
-<footer>
-  <div class="wrap">
-    <a href="#" class="logo"><span class="orb"></span>Expanse</a>
-    <span>© 2026 Expanse · A Nytto Labs project · Preview — things will change as we build.</span>
-  </div>
-</footer>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<noscript><p style="padding:24px;color:#fff;font-family:system-ui">Expanse is a living universe of people who sell, create, build and get hired. It needs JavaScript to fly through.</p></noscript>
 
 <script>
 (() => {
 'use strict';
 
-/* Founding reservations go to Supabase (project "expanse", Stockholm) through the reserve() RPC.
-   The publishable key is public by design: the reservations table is locked, reserve() is the only way in.
-   Set url to '' to stop collecting emails; squares then stay on the visitor's device only. */
-const RESERVE = { url: 'https://gjmkhnrgznorxxaemsmo.supabase.co/rest/v1/rpc/reserve', key: 'sb_publishable_b1uzRroOaHTGp9oXOhHjtQ_J-A-IUCZ' };
-const PRIVACY = "We only use your email to tell you when founding claims open. Stored in the EU, never sold or shared — reply to any email from us to have it deleted.";
+/* ================= CONFIG ================= */
+/* Reservations go to Supabase project "expanse" (Stockholm). The publishable key is public by design:
+   the reservations table is locked; only the RPC functions are callable. */
+const SUPA = { rpc: 'https://gjmkhnrgznorxxaemsmo.supabase.co/rest/v1/rpc/', key: 'sb_publishable_b1uzRroOaHTGp9oXOhHjtQ_J-A-IUCZ' };
+const FOUNDING_LIMIT = 1000;
+/* Keep in sync with zone_of() and price_per_cell() in Supabase. */
+const ZONES = [
+  { id: 'core',  label: 'Core',       r: 14,       price: 49, color: '#ffffff', invite: true, line: 'Invite only.' },
+  { id: 'inner', label: 'Inner ring', r: 40,       price: 19, color: '#c8ff3d', line: 'Close to the core.' },
+  { id: 'belt',  label: 'Belt',       r: 80,       price: 9,  color: '#5ee1ff', line: 'Where the universe gets busy.' },
+  { id: 'outer', label: 'Outer rim',  r: 125,      price: 4,  color: '#b39cff', line: 'Room to grow out here.' },
+  { id: 'edge',  label: 'Edge',       r: Infinity, price: 1,  color: '#8b94c9', line: 'Out on the frontier.' }
+];
+const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
+const WORLD_R = 150, CORE_R = 14, CELL = 16, ZMIN = .025, ZMAX = 6;
+const MINE_KEY = 'expanse.mine.v2', REF_KEY = 'expanse.ref';
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches;
-const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const $ = s => document.querySelector(s);
 const now = () => performance.now();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = n => n.toLocaleString('en');
+const eur = n => '€' + fmt(n);
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
-const MINE_KEY = 'expanse.mine.v1';
+const app = $('#app');
 
 /* ================= DATA ================= */
 function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const rnd = mulberry(20261011);
+const rnd = mulberry(20261012);
 const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
 const pick = a => a[Math.floor(rnd() * a.length)];
+const gauss = () => { let u = 0; while (!u) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * rnd()); };
 
 const MODES = {
   sell:   { label: 'Sell',    color: '#ffcf4a', rgb: '255,207,74', go: 'Buy',          dest: 'checkout' },
@@ -684,15 +539,15 @@ const MODES = {
   hire:   { label: 'Hire me', color: '#3dff8a', rgb: '61,255,138', go: 'Book',         dest: 'calendar' }
 };
 const MK = Object.keys(MODES);
-const CITIES = ['Stockholm','Göteborg','Malmö','Uppsala','Lund','Umeå','Oslo','Copenhagen','Berlin','Helsinki','Amsterdam','London'];
+const CITIES = ['Stockholm','Göteborg','Malmö','Uppsala','Lund','Umeå','Oslo','Copenhagen','Berlin','Helsinki','Amsterdam','London','Lisbon','Barcelona','Paris','New York','Tokyo','Reykjavík'];
 const NAMES = {
-  sell: ['Volvo 240','Saab 900 Turbo','VW Bus 1974','Lund Vintage','Fiskbod Smögen','Hemslöjd Umeå','Nordlys Prints','Notion CRM kit','Bageri Söder','Pho Hanoi','Pizzeria Luna','Vinyl crate #12','Fika Box','Linen & Oak','Cykelverkstan','Retro Consoles','Plant Swap','Kaffe Kollektiv','Moss Candles','Sill & Co'],
-  create: ['Lo-Fi Tomten','Nattklubb 404','Pernilla P','Blue Hour','Dödsrit','Vera Ek','Ink & Salt','Fjällvandra','Mats Cooks','Pixel Diaries','Neon Fjord','Tape Hiss','North Light Films','Kladd','Sofia Draws','Brus Radio'],
-  build: ['VATify','CSV Cleaner','Pixelnote','Shiplog','Tabby','Fjord Analytics','Orbit Notes','QR Reorder','SyncStock','Lagom UI','Ping Pal','Uptime Uggla','Formfix','Stack Sauna','Diffy','Kvitto'],
-  hire: ['Jonas · Plumber','Sara · Photographer','Nils · Fullstack','Amira · Copy','Hugo · Electrician','Maja · Illustrator','Leo · Video edit','Petra · Accountant','Ali · Motion','Ida · Brand','Oskar · Carpenter','Noor · iOS']
+  sell: ['Volvo 240','Saab 900 Turbo','VW Bus 1974','Lund Vintage','Fiskbod Smögen','Hemslöjd Umeå','Nordlys Prints','Notion CRM kit','Bageri Söder','Pho Hanoi','Pizzeria Luna','Vinyl crate #12','Fika Box','Linen & Oak','Cykelverkstan','Retro Consoles','Plant Swap','Kaffe Kollektiv','Moss Candles','Sill & Co','Ramen Ronin','Glasblåsarn','Tape & Thread','Kiln Club'],
+  create: ['Lo-Fi Tomten','Nattklubb 404','Pernilla P','Blue Hour','Dödsrit','Vera Ek','Ink & Salt','Fjällvandra','Mats Cooks','Pixel Diaries','Neon Fjord','Tape Hiss','North Light Films','Kladd','Sofia Draws','Brus Radio','Synth Saga','Midnight Sauna','Paper Moons','Ödemark'],
+  build: ['VATify','CSV Cleaner','Pixelnote','Shiplog','Tabby','Fjord Analytics','Orbit Notes','QR Reorder','SyncStock','Lagom UI','Ping Pal','Uptime Uggla','Formfix','Stack Sauna','Diffy','Kvitto','Lingon DB','Moose Mail','Polar Pay','Gravel CI'],
+  hire: ['Jonas · Plumber','Sara · Photographer','Nils · Fullstack','Amira · Copy','Hugo · Electrician','Maja · Illustrator','Leo · Video edit','Petra · Accountant','Ali · Motion','Ida · Brand','Oskar · Carpenter','Noor · iOS','Frida · Tattoo','Elias · DJ']
 };
-const OWNERS = ['anna','erik','maja','jonas','lisa','oskar','sofia','karl','emil','nora','ali','sara','leo','ida'];
-const PRICES = ['89 kr','€12','€29','199 kr','€49','€2,100','350 kr','€9'];
+const OWNERS = ['anna','erik','maja','jonas','lisa','oskar','sofia','karl','emil','nora','ali','sara','leo','ida','frida','elias'];
+const PRICES = ['89 kr','€12','€29','199 kr','€49','€2,100','350 kr','€9','€160'];
 const TAGS = {
   sell: ['Ships from {c}','Small batch · {c}','Open today · {c}','Handmade in {c}'],
   create: ['New drop every week','Live on Fridays','Prints & zines','New single out'],
@@ -701,20 +556,21 @@ const TAGS = {
 };
 const KW = { sell: 'shop buy store sell price product', create: 'music video art creator youtube tiktok spotify', build: 'app saas tool github developer code open source', hire: 'hire freelance book available freelancer' };
 
+let texDirty = true;
 const SQ = [], occ = new Map(), K = (x, y) => x + ',' + y;
 const isFree = (x, y, w, h) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (occ.has(K(x + i, y + j))) return false; return true; };
 function put(q) {
   q.id = SQ.length; q.w = q.h = q.size; q.cells = [];
   for (let i = 0; i < q.size; i++) for (let j = 0; j < q.size; j++) { q.cells.push([q.x + i, q.y + j]); occ.set(K(q.x + i, q.y + j), q.id); }
-  q.d = Math.hypot(q.x + q.size / 2, q.y + q.size / 2); q.born = -1e9; SQ.push(q); return q;
+  q.d = Math.hypot(q.x + q.size / 2, q.y + q.size / 2); SQ.push(q); texDirty = true; return q;
 }
-function unput(q) { for (const c of q.cells) if (occ.get(K(c[0], c[1])) === q.id) occ.delete(K(c[0], c[1])); q.gone = true; }
+function unput(q) { for (const c of q.cells) if (occ.get(K(c[0], c[1])) === q.id) occ.delete(K(c[0], c[1])); q.gone = true; texDirty = true; }
 const ago = d => d === 0 ? 'today' : d === 1 ? 'yesterday' : d + 'd ago';
 function receipts(s) {
   const a = ago(s.last);
   if (s.mode === 'sell') return [ri(12, 800) + ' sold', 'ships from ' + s.city, 'last sale ' + a];
   if (s.mode === 'create') return [ri(1, 60) + 'k followers', 'posted ' + a, ri(2, 40) + ' pieces'];
-  if (s.mode === 'build') return [(s.last < 30 ? ri(3, 40) : 0) + ' commits / wk', ri(20, 4000).toLocaleString('en') + ' stars', 'last push ' + a];
+  if (s.mode === 'build') return [(s.last < 30 ? ri(3, 40) : 0) + ' commits / wk', fmt(ri(20, 4000)) + ' stars', 'last push ' + a];
   return [s.avail ? 'available now' : 'booked until ' + pick(['May', 'June', 'Sept']), ri(5, 80) + ' bookings', 'based in ' + s.city];
 }
 function gen(x, y, size, mode, extra) {
@@ -726,267 +582,400 @@ function gen(x, y, size, mode, extra) {
   if (!q.rec) q.rec = receipts(q);
   return put(q);
 }
+
 const FEATURED = [
-  [2, -14, 8, 'sell', { name: 'Sushi Yama', city: 'Stockholm', tag: 'Cheap sushi lunch · Söder', price: 'from 89 kr', last: 0, likes: 1284, rec: ['1,912 sold', 'ships from Stockholm', 'last sale today'], kw: 'sushi lunch food cheap restaurant' }],
-  [-21, 2, 4, 'build', { name: 'DeployCheck', city: 'Göteborg', tag: 'Catch deploy errors before they ship', last: 0, likes: 430, rec: ['14 commits / wk', '2,310 stars', 'last push today'], kw: 'deploy vercel ci check developer tool' }],
-  [14, 8, 4, 'create', { name: 'Kajsa & The Tides', city: 'Malmö', tag: 'Indie folk · new single out', last: 0, likes: 960, rec: ['38k listeners', 'posted today', '12 tracks'], kw: 'music band indie folk spotify' }],
-  [-7, 16, 2, 'hire', { name: 'Fix my bike', city: 'Malmö', tag: 'Mobile bike repair · same day', last: 1, avail: true, likes: 88, rec: ['available now', '61 bookings', 'based in Malmö'], kw: 'bike repair cycle fix mechanic' }],
-  [23, -8, 4, 'sell', { name: 'Volvo 240 GL', city: 'Uppsala', tag: '1991 · 21,000 km · one owner', price: '€4,900', last: 3, likes: 210, rec: ['€4,900', 'listed 3d ago', 'in Uppsala'], kw: 'volvo car classic vintage' }],
-  [-26, -22, 4, 'sell', { name: 'Icon Pack Vol.3', city: 'Berlin', tag: '480 icons · Figma + SVG', price: '€29', last: 0, likes: 620, rec: ['212 sold', 'updated today', '4.9 ★'], kw: 'icons figma design svg ui' }],
-  [-14, -12, 4, 'create', { name: 'Studio Mira', city: 'Copenhagen', tag: 'Ceramics · weekly studio vlogs', last: 0, likes: 540, rec: ['22k followers', 'posted today', '96 pieces'], kw: 'ceramics pottery video craft' }],
-  [6, 20, 4, 'hire', { name: 'Elin · UX', city: 'Stockholm', tag: 'Product design · booking for June', avail: false, last: 2, likes: 310, rec: ['booked until June', '44 bookings', 'based in Stockholm'], kw: 'ux design designer product figma' }],
-  [28, 10, 2, 'build', { name: 'Kronor.js', city: 'Oslo', tag: 'Currency formatting in 2 kB', last: 0, likes: 150, rec: ['9 commits / wk', '880 stars', 'last push today'], kw: 'javascript library currency npm' }]
+  [-4, -12, 8, 'sell', { name: 'Sushi Yama', city: 'Stockholm', tag: 'Cheap sushi lunch · Söder', price: 'from 89 kr', last: 0, likes: 1284, rec: ['1,912 sold', 'ships from Stockholm', 'last sale today'], kw: 'sushi lunch food cheap restaurant' }],
+  [5, 2, 4, 'create', { name: 'Kajsa & The Tides', city: 'Malmö', tag: 'Indie folk · new single out', last: 0, likes: 960, rec: ['38k listeners', 'posted today', '12 tracks'], kw: 'music band indie folk spotify' }],
+  [-11, 0, 4, 'build', { name: 'DeployCheck', city: 'Göteborg', tag: 'Catch deploy errors before they ship', last: 0, likes: 430, rec: ['14 commits / wk', '2,310 stars', 'last push today'], kw: 'deploy vercel ci check developer tool' }],
+  [-2, 6, 4, 'create', { name: 'Studio Mira', city: 'Copenhagen', tag: 'Ceramics · weekly studio vlogs', last: 0, likes: 540, rec: ['22k followers', 'posted today', '96 pieces'], kw: 'ceramics pottery video craft' }],
+  [20, -14, 4, 'sell', { name: 'Volvo 240 GL', city: 'Uppsala', tag: '1991 · 21,000 km · one owner', price: '€4,900', last: 3, likes: 210, rec: ['€4,900', 'listed 3d ago', 'in Uppsala'], kw: 'volvo car classic vintage' }],
+  [-30, -18, 4, 'sell', { name: 'Icon Pack Vol.3', city: 'Berlin', tag: '480 icons · Figma + SVG', price: '€29', last: 0, likes: 620, rec: ['212 sold', 'updated today', '4.9 ★'], kw: 'icons figma design svg ui' }],
+  [10, 24, 4, 'hire', { name: 'Elin · UX', city: 'Stockholm', tag: 'Product design · booking for June', avail: false, last: 2, likes: 310, rec: ['booked until June', '44 bookings', 'based in Stockholm'], kw: 'ux design designer product figma' }],
+  [-20, 18, 2, 'hire', { name: 'Fix my bike', city: 'Malmö', tag: 'Mobile bike repair · same day', last: 1, avail: true, likes: 88, rec: ['available now', '61 bookings', 'based in Malmö'], kw: 'bike repair cycle fix mechanic' }],
+  [32, 8, 2, 'build', { name: 'Kronor.js', city: 'Oslo', tag: 'Currency formatting in 2 kB', last: 0, likes: 150, rec: ['9 commits / wk', '880 stars', 'last push today'], kw: 'javascript library currency npm' }],
+  [-62, 38, 8, 'create', { name: 'Aurora Records', city: 'Reykjavík', tag: 'Independent label · 40 artists', last: 0, likes: 2210, rec: ['410k listeners', 'released today', '40 artists'], kw: 'music label records aurora' }],
+  [66, -34, 8, 'sell', { name: 'Nordic Pixel Co.', city: 'Helsinki', tag: 'Pixel-art posters & merch', price: '€35', last: 1, likes: 1630, rec: ['8,420 sold', 'ships worldwide', 'last sale today'], kw: 'pixel art posters merch shop' }],
+  [16, 88, 8, 'build', { name: 'Open Fjord', city: 'Oslo', tag: 'Open-source maps for everyone', last: 0, likes: 1980, rec: ['61 commits / wk', '24,100 stars', 'last push today'], kw: 'maps open source geo' }],
+  [-96, -58, 4, 'hire', { name: 'Hus & Hem', city: 'Göteborg', tag: 'Carpentry · renovations', avail: true, last: 0, likes: 340, rec: ['available now', '120 bookings', 'based in Göteborg'], kw: 'carpenter renovation home builder' }]
 ];
 for (const f of FEATURED) gen(f[0], f[1], f[2], f[3], Object.assign({ featured: true }, f[4]));
-for (let r = 0; r < 80; r += 1.2) {
-  const n = Math.max(8, Math.floor(r * 5.4));
-  for (let k = 0; k < n; k++) {
-    const a = rnd() * 6.2832, p = rnd();
-    const size = r < 8 ? (p < .22 ? 8 : p < .62 ? 4 : 2) : r < 28 ? (p < .04 ? 8 : p < .22 ? 4 : p < .62 ? 2 : 1) : (p < .08 ? 4 : p < .48 ? 2 : 1);
-    const dens = r < 10 ? .95 : r < 28 ? .86 : r < 48 ? .62 : .34;
-    const x = Math.round(Math.cos(a) * r - size / 2), y = Math.round(Math.sin(a) * r - size / 2);
-    if (rnd() < dens && isFree(x, y, size, size)) gen(x, y, size);
-  }
-}
-// the core is always full: pack every remaining gap inside it
-const CORE_R = 13;
+// the core: packed solid
 for (let y = -CORE_R; y <= CORE_R; y++) for (let x = -CORE_R; x <= CORE_R; x++) {
   if (Math.hypot(x + .5, y + .5) > CORE_R || occ.has(K(x, y))) continue;
-  gen(x, y, isFree(x, y, 2, 2) && Math.hypot(x + 1, y + 1) <= CORE_R ? 2 : 1);
+  const p = rnd(); let s = p < .2 ? 4 : p < .62 ? 2 : 1;
+  while (s > 1 && !(isFree(x, y, s, s) && Math.hypot(x + s / 2, y + s / 2) <= CORE_R)) s >>= 1;
+  gen(x, y, s);
 }
+// spiral arms
+{
+  const ARMS = 4;
+  for (let i = 0; i < 46000; i++) {
+    const r = CORE_R + 1 + Math.pow(rnd(), 1.12) * (WORLD_R - CORE_R);
+    const arm = Math.floor(rnd() * ARMS), inArm = rnd() < .8;
+    const base = arm * (6.2832 / ARMS) + Math.log(r / CORE_R) * 2.25;
+    const a = base + (inArm ? gauss() * (.15 + .14 * r / WORLD_R) : (rnd() - .5) * 6.2832 / ARMS);
+    const p = rnd();
+    const size = r < 40 ? (p < .05 ? 8 : p < .24 ? 4 : p < .62 ? 2 : 1) : r < 80 ? (p < .012 ? 8 : p < .09 ? 4 : p < .45 ? 2 : 1) : (p < .025 ? 4 : p < .25 ? 2 : 1);
+    const keep = inArm ? (r < 40 ? .97 : r < 80 ? .82 : .62) : (r < 40 ? .8 : r < 80 ? .3 : .14);
+    const x = Math.round(Math.cos(a) * r - size / 2), y = Math.round(Math.sin(a) * r - size / 2);
+    if (rnd() < keep && isFree(x, y, size, size)) gen(x, y, size);
+  }
+}
+const DEMO_COUNT = SQ.length;
 
+const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
+const priceOf = (x, y, size) => zoneOf(x, y, size).price * size * size;
 let OFF = null;
 function offsets() {
-  if (OFF) return OFF; OFF = []; const R = 90;
-  for (let dx = -R; dx <= R; dx++) for (let dy = -R; dy <= R; dy++) { const d = dx * dx + dy * dy; if (d <= R * R) OFF.push([dx, dy, d]); }
-  OFF.sort((a, b) => a[2] - b[2]); return OFF;
+  if (OFF) return OFF;
+  const R = 150, tmp = [];
+  for (let dx = -R; dx <= R; dx++) for (let dy = -R; dy <= R; dy++) { const d = dx * dx + dy * dy; if (d <= R * R) tmp.push([dx, dy, d]); }
+  tmp.sort((a, b) => a[2] - b[2]);
+  OFF = new Int16Array(tmp.length * 2); tmp.forEach((t, k) => { OFF[k * 2] = t[0]; OFF[k * 2 + 1] = t[1]; });
+  return OFF;
 }
-function nearestFree(cx, cy) {
-  for (const [dx, dy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) if (isFree(cx + dx, cy + dy, 2, 2)) return { x: cx + dx, y: cy + dy };
-  for (const o of offsets()) { const x = cx + o[0], y = cy + o[1]; if (isFree(x, y, 2, 2)) return { x, y }; }
-  return { x: cx + 95, y: cy };
-}
-function freeAround(cx, cy) {
-  for (const [dx, dy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) if (isFree(cx + dx, cy + dy, 2, 2)) return { x: cx + dx, y: cy + dy };
+function spotOk(x, y, size) { return isFree(x, y, size, size) && !zoneOf(x, y, size).invite && Math.hypot(x + size / 2, y + size / 2) < WORLD_R + 25; }
+function nearestFree(cx, cy, size) {
+  const o = offsets();
+  for (let k = 0; k < o.length; k += 2) { const x = cx + o[k], y = cy + o[k + 1]; if (spotOk(x, y, size)) return { x, y }; }
   return null;
 }
-const ringOf = (x, y) => Math.max(1, Math.ceil(Math.hypot(x + 1, y + 1) / 5));
-const ringLine = r => r <= 2 ? 'Prime real estate.' : r <= 4 ? 'Close to the core.' : r <= 7 ? 'Solid spot.' : r <= 11 ? 'Room to grow out here.' : 'Out on the frontier.';
-function closerThan(x, y) { const d = Math.hypot(x + 1, y + 1); let n = 0; for (const q of SQ) if (!q.gone && !q.mine && !q.shared && q.d < d) n++; return n; }
+function closerThan(x, y, size) { const d = Math.hypot(x + size / 2, y + size / 2); let n = 0; for (const q of SQ) if (!q.gone && !q.mine && !q.shared && q.d < d) n++; return n; }
 const clean = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
 const today = () => new Date().toISOString().slice(0, 10);
+const glowOf = q => q.last <= 3 ? 1 : q.last <= 30 ? 1 - (q.last - 3) / 27 * .85 : 0;
+const fadeOf = q => q.last <= 30 ? 1 : q.last <= 90 ? 1 - (q.last - 30) / 60 * .5 : .3;
+
+/* ================= BACKEND ================= */
+async function rpc(fn, args) {
+  const r = await fetch(SUPA.rpc + fn, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPA.key }, body: JSON.stringify(args || {}) });
+  const t = await r.text(); let j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {}
+  if (!r.ok) { const err = new Error((j && j.message) || 'rpc ' + r.status); err.status = r.status; throw err; }
+  return j;
+}
+let STATS = null;
+async function loadStats() {
+  try { STATS = await rpc('founding_stats'); } catch (e) { STATS = null; }
+  renderLive();
+}
+async function loadSpots() {
+  try {
+    const spots = await rpc('public_spots');
+    if (Array.isArray(spots)) { let added = 0; for (const s of spots) if (addReal(s)) added++; if (added) kick(); }
+  } catch (e) {}
+}
+function addReal(s) {
+  if (!s || !Number.isInteger(s.x) || !Number.isInteger(s.y) || ![1, 2, 4, 8].includes(s.size) || !MK.includes(s.mode)) return false;
+  if (Math.hypot(s.x + s.size / 2, s.y + s.size / 2) > WORLD_R + 25) return false;
+  if (mine && mine.reserved && mine.x === s.x && mine.y === s.y) return false;
+  if (shared && shared.x === s.x && shared.y === s.y) { shared.real = true; return false; }
+  for (let i = 0; i < s.size; i++) for (let j = 0; j < s.size; j++) {
+    const id = occ.get(K(s.x + i, s.y + j)); if (id === undefined) continue;
+    const q = SQ[id];
+    if (q.real || q.shared) return false;
+    if (q.mine) { if (q.reserved) return false; relocateMine(); continue; }
+    unput(q);
+  }
+  const z = zoneOf(s.x, s.y, s.size);
+  put({ x: s.x, y: s.y, size: s.size, mode: s.mode, real: true, name: 'Founding spot', city: '', owner: '', last: 0, likes: 0, tag: `${z.label} · ${s.size}×${s.size} · ${MODES[s.mode].label}`, rec: ['founding reservation', z.label, MODES[s.mode].label] });
+  return true;
+}
 
 /* ================= CANVAS ================= */
-const hero = $('#map'), cv = $('#world'), ctx = cv.getContext('2d');
-let W = 0, H = 0, DPR = 1, CELL = 16, vignette = null;
-const cam = { x: 0, y: -1, z: 1 };
+const cv = $('#world'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+const cam = { x: 0, y: 0, z: .2 };
 const fp = { x: 0, y: 0 };
 const isMobile = () => W < 760;
-let ui = 'none', sel = null, hoverSq = null, ghost = null, filter = null, mine = null, shared = null;
-let idle = now(), dragged = false;
+let ui = 'none', sel = null, hoverSq = null, ghost = null, filter = null, mine = null, shared = null, explored = false, introRunning = false;
 
 function focusTarget() {
-  if (ui === 'pop') return isMobile() ? { x: W / 2, y: H * .26 } : { x: (W - 440) / 2 + 20, y: H / 2 };
-  if (ui === 'claim') return isMobile() ? { x: W / 2, y: H * .27 } : { x: Math.max(W * .62, 500), y: H * .47 };
-  return isMobile() ? { x: W / 2, y: H * .3 } : { x: W * .63, y: H * .5 };
+  if (ui === 'pop') return isMobile() ? { x: W / 2, y: H * .25 } : { x: (W - 460) / 2 + 20, y: H / 2 };
+  if (ui === 'claim') return isMobile() ? { x: W / 2, y: H * .24 } : { x: Math.max(W * .62, 520), y: H * .47 };
+  return isMobile() ? { x: W / 2, y: H * .36 } : { x: W * .6, y: H * .5 };
+}
+function home() {
+  const span = 2 * WORLD_R * CELL;
+  return isMobile() ? { x: 0, y: 0, z: W * 1.18 / span } : { x: 0, y: 0, z: Math.min(H * .98, W * .62) / span };
 }
 function resize() {
-  const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
-  DPR = Math.min(2, devicePixelRatio || 1);
-  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  CELL = W < 760 ? 13 : 16;
-  vignette = ctx.createRadialGradient(W * .6, H * .5, Math.min(W, H) * .35, W * .6, H * .5, Math.max(W, H) * .8);
-  vignette.addColorStop(0, 'rgba(4,6,26,0)'); vignette.addColorStop(1, 'rgba(4,6,26,.7)');
-  const f = focusTarget(); if (!fp.x) { fp.x = f.x; fp.y = f.y; }
-  if (!running) draw(now());
+  W = innerWidth; H = innerHeight; DPR = Math.min(2, devicePixelRatio || 1);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  const f = focusTarget(); fp.x = f.x; fp.y = f.y;
+  kick();
 }
 const toS = (wx, wy) => ({ x: fp.x + (wx - cam.x) * CELL * cam.z, y: fp.y + (wy - cam.y) * CELL * cam.z });
 const toW = (sx, sy) => ({ x: cam.x + (sx - fp.x) / (CELL * cam.z), y: cam.y + (sy - fp.y) / (CELL * cam.z) });
-
+function rrect(c, x, y, w, h, r) {
+  c.beginPath(); w = Math.max(0, w); h = Math.max(0, h); r = Math.max(0, Math.min(r, w / 2, h / 2));
+  if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h);
+}
 const SPR = {};
 function sprite(rgb) {
   if (SPR[rgb]) return SPR[rgb];
   const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
   const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gr.addColorStop(0, `rgba(${rgb},.85)`); gr.addColorStop(.3, `rgba(${rgb},.32)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+  gr.addColorStop(0, `rgba(${rgb},.9)`); gr.addColorStop(.28, `rgba(${rgb},.32)`); gr.addColorStop(1, `rgba(${rgb},0)`);
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (SPR[rgb] = c);
 }
-function rrect(x, y, w, h, r) {
-  ctx.beginPath(); w = Math.max(0, w); h = Math.max(0, h); r = Math.max(0, Math.min(r, w / 2, h / 2));
-  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+function starSprite() {
+  if (SPR.star) return SPR.star;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.12, 'rgba(255,255,255,.6)'); gr.addColorStop(.4, 'rgba(255,255,255,.08)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  g.globalCompositeOperation = 'lighter';
+  for (const [w, h] of [[128, 3], [3, 128]]) { const l = g.createLinearGradient(64 - w / 2, 64 - h / 2, 64 + w / 2, 64 + h / 2); l.addColorStop(0, 'rgba(255,255,255,0)'); l.addColorStop(.5, 'rgba(255,255,255,.9)'); l.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = l; g.fillRect(64 - w / 2, 64 - h / 2, w, h); }
+  return (SPR.star = c);
 }
-const STARS = []; for (let i = 0; i < 340; i++) STARS.push([rnd() * 4000, rnd() * 4000, rnd(), rnd() * 6.28]);
-const NEB = [[0, 0, 70, '94,225,255'], [-50, -36, 55, '255,92,122'], [60, 42, 60, '255,207,74'], [36, -60, 50, '179,156,255'], [-64, 50, 50, '61,255,138']];
-const RINGS = [[CORE_R + 1, 'CORE'], [30, 'INNER RING'], [52, 'BELT']];
-const glowOf = q => q.last <= 3 ? 1 : q.last <= 30 ? 1 - (q.last - 3) / 27 * .85 : 0;
-const fadeOf = q => q.last <= 30 ? 1 : q.last <= 90 ? 1 - (q.last - 30) / 60 * .5 : .3;
-const matches = q => !filter || q.mine || q.shared || q.mode === filter;
-const easeBack = t => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
-function spawnScale(q, T) { if (q.born < -1e8) return 1; const t = (T - q.born) / 480; return t <= 0 ? 0 : t >= 1 ? 1 : easeBack(t); }
 
-const PULSES = [], PARTS = [], WAVES = [];
-let VIS = [], nextPulse = 0;
+/* galaxy texture: every square at 3px/cell, plus a blurred copy for bloom */
+const TPX = 3, TN = (WORLD_R + 30) * 2, TOFF = TN / 2;
+let TEX = null, GLOW = null, MINIBASE = null;
+const MINI = $('#minimap'), mctx = MINI.getContext('2d');
+function buildTexture() {
+  const S = TN * TPX;
+  if (!TEX) { TEX = document.createElement('canvas'); GLOW = document.createElement('canvas'); MINIBASE = document.createElement('canvas'); }
+  TEX.width = TEX.height = S;
+  const g = TEX.getContext('2d');
+  for (const q of SQ) {
+    if (q.gone) continue;
+    const special = q.mine || q.shared || q.real;
+    g.globalAlpha = special ? 1 : fadeOf(q) * (.55 + .45 * glowOf(q));
+    g.fillStyle = special ? '#ffffff' : MODES[q.mode].color;
+    const ins = q.w === 1 ? .45 : .7;
+    g.fillRect((q.x + TOFF) * TPX + ins, (q.y + TOFF) * TPX + ins, q.w * TPX - ins * 2, q.h * TPX - ins * 2);
+  }
+  const gs = Math.round(S / 6); GLOW.width = GLOW.height = gs;
+  const gg = GLOW.getContext('2d'); gg.imageSmoothingEnabled = true; gg.imageSmoothingQuality = 'high';
+  gg.drawImage(TEX, 0, 0, gs, gs);
+  const t = document.createElement('canvas'); t.width = t.height = Math.round(gs / 4);
+  const tg = t.getContext('2d'); tg.imageSmoothingQuality = 'high'; tg.drawImage(GLOW, 0, 0, t.width, t.height);
+  gg.globalCompositeOperation = 'lighter'; gg.globalAlpha = .9; gg.drawImage(t, 0, 0, gs, gs);
+  MINIBASE.width = MINIBASE.height = 300;
+  const mb = MINIBASE.getContext('2d');
+  const mg = mb.createRadialGradient(150, 150, 0, 150, 150, 150); mg.addColorStop(0, '#0d1446'); mg.addColorStop(1, '#03040f');
+  mb.fillStyle = mg; mb.fillRect(0, 0, 300, 300);
+  const ms = 300 / ((WORLD_R + 8) * 2 * TPX), mo = 150 - TOFF * TPX * ms;
+  mb.drawImage(TEX, mo, mo, S * ms, S * ms);
+  mb.globalCompositeOperation = 'lighter'; mb.drawImage(GLOW, mo, mo, S * ms, S * ms);
+  texDirty = false;
+}
+
+const STARS = []; for (let i = 0; i < 520; i++) STARS.push([rnd(), rnd(), rnd(), rnd() * 6.28, i % 3]);
+const NEB = [[0, 0, 90, '94,225,255', .16], [-70, -50, 80, '255,92,122', .1], [80, 50, 85, '255,207,74', .08], [50, -80, 70, '179,156,255', .11], [-90, 70, 75, '61,255,138', .07], [0, 0, 190, '60,80,200', .1]];
+const PULSES = [], SPARKS = [], PARTS = [], WAVES = [];
+let VIS = [], nextPulse = 0, nextSpark = 0;
 
 function floatLabel(wx, wy, text, col, T) {
   const p = toS(wx, wy);
   ctx.font = '700 13px "Instrument Sans",system-ui,sans-serif';
-  const tw = Math.min(260, ctx.measureText(text).width + 22), x = p.x - tw / 2, bob = reduce ? 0 : Math.sin(T * .004) * 2, y = p.y - 40 + bob;
-  ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(6,9,32,.94)'; rrect(x, y, tw, 26, 13); ctx.fill();
+  const tw = Math.min(260, ctx.measureText(text).width + 22), bob = reduce ? 0 : Math.sin(T * .004) * 2;
+  const x = p.x - tw / 2, y = p.y - 42 + bob;
+  ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(4,6,22,.95)'; rrect(ctx, x, y, tw, 26, 13); ctx.fill();
   ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.stroke();
   ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, p.x, y + 13.5, tw - 16);
-  ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(p.x, y + 26); ctx.lineTo(p.x, p.y - 4); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(p.x, y + 26); ctx.lineTo(p.x, p.y - 3); ctx.stroke(); ctx.globalAlpha = 1;
+}
+function beacon(q, T, col, rgb, strength) {
+  const cp = CELL * cam.z, c = toS(q.x + q.w / 2, q.y + q.h / 2), base = Math.max(3, q.w * cp * .5);
+  if (c.x < -80 || c.x > W + 80 || c.y < -80 || c.y > H + 80) return;
+  const pu = reduce ? .5 : .5 + .5 * Math.sin(T * .004 + q.id);
+  ctx.globalCompositeOperation = 'lighter';
+  const R = base * 4 + 16 + pu * 8; ctx.globalAlpha = .55 * strength; ctx.drawImage(sprite(rgb), c.x - R, c.y - R, 2 * R, 2 * R);
+  ctx.globalCompositeOperation = 'source-over';
+  if (cp < 6) { ctx.globalAlpha = strength; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(2.5, base * .8), 0, 6.2832); ctx.fill(); }
+  if (!reduce) { const k = (T * .0006 + q.id * .37) % 1; ctx.globalAlpha = (1 - k) * .7 * strength; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(c.x, c.y, base + 4 + k * 26, 0, 6.2832); ctx.stroke(); }
+  ctx.globalAlpha = 1;
 }
 
 function draw(T) {
-  ctx.clearRect(0, 0, W, H);
-  const z = cam.z, s = CELL * z;
-  for (const n of NEB) {
-    const c = toS(n[0], n[1]), r = n[2] * s;
-    if (c.x + r < 0 || c.x - r > W || c.y + r < 0 || c.y - r > H) continue;
-    const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
-    g.addColorStop(0, `rgba(${n[3]},.14)`); g.addColorStop(1, `rgba(${n[3]},0)`); ctx.fillStyle = g; ctx.fillRect(c.x - r, c.y - r, 2 * r, 2 * r);
-  }
-  { const px = cam.x * CELL * .25 * Math.sqrt(z), py = cam.y * CELL * .25 * Math.sqrt(z); ctx.fillStyle = '#fff';
-    for (const st of STARS) { const x = ((st[0] - px) % W + W) % W, y = ((st[1] - py) % H + H) % H; const tw = reduce ? .7 : .4 + .6 * Math.abs(Math.sin(T * .0011 + st[3])); ctx.globalAlpha = tw * (.18 + st[2] * .55); const r = .6 + st[2] * 1.2; ctx.fillRect(x, y, r, r); }
-    ctx.globalAlpha = 1; }
-  // ring guides
-  { const c0 = toS(0, 0); ctx.setLineDash([2, 7]); ctx.lineWidth = 1;
-    for (const [r] of RINGS) {
-      ctx.strokeStyle = 'rgba(150,175,255,.16)'; ctx.beginPath(); ctx.arc(c0.x, c0.y, r * s, 0, 6.2832); ctx.stroke();
-    }
-    ctx.setLineDash([]); }
-
-  const tl = toW(-40, -40), br = toW(W + 40, H + 40);
-  const inView = q => !(q.x + q.w < tl.x || q.x > br.x || q.y + q.h < tl.y || q.y > br.y);
-  VIS = [];
-  // glow pass (additive)
-  ctx.globalCompositeOperation = 'lighter';
-  for (const q of SQ) {
-    if (q.gone || !inView(q) || !matches(q)) continue;
-    const sc = spawnScale(q, T); if (sc <= 0) continue;
-    const special = q.mine || q.shared;
-    let g = special ? 1 : glowOf(q); if (g <= 0) continue;
-    if (!special && q.last <= 3) VIS.push(q);
-    if (q.size < 2 && !special) continue;
-    const p = toS(q.x, q.y), bw = q.w * s, bh = q.h * s, cx = p.x + bw / 2, cy = p.y + bh / 2;
-    let R = Math.max(bw, bh) * .95 + 14 * Math.min(z, 1.6), a = g * (q.featured ? .7 : .34);
-    if (!reduce) {
-      if (q.mode === 'create') { const pu = .5 + .5 * Math.sin(T * .0024 + q.id); R *= 1 + .28 * pu; a *= .6 + .55 * pu; }
-      if (q.mode === 'build') a *= .8 + .35 * Math.sin(T * .003 + q.id * 1.7);
-      if (q.boost) { const b = 1 - (T - q.boost) / 900; if (b > 0) { a += b * .6; R *= 1 + b * .25; } }
-    }
-    if (special) { R *= 1.5; a = .95; }
-    ctx.globalAlpha = clamp(a, 0, 1) * sc;
-    ctx.drawImage(sprite(q.mine ? '200,255,61' : MODES[q.mode].rgb), cx - R, cy - R, 2 * R, 2 * R);
-  }
+  if (texDirty) buildTexture();
+  const cp = CELL * cam.z;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, W, H);
+  const c0 = toS(0, 0), big = Math.max(W, H);
+  for (const st of STARS) {
+    const layer = st[4] + 1, k = [2, 5, 11][st[4]], ww = W + 200, hh = H + 200;
+    const x = ((st[0] * ww - cam.x * k) % ww + ww) % ww - 100, y = ((st[1] * hh - cam.y * k) % hh + hh) % hh - 100;
+    const tw = reduce ? .7 : .45 + .55 * Math.abs(Math.sin(T * .0009 * layer + st[3]));
+    ctx.globalAlpha = tw * (.15 + st[2] * .5); ctx.fillStyle = st[2] > .92 ? '#cfe6ff' : '#fff';
+    const r = .5 + st[2] * layer * .45; ctx.fillRect(x, y, r, r);
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'lighter';
+  if (cp < 10) for (const n of NEB) {
+    const c = toS(n[0], n[1]), r = n[2] * cp;
+    if (r < 2 || r > big * 2.5 || c.x + r < 0 || c.x - r > W || c.y + r < 0 || c.y - r > H) continue;
+    const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
+    g.addColorStop(0, `rgba(${n[3]},${n[4]})`); g.addColorStop(1, `rgba(${n[3]},0)`); ctx.fillStyle = g; ctx.fillRect(c.x - r, c.y - r, 2 * r, 2 * r);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.setLineDash([2, 8]); ctx.lineWidth = 1;
+  for (const zz of ZONES) { if (!isFinite(zz.r)) continue; const r = zz.r * cp; if (r < 30 || r > Math.max(W, H) * 3) continue; ctx.strokeStyle = 'rgba(160,180,255,.15)'; ctx.beginPath(); ctx.arc(c0.x, c0.y, r, 0, 6.2832); ctx.stroke(); }
+  ctx.setLineDash([]);
 
-  // squares
-  for (const q of SQ) {
-    if (q.gone || !inView(q)) continue;
-    const sc = spawnScale(q, T); if (sc <= 0) continue;
-    const dim = !matches(q), M = MODES[q.mode], special = q.mine || q.shared;
-    const col = special ? '#ffffff' : M.color;
-    const a = (dim ? .1 : 1) * (special ? 1 : fadeOf(q));
-    let x = q.x, y = q.y; const p0 = toS(x, y); let bw = q.w * s, bh = q.h * s, px = p0.x, py = p0.y;
-    if (sc !== 1) { const cx = px + bw / 2, cy = py + bh / 2; bw *= sc; bh *= sc; px = cx - bw / 2; py = cy - bh / 2; }
-    const gap = Math.min(1.5, s * .08), rr = Math.min(5, s * .18);
-    ctx.globalAlpha = a; ctx.fillStyle = col; rrect(px + gap, py + gap, bw - 2 * gap, bh - 2 * gap, rr); ctx.fill();
-    if (bw > 16 && !dim) { ctx.fillStyle = 'rgba(255,255,255,.24)'; ctx.fillRect(px + gap + rr, py + gap, bw - 2 * gap - 2 * rr, Math.max(1, s * .07)); }
-    if (q.mode === 'build' && !dim && !special && glowOf(q) > 0 && bw > 6) { ctx.strokeStyle = 'rgba(220,250,255,.85)'; ctx.lineWidth = Math.max(1, s * .07); rrect(px + gap, py + gap, bw - 2 * gap, bh - 2 * gap, rr); ctx.stroke(); }
-    if (special) { ctx.strokeStyle = q.mine ? '#c8ff3d' : M.color; ctx.lineWidth = 2.5; rrect(px - 2, py - 2, bw + 4, bh + 4, rr + 2); ctx.stroke(); }
-    if (dim || sc !== 1) { ctx.globalAlpha = 1; continue; }
-    // badges
-    if (!special && (q.size >= 2 ? z >= .55 : z >= 1.4)) {
-      const bs = Math.max(5, Math.min(s * .55, 15));
-      if (q.mode === 'hire') { ctx.beginPath(); ctx.arc(px + bw - bs * .75, py + bs * .75, bs * .42, 0, 6.2832); ctx.fillStyle = q.avail ? '#3dff8a' : '#ff5a5a'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#071026'; ctx.stroke(); }
-      if (q.mode === 'sell' && q.size >= 2) { const tw = bs * 1.5, th = bs * .95; ctx.fillStyle = '#071026'; rrect(px + bw - tw - 2.5, py + 2.5, tw, th, 2); ctx.fill(); ctx.fillStyle = '#ffcf4a'; ctx.font = '700 ' + Math.max(6, th * .78) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('€', px + bw - tw / 2 - 2.5, py + 2.5 + th / 2 + .5); }
+  const gA = clamp((5.6 - cp) / 2.2, 0, 1), mA = clamp((cp - 3.4) / 2.2, 0, 1);
+  if (gA > 0) {
+    const p = toS(-TOFF, -TOFF), S = TN * cp;
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = gA; ctx.drawImage(TEX, p.x, p.y, S, S);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = gA * .9; ctx.drawImage(GLOW, p.x, p.y, S, S);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+  VIS = [];
+  if (mA > 0) {
+    const tl = toW(-40, -40), br = toW(W + 40, H + 40), detail = cp >= 8;
+    if (detail) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (const q of SQ) {
+        if (q.gone || q.x + q.w < tl.x || q.x > br.x || q.y + q.h < tl.y || q.y > br.y || (filter && !q.mine && !q.shared && q.mode !== filter)) continue;
+        const special = q.mine || q.shared || q.real, g = special ? 1 : glowOf(q);
+        if (g <= 0) continue;
+        if (!special && q.last <= 3) VIS.push(q);
+        if (q.size < 2 && !special) continue;
+        const p = toS(q.x, q.y), bw = q.w * cp, cx = p.x + bw / 2, cy = p.y + bw / 2;
+        let R = bw * .95 + 14 * Math.min(cam.z, 1.6), a = g * (q.featured ? .7 : .32);
+        if (!reduce) {
+          if (q.mode === 'create') { const pu = .5 + .5 * Math.sin(T * .0024 + q.id); R *= 1 + .28 * pu; a *= .6 + .55 * pu; }
+          if (q.mode === 'build') a *= .8 + .35 * Math.sin(T * .003 + q.id * 1.7);
+          if (q.boost) { const b = 1 - (T - q.boost) / 900; if (b > 0) { a += b * .6; R *= 1 + b * .25; } }
+        }
+        if (special) { R *= 1.4; a = .8; }
+        ctx.globalAlpha = clamp(a, 0, 1) * mA;
+        ctx.drawImage(sprite(q.mine ? '200,255,61' : special ? '255,255,255' : MODES[q.mode].rgb), cx - R, cy - R, 2 * R, 2 * R);
+      }
+      ctx.globalCompositeOperation = 'source-over';
     }
-    // labels
-    const showN = !special && (q.size >= 8 ? z >= .5 : q.size >= 4 ? z >= .8 : q.size >= 2 ? z >= 1.7 : z >= 3.2);
-    const showSpecialName = special && 2 * s >= 44;
-    if (showN || showSpecialName) {
-      ctx.fillStyle = '#071026'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      const fs = Math.max(8, Math.min(bw / (q.name.length * .56 + 1), s * .95, 30));
-      ctx.font = '700 ' + fs + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillText(q.name, px + s * .28, py + s * .28, bw - s * .5);
-      if (q.size >= 4 && z >= 1.05 && q.tag) { ctx.font = '500 ' + Math.max(7, fs * .58) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillStyle = 'rgba(7,16,38,.78)'; ctx.fillText(q.tag, px + s * .28, py + s * .28 + fs * 1.18, bw - s * .5); }
-      if (q.mode === 'sell' && q.size >= 4 && z >= 1.05 && q.price) { ctx.font = '700 ' + Math.max(7, fs * .72) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillStyle = '#071026'; ctx.textBaseline = 'bottom'; ctx.fillText(q.price, px + s * .28, py + bh - s * .25); }
+    for (const q of SQ) {
+      if (q.gone || q.x + q.w < tl.x || q.x > br.x || q.y + q.h < tl.y || q.y > br.y) continue;
+      const dim = filter && !q.mine && !q.shared && q.mode !== filter, special = q.mine || q.shared || q.real;
+      const col = special ? '#ffffff' : MODES[q.mode].color;
+      const a = (dim ? .1 : 1) * (special ? 1 : fadeOf(q)) * mA;
+      const p = toS(q.x, q.y), bw = q.w * cp;
+      ctx.globalAlpha = a; ctx.fillStyle = col;
+      if (!detail) { const ins = Math.max(.4, cp * .08); ctx.fillRect(p.x + ins, p.y + ins, bw - ins * 2, bw - ins * 2); continue; }
+      const gap = Math.min(1.5, cp * .08), rr = Math.min(5, cp * .18);
+      rrect(ctx, p.x + gap, p.y + gap, bw - 2 * gap, bw - 2 * gap, rr); ctx.fill();
+      if (bw > 16 && !dim) { ctx.fillStyle = 'rgba(255,255,255,.24)'; ctx.fillRect(p.x + gap + rr, p.y + gap, bw - 2 * gap - 2 * rr, Math.max(1, cp * .07)); }
+      if (q.mode === 'build' && !dim && !special && glowOf(q) > 0 && bw > 6) { ctx.strokeStyle = 'rgba(220,250,255,.85)'; ctx.lineWidth = Math.max(1, cp * .07); rrect(ctx, p.x + gap, p.y + gap, bw - 2 * gap, bw - 2 * gap, rr); ctx.stroke(); }
+      if (special) { ctx.strokeStyle = q.mine ? '#c8ff3d' : q.shared ? MODES[q.mode].color : 'rgba(255,255,255,.7)'; ctx.lineWidth = 2.5; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke(); }
+      if (dim) continue;
+      if (!special && (q.size >= 2 ? cp >= 9 : cp >= 22)) {
+        const bs = Math.max(5, Math.min(cp * .55, 15));
+        if (q.mode === 'hire') { ctx.beginPath(); ctx.arc(p.x + bw - bs * .75, p.y + bs * .75, bs * .42, 0, 6.2832); ctx.fillStyle = q.avail ? '#3dff8a' : '#ff5a5a'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#071026'; ctx.stroke(); }
+        if (q.mode === 'sell' && q.size >= 2) { const tw = bs * 1.5, th = bs * .95; ctx.fillStyle = '#071026'; rrect(ctx, p.x + bw - tw - 2.5, p.y + 2.5, tw, th, 2); ctx.fill(); ctx.fillStyle = '#ffcf4a'; ctx.font = '700 ' + Math.max(6, th * .78) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('€', p.x + bw - tw / 2 - 2.5, p.y + 2.5 + th / 2 + .5); }
+      }
+      const showN = q.size >= 8 ? cp >= 8 : q.size >= 4 ? cp >= 13 : q.size >= 2 ? cp >= 27 : cp >= 52;
+      if (showN && (!special || q.real || bw >= 44)) {
+        ctx.fillStyle = '#071026'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        const fs = Math.max(8, Math.min(bw / (q.name.length * .56 + 1), cp * .95, 30));
+        ctx.font = '700 ' + fs + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillText(q.name, p.x + cp * .28, p.y + cp * .28, bw - cp * .5);
+        if (q.size >= 4 && cp >= 17 && q.tag) { ctx.font = '500 ' + Math.max(7, fs * .58) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillStyle = 'rgba(7,16,38,.78)'; ctx.fillText(q.tag, p.x + cp * .28, p.y + cp * .28 + fs * 1.18, bw - cp * .5); }
+        if (q.mode === 'sell' && q.size >= 4 && cp >= 17 && q.price && !special) { ctx.font = '700 ' + Math.max(7, fs * .72) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillStyle = '#071026'; ctx.textBaseline = 'bottom'; ctx.fillText(q.price, p.x + cp * .28, p.y + bw - cp * .25); }
+      }
+      if (q === hoverSq || q === sel) { ctx.globalAlpha = mA; ctx.strokeStyle = '#fff'; ctx.lineWidth = q === sel ? 3 : 1.5; rrect(ctx, p.x - 3, p.y - 3, bw + 6, bw + 6, rr + 3); ctx.stroke(); }
     }
     ctx.globalAlpha = 1;
-    if (q === hoverSq || q === sel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = q === sel ? 3 : 1.5; rrect(px - 3, py - 3, bw + 6, bh + 6, rr + 3); ctx.stroke(); }
   }
-  // ring labels, on top
-  if (z > .45 && z < 3.2) {
-    const c0 = toS(0, 0); ctx.font = '600 10px "IBM Plex Mono",monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-    for (const [r, label] of RINGS) {
-      const y = c0.y - r * s; if (y < -20 || y > H + 20) continue;
-      const tw = ctx.measureText(label).width + 18; ctx.fillStyle = 'rgba(6,9,32,.86)'; rrect(c0.x - tw / 2, y - 10, tw, 20, 10); ctx.fill();
-      ctx.strokeStyle = 'rgba(150,175,255,.35)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = 'rgba(200,212,255,.85)'; ctx.fillText(label, c0.x + 1, y + .5);
+  { const r = CORE_R * cp * 2.6; if (r > 4 && r < big * 3 && c0.x + r > 0 && c0.x - r < W && c0.y + r > 0 && c0.y - r < H) { const g = ctx.createRadialGradient(c0.x, c0.y, 0, c0.x, c0.y, r); const s = .2 + .5 * gA; g.addColorStop(0, `rgba(255,255,255,${.55 * s})`); g.addColorStop(.25, `rgba(190,235,255,${.3 * s})`); g.addColorStop(1, 'rgba(94,225,255,0)'); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(c0.x - r, c0.y - r, 2 * r, 2 * r); ctx.globalCompositeOperation = 'source-over'; } }
+  if (gA > .25) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = SPARKS.length - 1; i >= 0; i--) {
+      const s = SPARKS[i], k = (T - s.t) / 1100; if (k > 1) { SPARKS.splice(i, 1); continue; }
+      const c = toS(s.q.x + s.q.w / 2, s.q.y + s.q.h / 2), R = 6 + s.q.w * cp * 2.5, a = Math.sin(k * Math.PI) * gA;
+      ctx.globalAlpha = a; ctx.drawImage(starSprite(), c.x - R, c.y - R, 2 * R, 2 * R);
+      ctx.globalAlpha = a * .7; ctx.drawImage(sprite(MODES[s.q.mode].rgb), c.x - R * 1.4, c.y - R * 1.4, R * 2.8, R * 2.8);
     }
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  }
-  // pulses
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  } else SPARKS.length = 0;
   for (let i = PULSES.length - 1; i >= 0; i--) {
     const pl = PULSES[i], k = (T - pl.t) / 1300; if (k > 1) { PULSES.splice(i, 1); continue; }
     const q = pl.q, p = toS(q.x + q.w / 2, q.y + q.h / 2);
-    ctx.globalAlpha = (1 - k) * .75; ctx.strokeStyle = MODES[q.mode].color; ctx.lineWidth = 2 * (1 - k) + .5;
-    ctx.beginPath(); ctx.arc(p.x, p.y, q.w * s * .6 + k * s * 5, 0, 6.2832); ctx.stroke();
+    ctx.globalAlpha = (1 - k) * .75 * Math.max(mA, .4); ctx.strokeStyle = MODES[q.mode].color; ctx.lineWidth = 2 * (1 - k) + .5;
+    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(4, q.w * cp * .6) + k * Math.max(cp * 5, 24), 0, 6.2832); ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  // hover ghost
-  if (ghost && ui === 'none') {
-    const p = toS(ghost.x, ghost.y), sz = 2 * s;
-    ctx.fillStyle = 'rgba(200,255,61,.12)'; rrect(p.x + 1, p.y + 1, sz - 2, sz - 2, Math.min(5, s * .18)); ctx.fill();
+  for (const q of SQ) if (q.real && !q.gone) beacon(q, T, '#ffffff', '255,255,255', .9);
+  if (ghost && ui === 'none' && mA > .5) {
+    const p = toS(ghost.x, ghost.y), sz = ghost.size * cp;
+    ctx.fillStyle = 'rgba(200,255,61,.12)'; rrect(ctx, p.x + 1, p.y + 1, sz - 2, sz - 2, Math.min(5, cp * .18)); ctx.fill();
     ctx.setLineDash([4, 4]); ctx.strokeStyle = '#c8ff3d'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#c8ff3d'; ctx.font = '700 ' + Math.max(10, s * .9) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+', p.x + sz / 2, p.y + sz / 2 + 1);
   }
-  // claim candidate
   if (ui === 'claim' && claim.spot && claim.step < 3) {
-    const c = claim.spot, p = toS(c.x, c.y), sz = 2 * s, step2 = claim.step === 2;
-    const col = step2 ? MODES[claim.mode].color : '#c8ff3d', rgb = step2 ? MODES[claim.mode].rgb : '200,255,61';
+    const c = claim.spot, s = claim.size, p = toS(c.x, c.y), sz = s * cp, named = claim.step >= 2;
+    const col = named ? MODES[claim.mode].color : '#c8ff3d', rgb = named ? MODES[claim.mode].rgb : '200,255,61';
     const pu = reduce ? .6 : .5 + .5 * Math.sin(T * .006);
-    const bg = ctx.createLinearGradient(0, p.y - 220, 0, p.y); bg.addColorStop(0, `rgba(${rgb},0)`); bg.addColorStop(1, `rgba(${rgb},.5)`);
-    ctx.fillStyle = bg; ctx.fillRect(p.x + sz / 2 - 1, p.y - 220, 2, 220);
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5 + .4 * pu; const R = sz * 1.7 + 22;
+    const bg = ctx.createLinearGradient(0, p.y - 240, 0, p.y); bg.addColorStop(0, `rgba(${rgb},0)`); bg.addColorStop(1, `rgba(${rgb},.55)`);
+    ctx.fillStyle = bg; ctx.fillRect(p.x + sz / 2 - 1, p.y - 240, 2, 240);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5 + .4 * pu; const R = Math.max(sz * 1.7 + 22, 30);
     ctx.drawImage(sprite(rgb), p.x + sz / 2 - R, p.y + sz / 2 - R, 2 * R, 2 * R);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    rrect(p.x + 1, p.y + 1, sz - 2, sz - 2, Math.min(5, s * .18));
-    if (step2) { ctx.fillStyle = col; ctx.fill(); }
-    else { ctx.fillStyle = `rgba(${rgb},${.16 + .16 * pu})`; ctx.fill(); ctx.setLineDash([4, 4]); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
-    floatLabel(c.x + 1, c.y, step2 ? (claim.name || 'Your name here') : 'YOUR SPOT', col, T);
+    const vs = Math.max(sz, 6), vx = p.x + sz / 2 - vs / 2, vy = p.y + sz / 2 - vs / 2;
+    rrect(ctx, vx + 1, vy + 1, vs - 2, vs - 2, Math.min(5, vs * .18));
+    if (named) { ctx.fillStyle = col; ctx.fill(); }
+    else { ctx.fillStyle = `rgba(${rgb},${.18 + .16 * pu})`; ctx.fill(); ctx.setLineDash([4, 4]); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
+    floatLabel(c.x + s / 2, c.y, named ? (claim.name || 'Your name here') : `YOUR SPOT · ${eur(priceOf(c.x, c.y, s))}`, col, T);
   }
-  // your square + shared square labels on top
-  if (mine && !mine.gone && !(ui === 'claim' && claim.step < 3 && claim.moving)) floatLabel(mine.x + 1, mine.y, '★ ' + mine.name, '#c8ff3d', T);
-  if (shared && !shared.gone) floatLabel(shared.x + 1, shared.y, shared.name, MODES[shared.mode].color, T);
-  // celebration
+  if (mine && !mine.gone && !(ui === 'claim' && claim.step < 3 && claim.moving)) { beacon(mine, T, '#c8ff3d', '200,255,61', 1); floatLabel(mine.x + mine.w / 2, mine.y, '★ ' + mine.name, '#c8ff3d', T); }
+  if (shared && !shared.gone) { beacon(shared, T, MODES[shared.mode].color, MODES[shared.mode].rgb, 1); floatLabel(shared.x + shared.w / 2, shared.y, shared.name, MODES[shared.mode].color, T); }
+  ctx.font = '600 10px "IBM Plex Mono",monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  for (const zz of ZONES) {
+    const r = (isFinite(zz.r) ? zz.r : WORLD_R + 8) * cp; if (r < 70 || r > Math.max(W, H) * 2.2) continue;
+    const y = c0.y - r; if (y < 70 || y > H - 20 || c0.x < -200 || c0.x > W + 200) continue;
+    const label = zz.invite ? `${zz.label.toUpperCase()} · INVITE ONLY` : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL`;
+    const tw = ctx.measureText(label).width + 20;
+    ctx.globalAlpha = .92; ctx.fillStyle = 'rgba(4,6,22,.88)'; rrect(ctx, c0.x - tw / 2, y - 11, tw, 22, 11); ctx.fill();
+    ctx.strokeStyle = zz.color; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.stroke();
+    ctx.globalAlpha = 1; ctx.fillStyle = zz.color; ctx.fillText(label, c0.x + 1, y + .5);
+  }
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   for (let i = WAVES.length - 1; i >= 0; i--) {
     const w = WAVES[i], k = (T - w.t) / 1200; if (k < 0) continue; if (k > 1) { WAVES.splice(i, 1); continue; }
     const p = toS(w.x, w.y); ctx.globalAlpha = 1 - k; ctx.strokeStyle = w.col; ctx.lineWidth = 3 * (1 - k) + .5;
-    ctx.beginPath(); ctx.arc(p.x, p.y, (1 + k * 16) * s, 0, 6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(cp, 6) * (1 + k * 16), 0, 6.2832); ctx.stroke();
   }
-  for (const pt of PARTS) { if (pt.life <= 0) continue; const p = toS(pt.x, pt.y), sz = pt.sz * s; ctx.globalAlpha = Math.min(1, pt.life * 1.4); ctx.fillStyle = pt.c; ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz); }
+  for (const pt of PARTS) { if (pt.life <= 0) continue; const p = toS(pt.x, pt.y), s = Math.max(2, pt.sz * cp); ctx.globalAlpha = Math.min(1, pt.life * 1.4); ctx.fillStyle = pt.c; ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s); }
   ctx.globalAlpha = 1;
-  if (vignette) { ctx.fillStyle = vignette; ctx.fillRect(0, 0, W, H); }
+  drawMini();
+}
+let miniShown = false;
+function drawMini() {
+  const show = cam.z > home().z * 2.2 && !isMobile();
+  if (show !== miniShown) { miniShown = show; MINI.classList.toggle('on', show); app.classList.toggle('has-mini', show); }
+  if (!show || !MINIBASE) return;
+  mctx.save(); mctx.clearRect(0, 0, 300, 300);
+  mctx.beginPath(); mctx.arc(150, 150, 150, 0, 6.2832); mctx.clip();
+  mctx.drawImage(MINIBASE, 0, 0);
+  const sc = 300 / ((WORLD_R + 8) * 2), tl = toW(0, 0), br = toW(W, H);
+  mctx.strokeStyle = '#c8ff3d'; mctx.lineWidth = 3; mctx.strokeRect(150 + tl.x * sc, 150 + tl.y * sc, Math.max(4, (br.x - tl.x) * sc), Math.max(4, (br.y - tl.y) * sc));
+  if (mine) { mctx.fillStyle = '#c8ff3d'; mctx.beginPath(); mctx.arc(150 + (mine.x + mine.w / 2) * sc, 150 + (mine.y + mine.h / 2) * sc, 5, 0, 6.2832); mctx.fill(); }
+  mctx.restore();
 }
 
 /* ================= CAMERA ================= */
-let fly = null;
+let fly = null, zAnim = null;
+const vel = { x: 0, y: 0 };
 const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 function flyTo(x, y, z, ms, ease) {
-  if (reduce) { cam.x = x; cam.y = y; cam.z = z || cam.z; fly = null; kick(); return; }
-  fly = { sx: cam.x, sy: cam.y, sz: cam.z, x, y, z: z || cam.z, t0: now(), ms: ms || 900, e: ease || easeOut }; idle = now(); kick();
+  zAnim = null; vel.x = vel.y = 0; hideTip(); hoverSq = null; ghost = null;
+  if (reduce) { cam.x = x; cam.y = y; cam.z = clamp(z || cam.z, ZMIN, ZMAX); fly = null; kick(); return; }
+  fly = { sx: cam.x, sy: cam.y, sz: cam.z, x, y, z: clamp(z || cam.z, ZMIN, ZMAX), t0: now(), ms: ms || 900, e: ease || easeOut }; kick();
 }
-function centerOn(q, z) { flyTo(q.x + q.w / 2, q.y + q.h / 2, z || clamp(Math.max(cam.z, q.size >= 4 ? 2 : 2.8), .3, 7), 850); }
-function zoomAt(sx, sy, f) {
-  fly = null; const b = toW(sx, sy); cam.z = clamp(cam.z * f, .3, 7); const a = toW(sx, sy);
-  cam.x += b.x - a.x; cam.y += b.y - a.y; idle = now(); kick();
+function centerOn(q, z) { flyTo(q.x + q.w / 2, q.y + q.h / 2, z || clamp(Math.max(cam.z, q.size >= 8 ? 1.3 : q.size >= 4 ? 2 : 2.8), ZMIN, ZMAX), 950, easeInOut); }
+function zoomBy(f, sx, sy) {
+  fly = null; vel.x = vel.y = 0; hideTip(); ghost = null;
+  const base = zAnim ? zAnim.target : cam.z;
+  zAnim = { target: clamp(base * f, ZMIN, ZMAX), sx, sy }; markExplore(); kick();
 }
-const home = () => ({ x: 0, y: -1, z: isMobile() ? .85 : 1 });
+function goHome() { const h = home(); flyTo(h.x, h.y, h.z, 1400, easeInOut); explored = false; app.classList.remove('explore'); }
+function markExplore() { if (!explored && !introRunning) { explored = true; app.classList.add('explore'); } }
 
 /* ================= LOOP ================= */
-let running = false, raf = 0, lastT = now();
+let running = !document.hidden, raf = 0, lastT = now(), idle = now();
 function tick(T) {
   raf = 0; if (!running) return;
   const dt = Math.min(50, T - lastT) / 1000; lastT = T;
@@ -995,20 +984,30 @@ function tick(T) {
     cam.x = fly.sx + (fly.x - fly.sx) * e; cam.y = fly.sy + (fly.y - fly.sy) * e; cam.z = fly.sz * Math.pow(fly.z / fly.sz, e);
     if (k >= 1) fly = null;
   }
-  const ft = focusTarget(), lf = reduce ? 1 : Math.min(1, dt * 7); fp.x += (ft.x - fp.x) * lf; fp.y += (ft.y - fp.y) * lf;
-  if (!reduce && !drag && !pinch && !fly && ui === 'none' && T - idle > 6000) { cam.x += Math.cos(T * .00012) * dt * .35 / cam.z; cam.y += Math.sin(T * .0001) * dt * .25 / cam.z; }
-  if (!reduce && T > nextPulse && VIS.length) { const q = VIS[Math.floor(Math.random() * VIS.length)]; PULSES.push({ q, t: T }); q.boost = T; nextPulse = T + 450 + Math.random() * 650; }
-  for (const pt of PARTS) { if (pt.life <= 0) continue; pt.x += pt.vx * dt; pt.y += pt.vy * dt; const dr = Math.pow(.12, dt); pt.vx *= dr; pt.vy *= dr; pt.life -= pt.dec * dt; }
+  if (zAnim) {
+    const a = toW(zAnim.sx, zAnim.sy), k = reduce ? 1 : 1 - Math.exp(-dt * 13);
+    cam.z = Math.exp(Math.log(cam.z) + (Math.log(zAnim.target) - Math.log(cam.z)) * k);
+    const b = toW(zAnim.sx, zAnim.sy); cam.x += a.x - b.x; cam.y += a.y - b.y;
+    if (Math.abs(Math.log(cam.z / zAnim.target)) < .002) zAnim = null;
+  }
+  if (!drag && (vel.x || vel.y)) {
+    cam.x += vel.x * dt; cam.y += vel.y * dt; const d = Math.pow(.004, dt); vel.x *= d; vel.y *= d;
+    if (Math.hypot(vel.x, vel.y) * CELL * cam.z < 4) vel.x = vel.y = 0;
+  }
+  const ft = focusTarget(), lf = reduce ? 1 : Math.min(1, dt * 6); fp.x += (ft.x - fp.x) * lf; fp.y += (ft.y - fp.y) * lf;
+  if (!reduce && !drag && !pinch && !fly && !zAnim && ui === 'none' && T - idle > 7000) { const s = dt / Math.sqrt(cam.z * 4); cam.x += Math.cos(T * .00011) * s * .9; cam.y += Math.sin(T * .00009) * s * .6; }
+  if (!reduce) {
+    if (T > nextSpark) { const q = SQ[Math.floor(Math.random() * SQ.length)]; if (q && !q.gone && q.last <= 6) SPARKS.push({ q, t: T }); nextSpark = T + 60 + Math.random() * 140; }
+    if (T > nextPulse && VIS.length) { const q = VIS[Math.floor(Math.random() * VIS.length)]; PULSES.push({ q, t: T }); q.boost = T; nextPulse = T + 450 + Math.random() * 650; }
+  }
+  for (const pt of PARTS) { if (pt.life <= 0) continue; pt.x += pt.vx * dt; pt.y += pt.vy * dt; const d = Math.pow(.12, dt); pt.vx *= d; pt.vy *= d; pt.life -= pt.dec * dt; }
   if (PARTS.length && PARTS.every(p => p.life <= 0)) PARTS.length = 0;
   draw(T);
   raf = requestAnimationFrame(tick);
 }
-function kick() { if (running && !raf) { lastT = now(); raf = requestAnimationFrame(tick); } else if (!running) draw(now()); }
-function setRunning(v) { running = v; if (v) kick(); }
-let heroVisible = true;
-new IntersectionObserver(es => { heroVisible = es[0].isIntersecting; setRunning(heroVisible && !document.hidden); }).observe(hero);
-document.addEventListener('visibilitychange', () => setRunning(heroVisible && !document.hidden));
-new ResizeObserver(() => resize()).observe(hero);
+function kick() { if (running && !raf) { lastT = now(); raf = requestAnimationFrame(tick); } }
+document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) kick(); });
+addEventListener('resize', resize);
 
 /* ================= INPUT ================= */
 const tip = $('#tip');
@@ -1018,37 +1017,57 @@ function showTip(m, title, sub, col) {
   tip.replaceChildren();
   const b = document.createElement('b'); b.textContent = title; if (col) b.style.color = col;
   const sm = document.createElement('small'); sm.textContent = sub; tip.append(b, sm);
-  const x = Math.min(m.x + 14, W - 270), y = Math.min(m.y + 16, H - 70);
-  tip.style.transform = `translate(${x}px,${y}px)`; tip.classList.add('on');
+  tip.style.transform = `translate(${Math.min(m.x + 16, W - 290)}px,${Math.min(m.y + 18, H - 70)}px)`; tip.classList.add('on');
 }
 const hideTip = () => tip.classList.remove('on');
+function freeAround(cx, cy, size) {
+  for (let dx = 0; dx < size; dx++) for (let dy = 0; dy < size; dy++) { const x = cx - dx, y = cy - dy; if (spotOk(x, y, size)) return { x, y, size }; }
+  return null;
+}
 function hover(m) {
-  const w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y), q = sqAt(cx, cy);
-  hoverSq = q; ghost = null;
+  const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
+  hoverSq = null; ghost = null; cv.classList.remove('pointy', 'dive');
+  if (introRunning) return;
   if (ui === 'claim' && claim.step < 3) { cv.classList.add('pointy'); hideTip(); return; }
+  if (cp < 4.5) {
+    const d = Math.hypot(w.x, w.y);
+    if (d > WORLD_R + 20) { hideTip(); return; }
+    const z = ZONES.find(zz => d < zz.r);
+    cv.classList.add('dive');
+    showTip(m, z.label, z.invite ? 'Invite only · click to dive in' : `Founding price ${eur(z.price)} / cell · click to dive in`, z.color);
+    return;
+  }
+  const q = sqAt(cx, cy);
   if (q) {
-    cv.classList.add('pointy');
-    if (q.mine) showTip(m, '★ ' + q.name, 'Your square · ring ' + ringOf(q.x, q.y), '#c8ff3d');
+    hoverSq = q; cv.classList.add('pointy');
+    if (q.mine) showTip(m, '★ ' + q.name, 'Your square · ' + zoneOf(q.x, q.y, q.size).label, '#c8ff3d');
+    else if (q.real) showTip(m, 'Founding spot', 'Reserved · ' + q.tag, '#fff');
     else showTip(m, q.name, MODES[q.mode].label + ' · ' + q.rec[0], MODES[q.mode].color);
     return;
   }
-  const f = freeAround(cx, cy);
-  if (f) { ghost = f; cv.classList.add('pointy'); showTip(m, 'Free spot · ring ' + ringOf(f.x, f.y), mine ? 'Click to move your square here' : 'Click to claim it', '#c8ff3d'); }
-  else { cv.classList.remove('pointy'); hideTip(); }
+  if (zoneOf(cx, cy, 1).invite) { showTip(m, 'Core', 'Invite only', '#fff'); return; }
+  const f = freeAround(cx, cy, 2);
+  if (f) { ghost = f; cv.classList.add('pointy'); showTip(m, `Free spot · ${zoneOf(f.x, f.y, 2).label}`, `2×2 for ${eur(priceOf(f.x, f.y, 2))} · click to claim`, '#c8ff3d'); }
+  else hideTip();
 }
 function tap(m) {
-  const w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
-  if (ui === 'claim' && claim.step < 3) { setSpot(nearestFree(cx, cy), true); return; }
+  const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
+  if (introRunning) return;
+  if (ui === 'claim' && claim.step < 3) { const s = nearestFree(cx - (claim.size >> 1), cy - (claim.size >> 1), claim.size); if (s) setSpot(s, true); return; }
+  if (cp < 4.5) { markExplore(); flyTo(w.x, w.y, clamp(18 / CELL, ZMIN, ZMAX), 1300, easeInOut); return; }
   const q = sqAt(cx, cy);
   if (q) { openPop(q); return; }
   if (ui !== 'none') { closeUI(); return; }
-  startClaim(nearestFree(cx, cy), true);
+  if (zoneOf(cx, cy, 1).invite) { toast('The core is invite only. Pick a spot just outside it.'); return; }
+  const f = freeAround(cx, cy, 2) || nearestFree(cx - 1, cy - 1, 2);
+  if (f) startClaim({ x: f.x, y: f.y }, true);
 }
-const ptrs = new Map(); let drag = null, pinch = null, moved = false;
+const ptrs = new Map(); let drag = null, pinch = null, moved = false, samples = [];
 cv.addEventListener('pointerdown', e => {
   if (e.button > 0) return;
-  ptrs.set(e.pointerId, local(e)); fly = null; idle = now();
-  if (ptrs.size === 1) { drag = { m: local(e), cx: cam.x, cy: cam.y }; moved = false; }
+  if (introRunning) { endIntro(); return; }
+  ptrs.set(e.pointerId, local(e)); fly = null; zAnim = null; vel.x = vel.y = 0; idle = now();
+  if (ptrs.size === 1) { drag = { m: local(e), cx: cam.x, cy: cam.y }; moved = false; samples = [{ x: e.clientX, y: e.clientY, t: now() }]; }
   else if (ptrs.size === 2) {
     const [a, b] = [...ptrs.values()], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: cam.z, w: toW(mid.x, mid.y) }; drag = null; moved = true;
@@ -1060,13 +1079,16 @@ cv.addEventListener('pointermove', e => {
   if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, m);
   if (pinch && ptrs.size >= 2) {
     const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    cam.z = clamp(pinch.z * d / pinch.d, .3, 7);
-    cam.x = pinch.w.x - (mid.x - fp.x) / (CELL * cam.z); cam.y = pinch.w.y - (mid.y - fp.y) / (CELL * cam.z); kick(); return;
+    cam.z = clamp(pinch.z * d / pinch.d, ZMIN, ZMAX);
+    cam.x = pinch.w.x - (mid.x - fp.x) / (CELL * cam.z); cam.y = pinch.w.y - (mid.y - fp.y) / (CELL * cam.z); markExplore(); kick(); return;
   }
   if (drag) {
     const dx = m.x - drag.m.x, dy = m.y - drag.m.y;
-    if (!moved && Math.abs(dx) + Math.abs(dy) > 5) { moved = true; dragged = true; cv.classList.add('dragging'); hideTip(); ghost = null; hoverSq = null; }
-    if (moved) { cam.x = drag.cx - dx / (CELL * cam.z); cam.y = drag.cy - dy / (CELL * cam.z); idle = now(); kick(); }
+    if (!moved && Math.abs(dx) + Math.abs(dy) > 5) { moved = true; cv.classList.add('dragging'); hideTip(); ghost = null; hoverSq = null; markExplore(); }
+    if (moved) {
+      cam.x = drag.cx - dx / (CELL * cam.z); cam.y = drag.cy - dy / (CELL * cam.z); idle = now();
+      samples.push({ x: e.clientX, y: e.clientY, t: now() }); if (samples.length > 6) samples.shift(); kick();
+    }
     return;
   }
   if (e.pointerType === 'mouse') hover(m);
@@ -1075,33 +1097,50 @@ function endPtr(e, cancel) {
   ptrs.delete(e.pointerId); cv.classList.remove('dragging');
   if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
   const was = drag; drag = null;
+  if (was && moved && !reduce && samples.length > 1) {
+    const s0 = samples[0], s1 = samples[samples.length - 1], dtm = (s1.t - s0.t) / 1000;
+    if (dtm > 0 && now() - s1.t < 80) { const cp = CELL * cam.z; vel.x = -(s1.x - s0.x) / dtm / cp; vel.y = -(s1.y - s0.y) / dtm / cp; kick(); }
+  }
   if (!cancel && was && !moved) { const m = local(e); tap(m); if (e.pointerType === 'mouse') hover(m); }
 }
 cv.addEventListener('pointerup', e => endPtr(e, false));
 cv.addEventListener('pointercancel', e => endPtr(e, true));
 cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) { hideTip(); hoverSq = null; ghost = null; } });
-const wh = $('#wheelhint'); let whT = 0, whShown = 0;
 cv.addEventListener('wheel', e => {
-  if (e.ctrlKey || e.metaKey) { e.preventDefault(); const m = local(e); zoomAt(m.x, m.y, Math.exp(-e.deltaY * (e.deltaMode === 1 ? .05 : .0022))); return; }
-  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2) { e.preventDefault(); fly = null; cam.x += e.deltaX / (CELL * cam.z); idle = now(); kick(); return; }
-  if (dragged && now() - whShown > 9000) { whShown = now(); wh.textContent = (isMac ? '⌘' : 'Ctrl') + ' + scroll to zoom the map'; wh.classList.add('on'); clearTimeout(whT); whT = setTimeout(() => wh.classList.remove('on'), 1400); }
+  e.preventDefault(); if (introRunning) { endIntro(); return; }
+  const m = local(e); idle = now();
+  const k = e.deltaMode === 1 ? .055 : e.ctrlKey ? .012 : .0019;
+  zoomBy(Math.exp(-e.deltaY * k), m.x, m.y);
 }, { passive: false });
-cv.addEventListener('keydown', e => {
-  const st = 5 / cam.z; let used = true;
-  if (e.key === 'ArrowLeft') cam.x -= st; else if (e.key === 'ArrowRight') cam.x += st;
-  else if (e.key === 'ArrowUp') cam.y -= st; else if (e.key === 'ArrowDown') cam.y += st;
-  else if (e.key === '+' || e.key === '=') zoomAt(W / 2, H / 2, 1.3); else if (e.key === '-') zoomAt(W / 2, H / 2, 1 / 1.3);
+addEventListener('keydown', e => {
+  const typing = e.target.closest && e.target.closest('input,textarea');
+  if (e.key === 'Escape') { if (introRunning) endIntro(); if (sheet.classList.contains('open')) closeSheet(); else if (!results.hidden) results.hidden = true; else if (ui !== 'none') closeUI(); return; }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.closest && e.target.closest('button,a,summary') && (e.key === 'Enter' || e.key === ' ')) return;
+  if (introRunning) { endIntro(); return; }
+  const st = 360 / (CELL * cam.z); let used = true;
+  if (e.key === 'ArrowLeft' || e.key === 'a') vel.x = -st; else if (e.key === 'ArrowRight' || e.key === 'd') vel.x = st;
+  else if (e.key === 'ArrowUp' || e.key === 'w') vel.y = -st; else if (e.key === 'ArrowDown' || e.key === 's') vel.y = st;
+  else if (e.key === '+' || e.key === '=') zoomBy(1.6, fp.x, fp.y); else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.6, fp.x, fp.y);
+  else if (e.key === '0') goHome();
+  else if (e.key === '/') openSearch();
+  else if (e.key === '?') openSheet();
   else used = false;
-  if (used) { e.preventDefault(); fly = null; idle = now(); kick(); }
+  if (used) { e.preventDefault(); if (e.key !== '0') markExplore(); kick(); }
 });
-$('#zIn').onclick = () => zoomAt(fp.x, fp.y, 1.4);
-$('#zOut').onclick = () => zoomAt(fp.x, fp.y, 1 / 1.4);
-$('#zHome').onclick = () => { const h = home(); flyTo(h.x, h.y, h.z, 1000); };
-$('#hint').textContent = coarse ? 'Swipe sideways to explore · tap an empty spot' : 'Drag to explore · ' + (isMac ? '⌘' : 'Ctrl') + ' + scroll to zoom · click any empty spot';
+$('#zIn').onclick = () => zoomBy(1.8, fp.x, fp.y);
+$('#zOut').onclick = () => zoomBy(1 / 1.8, fp.x, fp.y);
+$('#zHome').onclick = () => { closeUI(); goHome(); };
+$('#logo').onclick = e => { e.preventDefault(); closeUI(); closeSheet(); goHome(); };
+MINI.addEventListener('click', e => {
+  const r = MINI.getBoundingClientRect(), sc = r.width / ((WORLD_R + 8) * 2);
+  flyTo((e.clientX - r.left - r.width / 2) / sc, (e.clientY - r.top - r.height / 2) / sc, cam.z, 900, easeInOut);
+});
+$('#heroHint').textContent = coarse ? 'Pinch to zoom · drag to fly' : 'Scroll to zoom · drag to fly · click to dive';
 
 /* ================= TOAST / SHARE ================= */
 const toastEl = $('#toast'); let toastT = 0;
-function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('on'), 3200); }
+function toast(msg, ms) { toastEl.textContent = msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('on'), ms || 3400); }
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
   try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok; } catch (e) { return false; }
@@ -1109,170 +1148,275 @@ async function copy(text) {
 const b64e = o => { const b = new TextEncoder().encode(JSON.stringify(o)); let s = ''; for (const c of b) s += String.fromCharCode(c); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const b64d = s => { try { const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)))); } catch (e) { return null; } };
 const baseUrl = () => location.origin + location.pathname;
+function mineLink() { const o = { x: mine.x, y: mine.y, s: mine.size, m: mine.mode, n: mine.name }; if (mine.code) o.r = mine.code; return baseUrl() + '#s=' + b64e(o); }
+function mineText() { return mine.number ? `I'm founding spot #${mine.number} in Expanse — the internet, as a universe. Grab the spot next to me:` : `I'm on the Expanse map — the internet, as a universe. Grab the spot next to me:`; }
 async function shareUrl(url, title, text, okMsg) {
   try { history.replaceState(null, '', url.slice(url.indexOf('#'))); } catch (e) {}
   if (coarse && navigator.share) { try { await navigator.share({ title, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
-  toast((await copy(url)) ? okMsg : 'Link is in your address bar — copy it from there.');
+  toast((await copy(url)) ? okMsg : 'The link is in your address bar — copy it from there.');
 }
-function shareMine() {
+function shareMine() { if (mine) shareUrl(mineLink(), 'My square on Expanse', mineText(), 'Link copied. Friends who open it land right next to you.'); }
+
+async function squareCard() {
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; const g = c.getContext('2d');
+  const bg = g.createRadialGradient(540, 620, 0, 540, 620, 950); bg.addColorStop(0, '#16206a'); bg.addColorStop(.45, '#080c2c'); bg.addColorStop(1, '#02030c');
+  g.fillStyle = bg; g.fillRect(0, 0, 1080, 1350);
+  const r3 = mulberry(mine.x * 7919 + mine.y * 104729 + 7);
+  for (let i = 0; i < 320; i++) { g.globalAlpha = .15 + r3() * .6; g.fillStyle = '#fff'; const s = .6 + r3() * 1.8; g.fillRect(r3() * 1080, r3() * 1350, s, s); }
+  const sc = 26, cx = 540, cy = 640, wx = mine.x + mine.w / 2, wy = mine.y + mine.h / 2;
+  for (const q of SQ) {
+    if (q.gone) continue;
+    const sx = cx + (q.x - wx) * sc, sy = cy + (q.y - wy) * sc, sw = q.w * sc;
+    if (sx > 1080 || sy > 1350 || sx + sw < 0 || sy + sw < 0) continue;
+    const fade = clamp(1 - Math.hypot(sx + sw / 2 - cx, sy + sw / 2 - cy) / 600, 0, 1); if (fade <= 0) continue;
+    const special = q.mine || q.real || q.shared;
+    if (!special && glowOf(q) > 0 && q.size >= 2) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = fade * .35; const R = sw * 1.1; g.drawImage(sprite(MODES[q.mode].rgb), sx + sw / 2 - R, sy + sw / 2 - R, R * 2, R * 2); g.globalCompositeOperation = 'source-over'; }
+    g.globalAlpha = fade * (q === mine ? 1 : special ? .95 : fadeOf(q) * .92);
+    g.fillStyle = special ? '#fff' : MODES[q.mode].color; rrect(g, sx + 2, sy + 2, sw - 4, sw - 4, 6); g.fill();
+  }
+  g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
+  const ms = mine.w * sc, mx = cx - ms / 2, my = cy - ms / 2, R = ms * 2.6 + 80;
+  g.drawImage(sprite('200,255,61'), cx - R, cy - R, R * 2, R * 2); g.globalCompositeOperation = 'source-over';
+  g.fillStyle = '#fff'; rrect(g, mx + 2, my + 2, ms - 4, ms - 4, 8); g.fill();
+  g.strokeStyle = '#c8ff3d'; g.lineWidth = 6; rrect(g, mx - 6, my - 6, ms + 12, ms + 12, 12); g.stroke();
+  g.font = '700 34px "Instrument Sans",sans-serif'; const label = '★ ' + mine.name, lw = Math.min(900, g.measureText(label).width + 48);
+  g.fillStyle = 'rgba(4,6,22,.95)'; rrect(g, cx - lw / 2, my - 110, lw, 64, 32); g.fill(); g.strokeStyle = '#c8ff3d'; g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#c8ff3d'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, cx, my - 77, lw - 40);
+  g.beginPath(); g.moveTo(cx, my - 46); g.lineTo(cx, my - 10); g.stroke();
+  const top = g.createLinearGradient(0, 0, 0, 260); top.addColorStop(0, 'rgba(2,3,12,.95)'); top.addColorStop(1, 'rgba(2,3,12,0)'); g.fillStyle = top; g.fillRect(0, 0, 1080, 260);
+  const bot = g.createLinearGradient(0, 960, 0, 1350); bot.addColorStop(0, 'rgba(2,3,12,0)'); bot.addColorStop(.45, 'rgba(2,3,12,.92)'); bot.addColorStop(1, '#02030c'); g.fillStyle = bot; g.fillRect(0, 960, 1080, 390);
+  const og = g.createRadialGradient(92, 98, 2, 100, 106, 26); og.addColorStop(0, '#c8ff3d'); og.addColorStop(.5, '#5ee1ff'); og.addColorStop(1, '#1a5fff'); g.fillStyle = og; g.beginPath(); g.arc(100, 106, 26, 0, 6.2832); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '700 46px "Instrument Sans",sans-serif'; g.fillText('Expanse', 142, 108);
+  g.textAlign = 'right'; g.font = '600 22px "IBM Plex Mono",monospace'; g.fillStyle = '#c8ff3d'; g.fillText('THE INTERNET, AS A UNIVERSE', 1000, 108);
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  g.font = '700 96px "Instrument Sans",sans-serif'; g.fillStyle = '#fff';
+  g.fillText(mine.number ? `Founding spot #${mine.number}` : "I'm on the map.", 80, 1150, 920);
+  const z = zoneOf(mine.x, mine.y, mine.size);
+  g.font = '500 34px "Instrument Sans",sans-serif'; g.fillStyle = '#c3caf0';
+  g.fillText(`${mine.name} · ${z.label} · ${mine.size}×${mine.size} · ${MODES[mine.mode].label}`, 80, 1210, 920);
+  g.font = '600 26px "IBM Plex Mono",monospace'; g.fillStyle = '#c8ff3d';
+  g.fillText((location.host || 'expanse-inky.vercel.app').toUpperCase() + ' — CLAIM THE SPOT NEXT TO ME →', 80, 1280, 920);
+  return new Promise(res => c.toBlob(res, 'image/png'));
+}
+async function shareCard() {
   if (!mine) return;
-  shareUrl(baseUrl() + '#s=' + b64e({ x: mine.x, y: mine.y, m: mine.mode, n: mine.name }), 'My square on Expanse', `I'm on the Expanse map. Grab the spot next to me →`, 'Link copied. Friends who open it land right next to you.');
+  toast('Rendering your square card…', 1500);
+  const blob = await squareCard(); if (!blob) return;
+  const file = new File([blob], 'my-expanse-square.png', { type: 'image/png' }), url = mineLink();
+  if (coarse && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'My square on Expanse', text: mineText() + ' ' + url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'my-expanse-square.png'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast((await copy(url)) ? 'Square card saved and link copied — post them together.' : 'Square card saved.');
 }
 
 /* ================= SQUARE CARD ================= */
-const pop = $('#pop'), claimEl = $('#claim');
-function setUI(v) { ui = v; hero.classList.toggle('ui', v !== 'none'); hideTip(); ghost = null; kick(); }
+const pop = $('#pop'), claimEl = $('#claim'), sheet = $('#sheet');
+function setUI(v) { ui = v; app.classList.toggle('ui', v !== 'none'); hideTip(); ghost = null; kick(); }
+function renderRefs(el, code) {
+  if (!code) { el.hidden = true; return; }
+  el.hidden = false; el.replaceChildren();
+  const t = document.createElement('b'); t.textContent = 'Invite 3 friends → +1 free cell.';
+  const dots = document.createElement('div'); dots.className = 'dots'; for (let i = 0; i < 3; i++) dots.appendChild(document.createElement('i'));
+  const sm = document.createElement('small'); sm.textContent = 'Friends who reserve through your link count.';
+  el.append(t, dots, sm);
+  rpc('referral_count', { p_code: code }).then(n => {
+    n = Math.max(0, n | 0); dots.querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i < n));
+    sm.textContent = n >= 3 ? 'Done — your extra cell is waiting for launch.' : `${n} of 3 friends have reserved through your link.`;
+  }).catch(() => {});
+}
 function openPop(q) {
   claimEl.classList.remove('open'); sel = q; setUI('pop');
-  const M = MODES[q.mode], special = q.mine || q.shared;
-  $('#pMode').textContent = q.mine ? 'Your square' : q.shared ? 'Founding square' : M.label;
-  $('#pMode').style.cssText = special ? 'color:#071026;background:' + (q.mine ? '#c8ff3d' : M.color) : `color:${M.color};background:rgba(${M.rgb},.14)`;
-  $('#pMeta').textContent = `${q.size}×${q.size} · ring ${ringOf(q.x, q.y)}${q.city ? ' · ' + q.city : ''}`;
+  const M = MODES[q.mode], special = q.mine || q.shared || q.real, z = zoneOf(q.x, q.y, q.size);
+  $('#pMode').textContent = q.mine ? 'Your square' : q.shared ? 'Shared with you' : q.real ? 'Founding spot' : M.label;
+  $('#pMode').style.cssText = special ? 'color:#071026;background:' + (q.mine ? '#c8ff3d' : q.shared ? M.color : '#fff') : `color:${M.color};background:rgba(${M.rgb},.14)`;
+  $('#pMeta').textContent = `${q.size}×${q.size} · ${z.label}${q.city ? ' · ' + q.city : ''}`;
   $('#pName').textContent = q.name;
-  $('#pTag').textContent = q.tag || '';
-  $('#pWho').textContent = special ? (q.mine ? 'Only you can see this until claims open.' : 'Shared with you') : `${q.owner} · active ${ago(q.last)}`;
-  $('#pRec').replaceChildren(...q.rec.map(r => { const e = document.createElement('span'); e.className = 'rc'; e.textContent = r; e.style.setProperty('--c', special && q.mine ? '#c8ff3d' : M.color); return e; }));
+  $('#pTag').textContent = q.mine ? (mine.number ? `Founding spot #${fmt(mine.number)} · ${eur(mine.price || priceOf(q.x, q.y, q.size))} founding price` : `${eur(priceOf(q.x, q.y, q.size))} founding price · not reserved yet`) : q.tag || '';
+  $('#pWho').textContent = q.mine ? (mine.email ? `Reserved for ${maskEmail(mine.email)}.` : 'Saved on this device only.') : q.shared ? 'A square on the Expanse map.' : q.real ? 'This spot is reserved by a founding member.' : `${q.owner} · active ${ago(q.last)}`;
+  $('#pRec').replaceChildren(...(q.mine ? [z.label, MODES[q.mode].label, mine.email ? 'reserved' : 'on this device'] : q.rec).map(r => { const e = document.createElement('span'); e.className = 'rc'; e.textContent = r; e.style.setProperty('--c', q.mine ? '#c8ff3d' : special ? '#fff' : M.color); return e; }));
   const like = $('#pLike'), shareB = $('#pShare'), go = $('#pGo');
-  like.hidden = shareB.hidden = special; $('#pRemove').hidden = !q.mine; $('#pFine').hidden = special; $('#pNext').hidden = !!q.shared;
-  if (q.mine) { go.textContent = 'Share my square ↗'; $('#pNextTxt').textContent = 'Move or rename my square'; }
-  else if (q.shared) { go.textContent = mine ? 'Move next to ' + q.name : 'Claim the spot next to ' + q.name; }
+  like.hidden = shareB.hidden = special; $('#pRemove').hidden = !q.mine || !!mine.email; $('#pCard').hidden = !q.mine; $('#pNext').hidden = !!q.shared;
+  $('#pFine').textContent = special ? '' : 'Example square on the preview map.'; $('#pFine').hidden = special;
+  if (q.mine) { renderRefs($('#pRefs'), mine.code); go.textContent = mine.email ? 'Share my square ↗' : 'Reserve it →'; $('#pNextTxt').textContent = 'Move or resize my square'; }
   else {
-    go.textContent = M.go + (q.mode === 'sell' && q.price ? ' · ' + q.price : '');
+    $('#pRefs').hidden = true;
+    if (q.shared) go.textContent = mine ? `Move next to ${q.name}` : `Claim the spot next to ${q.name}`;
+    else if (q.real) go.textContent = 'Claim a spot near it';
+    else go.textContent = M.go + (q.mode === 'sell' && q.price ? ' · ' + q.price : '');
     $('#pNextTxt').textContent = mine ? 'Move my square next to this' : 'Claim the spot next to this';
-    const liked = store.get('expanse.like.' + q.id) === today(); like.classList.toggle('on', liked);
-    $('#pLikes').textContent = (q.likes + (liked ? 1 : 0)).toLocaleString('en');
+    if (!special) { const liked = store.get('expanse.like.' + q.id) === today(); like.classList.toggle('on', liked); $('#pLikes').textContent = fmt(q.likes + (liked ? 1 : 0)); }
   }
-  pop.classList.add('open'); pop.focus({ preventScroll: true }); centerOn(q);
+  pop.classList.add('open'); pop.focus({ preventScroll: true }); centerOn(q); markExplore();
 }
-function nextTo(q) { return nearestFree(Math.round(q.x + q.w / 2 - 1), Math.round(q.y + q.h / 2 - 1)); }
+function nextTo(q) { const s = mine ? mine.size : 2; return nearestFree(Math.round(q.x + q.w / 2 - s / 2), Math.round(q.y + q.h / 2 - s / 2), s); }
 $('#pGo').onclick = () => {
   const q = sel; if (!q) return;
-  if (q.mine) return shareMine();
-  if (q.shared) return startClaim(nextTo(q));
+  if (q.mine) { if (mine.email) shareMine(); else startClaim({ x: mine.x, y: mine.y, keep: true }, false, 3); return; }
+  if (q.shared || q.real) { const s = nextTo(q); if (s) startClaim(s); return; }
   toast(`Example square — at launch this goes straight to their ${MODES[q.mode].dest}.`);
 };
-$('#pNext').onclick = () => { const q = sel; if (!q) return; startClaim(q.mine ? { x: q.x, y: q.y, keep: true } : nextTo(q)); };
+$('#pNext').onclick = () => { const q = sel; if (!q) return; if (q.mine) startClaim({ x: q.x, y: q.y }); else { const s = nextTo(q); if (s) startClaim(s); } };
+$('#pCard').onclick = shareCard;
 $('#pLike').onclick = () => {
   const q = sel; if (!q) return; const k = 'expanse.like.' + q.id, b = $('#pLike');
   if (store.get(k) === today()) { toast('One like per square per day.'); return; }
-  store.set(k, today()); b.classList.add('on'); $('#pLikes').textContent = (q.likes + 1).toLocaleString('en');
-  b.classList.remove('pop-anim'); void b.offsetWidth; b.classList.add('pop-anim'); PULSES.push({ q, t: now() }); q.boost = now();
+  store.set(k, today()); b.classList.add('on'); $('#pLikes').textContent = fmt(q.likes + 1);
+  b.classList.remove('pp'); void b.offsetWidth; b.classList.add('pp'); PULSES.push({ q, t: now() }); q.boost = now();
 };
 $('#pShare').onclick = () => { const q = sel; if (q) shareUrl(baseUrl() + '#sq=' + q.id, q.name + ' on Expanse', q.name + ' on the Expanse map', 'Link copied.'); };
 $('#pRemove').onclick = () => {
-  if (!mine) return; unput(mine); mine = null; store.del(MINE_KEY); updateCTAs(); closeUI();
+  if (!mine || mine.email) return; unput(mine); mine = null; store.del(MINE_KEY); updateCTAs(); closeUI();
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
-  toast('Your square is off the map. Claim a new one anytime.');
+  toast('Removed. Claim a new spot anytime.');
 };
 
 /* ================= CLAIM ================= */
-const claim = { step: 0, spot: null, name: '', mode: 'build', moving: false };
+const claim = { step: 0, spot: null, size: 2, name: '', mode: 'build', moving: false };
 const cName = $('#cName');
 function setStep(n) {
   claim.step = n;
-  ['#cStep1', '#cStep2', '#cStep3'].forEach((id, i) => { $(id).hidden = i !== n - 1; });
+  ['#cStep1', '#cStep2', '#cStep3', '#cStep4'].forEach((id, i) => { $(id).hidden = i !== n - 1; });
   claimEl.querySelectorAll('.steps i').forEach((el, i) => el.classList.toggle('on', i < n));
   claimEl.querySelectorAll('[data-m]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === claim.mode)));
+  claimEl.querySelectorAll('[data-s]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.s === claim.size)));
+  if (n === 3) renderSummary();
   kick();
 }
-function startClaim(spot, fromMap) {
-  pop.classList.remove('open'); sel = null;
-  claim.moving = !!mine; claim.name = mine ? mine.name : claim.name; claim.mode = mine ? mine.mode : claim.mode;
+function startClaim(spot, fromMap, step) {
+  pop.classList.remove('open'); sel = null; closeSheet();
+  claim.moving = !!mine; claim.name = mine ? mine.name : claim.name; claim.mode = mine ? mine.mode : claim.mode; claim.size = mine ? mine.size : (claim.size || 2);
   cName.value = claim.name;
-  setUI('claim'); setStep(1);
-  $('#cTake').textContent = mine ? 'Move here →' : 'Take this spot →';
+  setUI('claim'); markExplore();
   claimEl.classList.add('open'); claimEl.focus({ preventScroll: true });
-  if (spot && spot.keep) { claim.spot = { x: spot.x, y: spot.y }; setStep(2); describe(); centerOnSpot(false); return; }
-  setSpot(spot || nearestFree(-1, -1), !!fromMap);
+  if (spot && spot.keep) { claim.spot = { x: spot.x, y: spot.y }; describe(); setStep(step || 2); centerOnSpot(false); return; }
+  setStep(1);
+  const s = spot || nearestFree(-(claim.size >> 1), -(claim.size >> 1), claim.size);
+  if (s) setSpot(s, !!fromMap);
 }
 function describe() {
-  const s = claim.spot, r = ringOf(s.x, s.y), n = closerThan(s.x, s.y);
-  $('#cRing').textContent = `Ring ${r}. ${ringLine(r)}`;
-  $('#cWhere').textContent = (n === 0 ? 'Nothing on the map is closer to the core. ' : `${n.toLocaleString('en')} squares are closer to the core. `) + (coarse ? 'Tap' : 'Click') + ' the map to move it.';
+  const s = claim.spot, z = zoneOf(s.x, s.y, claim.size), n = closerThan(s.x, s.y, claim.size);
+  const zb = $('#cZone'); zb.textContent = z.label; zb.style.background = z.color;
+  $('#cCloser').textContent = n === 0 ? 'Nothing closer to the core' : `${fmt(n)} squares closer to the core`;
+  $('#cTitle').textContent = z.line;
+  $('#cPrice').textContent = eur(z.price * claim.size * claim.size);
+  claimEl.querySelectorAll('[data-s]').forEach(b => { const sz = +b.dataset.s; b.querySelector('small').textContent = eur(zoneOf(s.x, s.y, sz).price * sz * sz) + (sz === 8 ? ' · landmark' : ''); });
+  $('#cMoveHint').textContent = (coarse ? 'Tap' : 'Click') + ' anywhere on the map to move your spot.';
 }
-function centerOnSpot(quick) { const s = claim.spot; flyTo(s.x + 1, s.y + 1, clamp(Math.max(cam.z, isMobile() ? 2 : 2.4), .3, 4), quick ? 500 : 1100, easeInOut); }
-function setSpot(s, quick) { claim.spot = s; describe(); centerOnSpot(quick); if (claim.step !== 1) setStep(1); }
-$('#cTake').onclick = () => { setStep(2); if (!coarse) setTimeout(() => cName.focus({ preventScroll: true }), 200); };
-$('#cCore').onclick = () => setSpot(nearestFree(-1, -1), false);
-$('#cBack').onclick = () => setStep(1);
+function centerOnSpot(quick) { const s = claim.spot; flyTo(s.x + claim.size / 2, s.y + claim.size / 2, clamp(Math.max(cam.z, (isMobile() ? 26 : 34) / CELL / Math.max(1, claim.size / 2)), ZMIN, ZMAX), quick ? 550 : 1300, easeInOut); }
+function setSpot(s, quick) { claim.spot = { x: s.x, y: s.y }; describe(); centerOnSpot(quick); if (claim.step !== 1) setStep(1); }
+$('#cSizes').addEventListener('click', e => {
+  const b = e.target.closest('[data-s]'); if (!b) return; const sz = +b.dataset.s; if (sz === claim.size) return;
+  const c = claim.spot || { x: 0, y: 0 }, old = claim.size; claim.size = sz;
+  const s = nearestFree(Math.round(c.x + old / 2 - sz / 2), Math.round(c.y + old / 2 - sz / 2), sz);
+  if (s) setSpot(s, true); setStep(1);
+});
+$('#cNext1').onclick = () => { setStep(2); if (!coarse) setTimeout(() => cName.focus({ preventScroll: true }), 220); };
+$('#cCore').onclick = () => { const s = nearestFree(-(claim.size >> 1), -(claim.size >> 1), claim.size); if (s) setSpot(s, false); };
+$('#cBack2').onclick = () => setStep(1);
+$('#cBack3').onclick = () => setStep(2);
 cName.addEventListener('input', () => { claim.name = clean(cName.value); kick(); });
-cName.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); place(); } });
+cName.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#cNext2').click(); } });
 $('#cModes').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; claim.mode = b.dataset.m; setStep(2); });
-$('#cPlace').onclick = place;
-function place() {
+$('#cNext2').onclick = () => {
   const name = clean(cName.value);
   if (!name) { cName.classList.remove('shake'); void cName.offsetWidth; cName.classList.add('shake'); cName.focus({ preventScroll: true }); toast('Give your square a name first.'); return; }
-  const s = claim.spot;
-  if (mine) unput(mine);
-  const spot = isFree(s.x, s.y, 2, 2) ? s : nearestFree(s.x, s.y);
-  mine = put({ x: spot.x, y: spot.y, size: 2, mode: claim.mode, name, mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: 'Founding square · claimed in preview', rec: ['ring ' + ringOf(spot.x, spot.y), 'claimed ' + new Date().toLocaleDateString('en', { month: 'short', day: 'numeric' }), MODES[claim.mode].label] });
-  mine.born = reduce ? -1e9 : now();
-  const email = (store.get(MINE_KEY) || {}).email || '';
-  store.set(MINE_KEY, { v: 1, x: spot.x, y: spot.y, mode: claim.mode, name, email });
-  if (shared && !shared.gone && shared.x === spot.x && shared.y === spot.y) unput(shared);
-  setStep(3);
-  renderHold(RESERVE.url && email ? email : '');
-  if (RESERVE.url && email) {
-    mine.rec[1] = 'spot held ✓';
-    reserveRemote(email).catch(() => { $('#cMail').value = email; renderHold(''); toast("Couldn't update your held spot — hit “Hold my spot” to retry."); });
-  }
-  updateCTAs(); celebrate(mine);
-  setTimeout(() => { if (ui === 'claim') flyTo(spot.x + 1, spot.y + 1, isMobile() ? 1.3 : 1.5, 1800, easeInOut); }, 1100);
+  claim.name = name; placeLocal();
+  if (mine.email) { reserve(mine.email, true); return; }
+  setStep(3); if (!coarse) setTimeout(() => $('#cMail').focus({ preventScroll: true }), 220);
+};
+function renderSummary() {
+  const s = claim.spot, z = zoneOf(s.x, s.y, claim.size), price = z.price * claim.size * claim.size;
+  $('#cSummary').style.setProperty('--c', MODES[claim.mode].color);
+  $('#sName').textContent = claim.name; $('#sWhere').textContent = `${z.label} · ${claim.size}×${claim.size} · ${MODES[claim.mode].label}`;
+  $('#sAmt').textContent = eur(price); $('#cHold').textContent = `Reserve for ${eur(price)}`;
+}
+function placeLocal() {
+  const s = claim.spot, old = mine;
+  if (old) unput(old);
+  const spot = spotOk(s.x, s.y, claim.size) ? s : (nearestFree(s.x, s.y, claim.size) || s);
+  claim.spot = { x: spot.x, y: spot.y };
+  mine = put({ x: spot.x, y: spot.y, size: claim.size, mode: claim.mode, name: claim.name, mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: '', rec: [] });
+  if (old) Object.assign(mine, { email: old.email, code: old.code, number: old.number, price: old.price, reserved: old.reserved });
+  saveMine(); updateCTAs();
+}
+function saveMine() { store.set(MINE_KEY, { v: 2, x: mine.x, y: mine.y, size: mine.size, mode: mine.mode, name: mine.name, email: mine.email || '', code: mine.code || '', number: mine.number || 0, price: mine.price || 0 }); }
+const maskEmail = e => { const [u, d] = String(e).split('@'); return (u.length <= 2 ? u[0] : u.slice(0, 2)) + '•••@' + d; };
+async function reserve(email, silent) {
+  const btn = $('#cHold'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'Reserving…';
+  try {
+    const ref = store.get(REF_KEY);
+    const r = await rpc('reserve_spot', { p_email: email, p_name: mine.name, p_mode: mine.mode, p_x: mine.x, p_y: mine.y, p_size: mine.size, p_ref: ref && ref !== mine.code ? ref : null });
+    Object.assign(mine, { email, code: r.code, number: r.number, price: r.price, reserved: true }); saveMine(); texDirty = true;
+    finish(true); loadStats();
+  } catch (err) {
+    const m = String(err.message || '');
+    if (m.includes('spot_taken')) {
+      await loadSpots();
+      const s = nearestFree(mine.x, mine.y, mine.size);
+      if (s) { claim.spot = s; placeLocal(); describe(); }
+      toast('Someone just reserved that exact spot! We moved you to the nearest free one — try again.', 5000);
+      setStep(silent ? 1 : 3);
+    } else if (m.includes('core_invite_only')) { toast('The core is invite only — pick a spot just outside it.'); setStep(1); }
+    else if (m.includes('busy')) toast('Lots of people are claiming right now — try again in a minute.', 4500);
+    else { toast("Couldn't reserve right now — check your connection and try again."); if (silent) finish(false); }
+  } finally { btn.disabled = false; btn.textContent = label; }
+}
+$('#cReserve').addEventListener('submit', e => {
+  e.preventDefault(); if (!mine) return;
+  if ($('#cWeb').value) { finish(false); return; }
+  const input = $('#cMail'), email = input.value.trim().toLowerCase();
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake'); input.focus(); toast('That email looks off.'); return; }
+  reserve(email, false);
+});
+$('#cSkip').onclick = () => finish(false);
+function finish(reserved) {
+  setStep(4);
+  const z = zoneOf(mine.x, mine.y, mine.size), price = mine.price || priceOf(mine.x, mine.y, mine.size);
+  $('#dEyebrow').textContent = mine.email ? 'Reserved · pay nothing today' : 'Saved on this device';
+  $('#dTitle').textContent = mine.number ? `Founding spot #${fmt(mine.number)}.` : "You're on the map.";
+  $('#dText').textContent = `${mine.name} · ${z.label} · ${mine.size}×${mine.size} · ${eur(price)} founding price. ` + (mine.email ? 'Share it — friends who open your link land right next to you.' : "It's only saved in this browser until you reserve it.");
+  renderRefs($('#dRefs'), mine.code);
+  $('#dReserve').hidden = !!mine.email;
+  if (reserved || !claim.celebrated) celebrate(mine);
+  claim.celebrated = true;
+  setTimeout(() => { if (ui === 'claim' && claim.step === 4) flyTo(mine.x + mine.w / 2, mine.y + mine.h / 2, clamp(cam.z * .45, ZMIN, ZMAX), 2200, easeInOut); }, 1200);
 }
 function celebrate(q) {
-  const cx = q.x + 1, cy = q.y + 1, t = now();
+  const cx = q.x + q.w / 2, cy = q.y + q.h / 2, t = now();
   if (!reduce) {
     const cols = [MODES[q.mode].color, '#c8ff3d', '#ffffff', '#5ee1ff'];
-    for (let i = 0; i < 80; i++) { const a = Math.random() * 6.2832, v = 5 + Math.random() * 16; PARTS.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, dec: .45 + Math.random() * .6, c: cols[i % 4], sz: .22 + Math.random() * .5 }); }
+    for (let i = 0; i < 90; i++) { const a = Math.random() * 6.2832, v = (5 + Math.random() * 16) * Math.max(1, q.size / 2); PARTS.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, dec: .45 + Math.random() * .6, c: cols[i % 4], sz: .22 + Math.random() * .5 }); }
     for (let i = 0; i < 3; i++) WAVES.push({ x: cx, y: cy, t: t + i * 170, col: i === 1 ? MODES[q.mode].color : '#c8ff3d' });
   }
   const p = toS(cx, cy), f = $('#flash'); f.style.setProperty('--fx', p.x + 'px'); f.style.setProperty('--fy', p.y + 'px');
   f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); kick();
 }
-$('#cShare').onclick = shareMine;
-$('#cExplore').onclick = () => closeUI();
-const maskEmail = e => { const [u, d] = e.split('@'); return (u.length <= 2 ? u[0] : u.slice(0, 2)) + '•••@' + d; };
-function renderHold(email) {
-  const on = !!RESERVE.url, held = on && !!email, sq = mine;
-  $('#cReserve').hidden = !on || held; $('#cHeld').hidden = !held;
-  if (held) $('#cHeld').textContent = `✓ Held for ${maskEmail(email)}. We'll email you when founding claims open.`;
-  $('#cShare').classList.toggle('btn-primary', !on || held); $('#cShare').classList.toggle('btn-ghost', on && !held);
-  $('#cFine').textContent = on ? PRIVACY : 'Saved on this device. Expanse is in preview — your square goes live when founding claims open.';
-  if (sq) $('#cDone').textContent = `${sq.name} · ring ${ringOf(sq.x, sq.y)} · ${MODES[sq.mode].label}. ` + (on && !held ? "Want to keep it? Leave your email and we'll hold this spot until founding claims open." : 'Share your link — friends who open it land right next to you.');
-}
-async function reserveRemote(email) {
-  const r = await fetch(RESERVE.url, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: RESERVE.key }, body: JSON.stringify({ p_email: email, p_name: mine.name, p_mode: mine.mode, p_x: mine.x, p_y: mine.y }) });
-  if (!r.ok) throw new Error('reserve ' + r.status);
-}
-$('#cReserve').addEventListener('submit', async e => {
-  e.preventDefault(); if (!RESERVE.url || !mine) return;
-  const input = $('#cMail'), btn = $('#cHold'), email = input.value.trim().toLowerCase();
-  if ($('#cWeb').value) { renderHold(''); $('#cReserve').hidden = true; return; }
-  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake'); input.focus(); toast('That email looks off.'); return; }
-  btn.disabled = true; btn.textContent = 'Holding…';
-  try {
-    await reserveRemote(email);
-    const s = store.get(MINE_KEY) || {}; s.email = email; store.set(MINE_KEY, s);
-    mine.rec[1] = 'spot held ✓'; renderHold(email); celebrate(mine);
-    toast("Spot held. We'll email you when founding claims open.");
-  } catch (err) { toast("Couldn't save right now — try again in a bit."); }
-  finally { btn.disabled = false; btn.textContent = 'Hold my spot'; }
-});
+$('#dShare').onclick = shareMine;
+$('#dCard').onclick = shareCard;
+$('#dReserve').onclick = () => setStep(3);
+$('#dExplore').onclick = () => closeUI();
 
-function closeUI() { pop.classList.remove('open'); claimEl.classList.remove('open'); sel = null; setUI('none'); cv.focus({ preventScroll: true }); }
+function closeUI() { pop.classList.remove('open'); claimEl.classList.remove('open'); sel = null; claim.celebrated = false; setUI('none'); cv.focus({ preventScroll: true }); }
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeUI);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!results.hidden) { results.hidden = true; return; } if (ui !== 'none') closeUI(); } });
-
-function goHero(fn) {
-  if (scrollY > 40) { scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); setTimeout(fn, reduce ? 30 : 650); } else fn();
-}
-function onCTA() { goHero(() => { if (mine) openPop(mine); else startClaim(null); }); }
+function onCTA() { closeSheet(); if (mine) openPop(mine); else startClaim(null); }
 const ctas = [...document.querySelectorAll('[data-claim]')];
 ctas.forEach(b => { b.dataset.def = b.textContent; b.onclick = onCTA; });
 function updateCTAs() { ctas.forEach(b => { b.textContent = mine ? b.dataset.mineLabel : b.dataset.def; }); }
 
-/* ================= SEARCH / FILTERS ================= */
-const results = $('#results'), qIn = $('#q');
+/* ================= INFO SHEET ================= */
+function openSheet() { sheet.classList.add('open'); hideTip(); setTimeout(() => sheet.querySelector('.sheet-in').focus({ preventScroll: true }), 50); }
+function closeSheet() { sheet.classList.remove('open'); }
+document.querySelectorAll('[data-info]').forEach(b => b.onclick = openSheet);
+$('#infoBtn').onclick = openSheet;
+sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-sheet-close]')) closeSheet(); });
+
+/* ================= SEARCH ================= */
+const results = $('#results'), qIn = $('#q'), searchEl = $('#search');
+function openSearch() { searchEl.classList.add('open'); qIn.focus(); }
+$('#searchBtn').onclick = () => { searchEl.classList.toggle('open'); if (searchEl.classList.contains('open')) qIn.focus(); };
 function search(qs) {
   const q = qs.toLowerCase().trim(); if (q.length < 2) return [];
   const terms = q.split(/\s+/).filter(t => t.length > 1), city = CITIES.find(c => q.includes(c.toLowerCase())), out = [];
@@ -1281,138 +1425,139 @@ function search(qs) {
     const hay = (s.name + ' ' + (s.tag || '') + ' ' + (s.kw || '') + ' ' + KW[s.mode] + ' ' + (s.city || '') + ' ' + MODES[s.mode].label).toLowerCase();
     let sc = 0; for (const t of terms) if (hay.includes(t)) sc += t.length;
     if (city && s.city === city) sc += 3; if (s.name.toLowerCase().includes(q)) sc += 20;
-    if (sc > 0) { if (s.featured) sc += 3; if (s.mine || s.shared) sc += 25; out.push([sc, s]); }
+    if (sc > 0) { if (s.featured) sc += 4; if (s.mine || s.shared) sc += 25; out.push([sc, s]); }
   }
-  return out.sort((a, b) => b[0] - a[0] || a[1].d - b[1].d).slice(0, 6).map(r => r[1]);
+  return out.sort((a, b) => b[0] - a[0] || a[1].d - b[1].d).slice(0, 7).map(r => r[1]);
 }
 qIn.addEventListener('input', () => {
   const r = search(qIn.value); if (!r.length) { results.hidden = true; return; }
   results.replaceChildren(...r.map(s => {
     const b = document.createElement('button'); b.type = 'button';
-    const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = s.mine ? '#c8ff3d' : MODES[s.mode].color;
+    const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = s.mine ? '#c8ff3d' : s.real ? '#fff' : MODES[s.mode].color;
     const nm = document.createElement('b'); nm.textContent = s.name;
-    const sm = document.createElement('small'); sm.textContent = (s.mine ? 'Your square' : MODES[s.mode].label) + (s.city ? ' · ' + s.city : '');
-    b.append(sw, nm, sm); b.onclick = () => { results.hidden = true; openPop(s); }; return b;
+    const sm = document.createElement('small'); sm.textContent = (s.mine ? 'Your square' : MODES[s.mode].label) + ' · ' + zoneOf(s.x, s.y, s.size).label;
+    b.append(sw, nm, sm); b.onclick = () => { results.hidden = true; searchEl.classList.remove('open'); openPop(s); }; return b;
   }));
   results.hidden = false;
 });
 $('#searchForm').addEventListener('submit', e => {
   e.preventDefault(); const r = search(qIn.value); results.hidden = true;
-  if (!r.length) { toast('Nothing there yet. Maybe that spot is yours?'); return; }
-  openPop(r[0]); if (r.length > 1) toast(r.length + ' matches — flew to the best one.');
+  if (!r.length) { toast('Nothing out there yet. Maybe that spot is yours?'); return; }
+  searchEl.classList.remove('open'); qIn.blur(); openPop(r[0]); if (r.length > 1) toast(r.length + ' matches — flew to the best one.');
 });
-document.addEventListener('click', e => { if (!e.target.closest('.search')) results.hidden = true; });
-$('#filters').addEventListener('click', e => {
-  const b = e.target.closest('.pill'); if (!b) return; filter = filter === b.dataset.f ? null : b.dataset.f;
-  document.querySelectorAll('#filters .pill').forEach(p => p.setAttribute('aria-pressed', String(p.dataset.f === filter))); kick();
-});
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.search') && !e.target.closest('#searchBtn')) { results.hidden = true; if (isMobile() && !qIn.value) searchEl.classList.remove('open'); } });
+
+/* ================= LIVE: COUNTER + FEED ================= */
+function renderLive() {
+  const chip = $('#chip'), dock = $('#dockTxt');
+  if (!STATS) { chip.hidden = true; $('#heroLive').textContent = 'Founding prices for the first 1,000 spots'; return; }
+  const left = Math.max(0, FOUNDING_LIMIT - (STATS.reserved | 0));
+  chip.hidden = false; $('#chipTxt').textContent = `${fmt(left)} of ${fmt(FOUNDING_LIMIT)} founding spots left`;
+  $('#heroLive').textContent = `${fmt(left)} of ${fmt(FOUNDING_LIMIT)} founding spots left`;
+  dock.replaceChildren(); const b = document.createElement('b'); b.textContent = fmt(left); dock.append(b, ' founding spots left');
+}
+const ticker = $('#ticker'); let tickN = 0, tickItem = null;
+function timeAgo(iso) { const s = (Date.now() - Date.parse(iso)) / 1000; if (!(s >= 60)) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; }
+function demoLine(q) {
+  if (q.mode === 'sell') return `${q.name} just made a sale · ${q.city}`;
+  if (q.mode === 'create') return `${q.name} posted something new`;
+  if (q.mode === 'build') return `${q.name} shipped ${2 + Math.floor(Math.random() * 8)} commits`;
+  return `${q.name} is ${q.avail ? 'available this week' : 'booked solid'}`;
+}
+function nextTick() {
+  if (document.hidden || introRunning) return;
+  const live = ((STATS && STATS.recent) || []).filter(r => Date.now() - Date.parse(r.at) < 30 * 864e5 && MODES[r.mode] && ZONE_BY_ID[r.zone]);
+  let item;
+  if (live.length && tickN % 2 === 0) {
+    const r = live[(tickN / 2) % live.length];
+    item = { live: true, text: `A ${MODES[r.mode].label} spot was reserved in the ${ZONE_BY_ID[r.zone].label} · ${timeAgo(r.at)}`, zone: r.zone };
+  } else {
+    let q = null; for (let i = 0; i < 60 && !q; i++) { const c = SQ[Math.floor(Math.random() * DEMO_COUNT)]; if (c && !c.gone && c.last <= 3 && (c.featured || c.size >= 2)) q = c; }
+    if (!q) return; item = { live: false, text: demoLine(q), q }; PULSES.push({ q, t: now() }); SPARKS.push({ q, t: now() }); q.boost = now();
+  }
+  tickN++; tickItem = item;
+  ticker.classList.add('swap');
+  setTimeout(() => {
+    const tag = $('#tickTag'); tag.textContent = item.live ? 'Live' : 'Preview'; tag.className = 'tag mono ' + (item.live ? 'live' : 'prev');
+    $('#tickTxt').textContent = item.text; ticker.classList.remove('swap'); ticker.classList.add('on');
+  }, 380);
+}
+ticker.onclick = () => { if (!tickItem) return; if (tickItem.q) openPop(tickItem.q); else if (tickItem.zone) { const z = ZONE_BY_ID[tickItem.zone], r = isFinite(z.r) ? z.r : WORLD_R; markExplore(); flyTo(0, -r + 6, clamp(10 / CELL, ZMIN, ZMAX), 1400, easeInOut); } };
 
 /* ================= BOOT ================= */
-function validSave(d) { return d && Number.isInteger(d.x) && Number.isInteger(d.y) && Math.abs(d.x) <= 200 && Math.abs(d.y) <= 200 && MK.includes(d.mode || d.m) && clean(d.name || d.n).length > 0; }
-const saved = store.get(MINE_KEY);
-if (validSave(saved)) {
-  const p = isFree(saved.x, saved.y, 2, 2) ? saved : nearestFree(saved.x, saved.y);
-  mine = put({ x: p.x, y: p.y, size: 2, mode: saved.mode, name: clean(saved.name), mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: 'Founding square · claimed in preview', rec: ['ring ' + ringOf(p.x, p.y), saved.email && RESERVE.url ? 'spot held ✓' : 'saved on this device', MODES[saved.mode].label] });
+function validShare(d) { return !!d && Number.isInteger(d.x) && Number.isInteger(d.y) && Math.abs(d.x) <= 200 && Math.abs(d.y) <= 200 && MK.includes(d.m || d.mode) && clean(d.n || d.name).length > 0; }
+function relocateMine() {
+  if (!mine) return; unput(mine);
+  const keep = mine, s = nearestFree(keep.x, keep.y, keep.size);
+  if (!s) { mine = null; store.del(MINE_KEY); return; }
+  mine = put({ x: s.x, y: s.y, size: keep.size, mode: keep.mode, name: keep.name, mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: '', rec: [] });
+  Object.assign(mine, { email: keep.email, code: keep.code, number: keep.number, price: keep.price, reserved: keep.reserved }); saveMine();
+}
+function clearArea(x, y, size) { for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) { const id = occ.get(K(x + i, y + j)); if (id !== undefined && !SQ[id].mine) unput(SQ[id]); } }
+{
+  let saved = store.get(MINE_KEY);
+  if (!saved) { const v1 = store.get('expanse.mine.v1'); if (v1 && validShare(v1)) saved = { x: v1.x, y: v1.y, size: 2, mode: v1.mode, name: v1.name, email: v1.email || '' }; }
+  if (saved && validShare(saved)) {
+    const size = [1, 2, 4, 8].includes(saved.size) ? saved.size : 2;
+    let p = { x: saved.x, y: saved.y };
+    if (saved.code) clearArea(p.x, p.y, size);
+    else if (!spotOk(p.x, p.y, size)) p = nearestFree(saved.x, saved.y, size);
+    if (p) {
+      mine = put({ x: p.x, y: p.y, size, mode: saved.mode, name: clean(saved.name), mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: '', rec: [] });
+      Object.assign(mine, { email: saved.email || '', code: saved.code || '', number: saved.number || 0, price: saved.price || 0, reserved: !!saved.code });
+      saveMine();
+    }
+  }
 }
 let deep = null;
 {
-  const h = location.hash, ms = h.match(/^#s=([\w-]{4,600})$/), mq = h.match(/^#sq=(\d{1,5})$/);
+  const h = location.hash, ms = h.match(/^#s=([\w-]{4,800})$/), mq = h.match(/^#sq=(\d{1,6})$/);
   if (ms) {
     const d = b64d(ms[1]);
-    if (validSave(d)) {
-      const n = clean(d.n);
+    if (validShare(d)) {
+      const n = clean(d.n), size = [1, 2, 4, 8].includes(d.s) ? d.s : 2, mode = d.m;
+      if (typeof d.r === 'string' && /^[\w-]{6,20}$/.test(d.r) && (!mine || mine.code !== d.r)) store.set(REF_KEY, d.r);
       if (mine && mine.x === d.x && mine.y === d.y && mine.name === n) deep = mine;
       else {
-        const p = isFree(d.x, d.y, 2, 2) ? { x: d.x, y: d.y } : nearestFree(d.x, d.y);
-        shared = put({ x: p.x, y: p.y, size: 2, mode: d.m, name: n, shared: true, last: 0, likes: 0, city: '', owner: '', tag: MODES[d.m].label + ' · ring ' + ringOf(p.x, p.y), rec: ['claimed in preview', 'ring ' + ringOf(p.x, p.y)] });
-        deep = shared;
+        clearArea(d.x, d.y, size);
+        const p = isFree(d.x, d.y, size, size) ? { x: d.x, y: d.y } : nearestFree(d.x, d.y, size);
+        if (p) { const z = zoneOf(p.x, p.y, size); shared = put({ x: p.x, y: p.y, size, mode, name: n, shared: true, last: 0, likes: 0, city: '', owner: '', tag: `${z.label} · ${size}×${size} · ${MODES[mode].label}`, rec: [z.label, MODES[mode].label, d.r ? 'founding spot' : 'on the map'] }); deep = shared; }
       }
     }
   } else if (mq) { const q = SQ[+mq[1]]; if (q && !q.gone && !q.mine) deep = q; }
 }
 updateCTAs();
 resize();
-const h0 = home();
-if (deep) {
-  cam.x = deep.x + deep.w / 2; cam.y = deep.y + deep.h / 2; cam.z = deep.size >= 4 ? 1.8 : 2.4;
-  setTimeout(() => { openPop(deep); if (deep.shared) toast(`${deep.name} is on the map. Grab the spot next to them?`); }, 500);
-} else if (!reduce) {
-  const t0 = now() + 200;
-  for (const q of SQ) q.born = t0 + q.d * 21 + (q.featured ? 0 : rnd() * 240);
-  cam.x = h0.x; cam.y = h0.y; cam.z = 2.7;
-  setTimeout(() => flyTo(h0.x, h0.y, h0.z, 2900, easeInOut), 200);
-} else { cam.x = h0.x; cam.y = h0.y; cam.z = h0.z; }
-setRunning(heroVisible && !document.hidden);
+
+const introEl = $('#intro');
+function endIntro() {
+  if (!introRunning) return; introRunning = false; introEl.classList.add('out'); app.classList.add('ready');
+  if (fly && fly.intro) { const f = fly; flyTo(f.x, f.y, f.z, 1000, easeOut); }
+  else if (!fly && cam.z < home().z * .9) { const h = home(); flyTo(h.x, h.y, h.z, 1000, easeOut); }
+}
+{
+  const h = home();
+  if (deep) {
+    introEl.classList.add('out'); app.classList.add('ready', 'explore'); explored = true;
+    cam.x = deep.x + deep.w / 2; cam.y = deep.y + deep.h / 2; cam.z = deep.size >= 4 ? 2 : 2.6;
+    setTimeout(() => { openPop(deep); if (deep.shared) toast(`${deep.name} is on the map. Grab the spot next to them?`, 4200); }, 500);
+  } else if (reduce) {
+    introEl.classList.add('out'); app.classList.add('ready'); cam.x = h.x; cam.y = h.y; cam.z = h.z;
+  } else {
+    introRunning = true; cam.x = h.x; cam.y = h.y; cam.z = h.z * .07;
+    setTimeout(() => { if (introRunning) introEl.classList.add('out'); }, 1500);
+    setTimeout(() => { if (!introRunning) return; flyTo(h.x, h.y, h.z, 4200, easeInOut); if (fly) fly.intro = true; }, 900);
+    setTimeout(() => { introRunning = false; app.classList.add('ready'); }, 3700);
+    introEl.addEventListener('pointerdown', endIntro);
+  }
+}
+kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
-
-/* ================= SECTIONS ================= */
-const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .14, rootMargin: '0px 0px -40px 0px' });
-document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-document.addEventListener('pointermove', e => {
-  const c = e.target.closest && e.target.closest('.card'); if (!c) return;
-  const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
-}, { passive: true });
-
-// 01 mini map
-{
-  const r2 = mulberry(9), cols = ['var(--amber)', 'var(--pink)', 'var(--cyan)', 'var(--green)'], mini = $('#mini');
-  const me = document.createElement('i'); me.className = 'me'; me.textContent = '+'; mini.appendChild(me);
-  for (let i = 0; i < 50; i++) { const c = document.createElement('i'); if (r2() < .5) { c.className = 'c'; c.style.setProperty('--c', cols[Math.floor(r2() * 4)]); } mini.appendChild(c); }
-}
-
-// grow demo
-{
-  const shape = $('#shape'), cells = [];
-  for (let i = 0; i < 35; i++) { const c = document.createElement('i'); shape.appendChild(c); cells.push(c); }
-  const at = (c, r) => cells[r * 7 + c], BASE = [[1, 1], [2, 1], [1, 2], [2, 2]], GROW = [[3, 2], [4, 2], [4, 1], [4, 3], [5, 2]];
-  const bar = $('#growBar'), xp = $('#growXp'), msg = $('#growMsg');
-  let step = 0, timer = 0, visible = false;
-  function nx(on) {
-    cells.forEach(c => c.classList.remove('nx'));
-    for (const [c, r] of on) for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const cc = c + dc, rr = r + dr; if (cc < 0 || rr < 0 || cc > 6 || rr > 4) continue; if (!on.some(o => o[0] === cc && o[1] === rr)) at(cc, rr).classList.add('nx'); }
-  }
-  function reset() { cells.forEach(c => c.className = ''); BASE.forEach(([c, r]) => at(c, r).classList.add('on')); nx(BASE); step = 0; bar.style.transition = 'none'; bar.style.width = '0%'; xp.textContent = '0 / 100 xp'; msg.textContent = ''; }
-  function run() {
-    clearTimeout(timer); if (!visible) return;
-    if (step >= GROW.length) { timer = setTimeout(() => { reset(); timer = setTimeout(run, 700); }, 2600); return; }
-    void bar.offsetWidth; bar.style.transition = 'width 1.3s cubic-bezier(.2,.8,.2,1)'; bar.style.width = '100%'; xp.textContent = '100 / 100 xp';
-    timer = setTimeout(() => {
-      const [c, r] = GROW[step], el = at(c, r); el.classList.add('on', 'new'); setTimeout(() => el.classList.remove('new'), 650);
-      step++; nx(BASE.concat(GROW.slice(0, step))); msg.textContent = '+1 cell unlocked';
-      bar.style.transition = 'none'; bar.style.width = '0%'; xp.textContent = '0 / 100 xp';
-      timer = setTimeout(run, 650);
-    }, 1400);
-  }
-  reset();
-  if (reduce) { GROW.forEach(([c, r]) => at(c, r).classList.add('on')); nx(BASE.concat(GROW)); }
-  else new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible) run(); else clearTimeout(timer); }, { threshold: .3 }).observe(shape);
-}
-
-// core rings
-{
-  const svg = $('#coreSvg'), NS = 'http://www.w3.org/2000/svg', r2 = mulberry(77);
-  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
-  const RINGS = [[72, 'CORE', '#c8ff3d'], [142, 'INNER RING', '#5ee1ff'], [206, 'BELT', '#b39cff'], [256, 'EDGE', '#8a93c8']];
-  for (const [r, , c] of RINGS) svg.appendChild(el('circle', { r, fill: 'none', stroke: c, 'stroke-opacity': .28, 'stroke-dasharray': '2 6' }));
-  svg.appendChild(el('circle', { r: 72, fill: 'url(#cg)' }));
-  const defs = el('defs', {}), gr = el('radialGradient', { id: 'cg' });
-  gr.append(el('stop', { offset: '0', 'stop-color': '#5ee1ff', 'stop-opacity': '.22' }), el('stop', { offset: '1', 'stop-color': '#5ee1ff', 'stop-opacity': '0' })); defs.appendChild(gr); svg.prepend(defs);
-  for (const c of ['sonar', 'sonar s2']) svg.appendChild(el('circle', { r: 256, fill: 'none', stroke: '#5ee1ff', 'stroke-opacity': .5, 'stroke-width': 1.5, class: c }));
-  const g = el('g', {}), pts = [], cols = ['#ffcf4a', '#ff5c7a', '#5ee1ff', '#3dff8a'];
-  for (let i = 0; i < 4000 && pts.length < 420; i++) {
-    const rad = 248 * Math.pow(r2(), 1.4), a = r2() * 6.2832, sz = rad < 72 ? 10 + r2() * 9 : rad < 142 ? 7 + r2() * 5 : rad < 206 ? 5 + r2() * 3 : 3 + r2() * 3;
-    const x = Math.cos(a) * rad, y = Math.sin(a) * rad;
-    if (pts.some(p => Math.abs(p[0] - x) < (p[2] + sz) / 2 + 2 && Math.abs(p[1] - y) < (p[2] + sz) / 2 + 2)) continue;
-    pts.push([x, y, sz]);
-    g.appendChild(el('rect', { x: (x - sz / 2).toFixed(1), y: (y - sz / 2).toFixed(1), width: sz.toFixed(1), height: sz.toFixed(1), rx: (sz * .2).toFixed(1), fill: cols[Math.floor(r2() * 4)], 'fill-opacity': rad < 72 ? .95 : rad < 142 ? .8 : rad < 206 ? .55 : .32, class: r2() < .25 ? 'twk' : '', style: '--d:' + (rad / 60).toFixed(2) + 's' }));
-  }
-  svg.appendChild(g);
-  for (const [r, label, c] of RINGS) { const t = el('text', { x: 0, y: -r - 7, 'text-anchor': 'middle', fill: c, 'fill-opacity': .8, 'font-size': 10, 'font-family': 'IBM Plex Mono, monospace', 'font-weight': 600, 'letter-spacing': 2 }); t.textContent = label; svg.appendChild(t); }
-  const ya = -2.35, yx = Math.cos(ya) * 174, yy = Math.sin(ya) * 174, you = el('g', { class: 'youm' });
-  you.append(el('rect', { x: yx - 9, y: yy - 9, width: 18, height: 18, rx: 4, fill: 'rgba(200,255,61,.18)', stroke: '#c8ff3d', 'stroke-width': 2, 'stroke-dasharray': '4 3' }));
-  const yt = el('text', { x: yx, y: yy - 16, 'text-anchor': 'middle', fill: '#c8ff3d', 'font-size': 12, 'font-weight': 700, 'font-family': 'Instrument Sans, sans-serif' }); yt.textContent = 'you?'; you.append(yt);
-  svg.appendChild(you);
-}
+loadStats(); loadSpots();
+setInterval(() => { if (!document.hidden) loadStats(); }, 30000);
+setInterval(() => { if (!document.hidden) loadSpots(); }, 90000);
+setTimeout(nextTick, 4400); setInterval(nextTick, 5200);
+if (window.requestIdleCallback) requestIdleCallback(() => offsets(), { timeout: 5000 }); else setTimeout(offsets, 2500);
 })();
 </script>
 </body>
