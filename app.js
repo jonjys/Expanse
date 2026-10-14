@@ -864,8 +864,9 @@ async function copy(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
   try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok; } catch (e) { return false; }
 }
-const origin = () => location.origin && location.origin !== 'null' ? location.origin : 'https://expanse-inky.vercel.app';
-const productUrl = slug => origin() + '/p/' + slug;
+/* Shared links always use the real domain, whichever address the visitor came in on. */
+const SITE = 'https://expanse.nyttolabs.com';
+const productUrl = slug => SITE + '/p/' + slug;
 async function shareUrl(url, title, text, okMsg) {
   if (coarse && navigator.share) { try { await navigator.share({ title, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
   toast((await copy(url)) ? okMsg : 'Copy the link: ' + url, 4200);
@@ -918,7 +919,7 @@ async function squareCard(it, title, line) {
   g.font = '700 92px "Instrument Sans",sans-serif'; g.fillStyle = '#fff'; g.fillText(it.name, 80, 1150, 920);
   g.font = '500 34px "Instrument Sans",sans-serif'; g.fillStyle = '#c3caf0'; g.fillText(line, 80, 1210, 920);
   g.font = '600 26px "IBM Plex Mono",monospace'; g.fillStyle = '#c8ff3d';
-  g.fillText(((location.host || 'expanse-inky.vercel.app') + '/p/' + it.slug).toUpperCase() + ' →', 80, 1280, 920);
+  g.fillText(productUrl(it.slug).replace(/^https:\/\//, '').toUpperCase() + ' →', 80, 1280, 920);
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
 async function shareCard(slug) {

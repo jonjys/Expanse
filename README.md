@@ -1,7 +1,7 @@
 # Expanse
 
 The internet, as a universe. A map of real products shaped like a spiral galaxy: search by the problem you have,
-compare products in a list, and add your own. Live at <https://expanse-inky.vercel.app>.
+compare products in a list, and add your own. Live at <https://expanse.nyttolabs.com> (the old address, expanse-inky.vercel.app, redirects there).
 
 ## Structure
 

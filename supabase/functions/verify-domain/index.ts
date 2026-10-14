@@ -34,7 +34,7 @@ async function fetchText(url: string, domain: string, hops = 0): Promise<string 
     const r = await fetch(u, {
       redirect: "manual",
       signal: ctl.signal,
-      headers: { "User-Agent": "ExpanseVerifier/1.0 (+https://expanse-inky.vercel.app)", Accept: "text/html,text/plain;q=0.9,*/*;q=0.1" },
+      headers: { "User-Agent": "ExpanseVerifier/1.0 (+https://expanse.nyttolabs.com)", Accept: "text/html,text/plain;q=0.9,*/*;q=0.1" },
     });
     if (r.status >= 300 && r.status < 400) {
       const loc = r.headers.get("location");

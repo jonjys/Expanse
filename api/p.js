@@ -7,6 +7,7 @@ const path = require('path');
 
 const SUPA = 'https://gjmkhnrgznorxxaemsmo.supabase.co';
 const KEY = 'sb_publishable_b1uzRroOaHTGp9oXOhHjtQ_J-A-IUCZ'; // public by design, same as in app.js
+const SITE = 'https://expanse.nyttolabs.com';
 
 let HTML = null;
 function page() {
@@ -52,7 +53,7 @@ function withProduct(html, p, url) {
     html = setMeta(html, 'property', 'og:image', img);
     html = html.replace(/\s*<meta property="og:image:(width|height)" content="\d+">/g, '');
   }
-  return html.replace('<meta name="twitter:card"', `<link rel="canonical" href="${esc(url)}">\n<meta name="twitter:card"`);
+  return html.replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${esc(url)}">`);
 }
 
 module.exports = async (req, res) => {
@@ -65,10 +66,7 @@ module.exports = async (req, res) => {
   }
   if (/^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$/.test(slug)) {
     const p = await product(slug);
-    if (p && p.name) {
-      const host = String(req.headers['x-forwarded-host'] || req.headers.host || 'expanse-inky.vercel.app').replace(/[^a-z0-9.:-]/gi, '');
-      html = withProduct(html, p, `https://${host}/p/${slug}`);
-    }
+    if (p && p.name) html = withProduct(html, p, `${SITE}/p/${slug}`);
   }
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
