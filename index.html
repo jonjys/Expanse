@@ -4,30 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Expanse — The internet, as a universe</title>
-<meta name="description" content="Expanse is a living universe of people who sell, create, build and get hired. Every glowing square is someone. Claim your spot — the closer to the core, the more eyes.">
+<meta name="description" content="Find tools by what you need. Expanse is a living map of real products — search by the problem you have, compare them in a list, and add your own product to the universe.">
 <meta name="theme-color" content="#02030c">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Expanse">
 <meta property="og:title" content="Expanse — The internet, as a universe">
-<meta property="og:description" content="Every glowing square is someone. Claim your spot before the inner rings fill up.">
+<meta property="og:description" content="Find tools by what you need. Every glowing square is a real product. Add yours before the inner rings fill up.">
 <meta property="og:image" content="https://expanse-inky.vercel.app/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:url" content="https://expanse-inky.vercel.app/">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="preload" href="fonts/instrument-sans-700.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/instrument-sans-500.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preload" href="/fonts/instrument-sans-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/instrument-sans-500.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://gjmkhnrgznorxxaemsmo.supabase.co" crossorigin>
 <style>
-@font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans-400.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
-@font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans-500.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
-@font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans-600.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
-@font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans-700.woff2) format("woff2");font-weight:700 900;font-style:normal;font-display:swap}
-@font-face{font-family:"IBM Plex Mono";src:url(fonts/ibm-plex-mono-500.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
-@font-face{font-family:"IBM Plex Mono";src:url(fonts/ibm-plex-mono-600.woff2) format("woff2");font-weight:600 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrument-sans-400.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrument-sans-500.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrument-sans-600.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrument-sans-700.woff2) format("woff2");font-weight:700 900;font-style:normal;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/ibm-plex-mono-500.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/ibm-plex-mono-600.woff2) format("woff2");font-weight:600 700;font-style:normal;font-display:swap}
 
 :root{
-  --bg:#02030c;--panel:rgba(8,11,34,.88);--line:rgba(140,160,255,.13);--line2:rgba(150,170,255,.24);
+  --bg:#02030c;--panel:rgba(8,11,34,.9);--line:rgba(140,160,255,.13);--line2:rgba(150,170,255,.24);
   --txt:#fff;--txt2:#c3caf0;--muted:#8b94c9;
   --lime:#c8ff3d;--cyan:#5ee1ff;--pink:#ff5c7a;--amber:#ffcf4a;--green:#3dff8a;--violet:#b39cff;--red:#ff5a5a;
   --ease:cubic-bezier(.2,.8,.2,1);
@@ -37,7 +38,7 @@
 *{margin:0;padding:0}
 html,body{height:100%;overflow:hidden;background:var(--bg);overscroll-behavior:none}
 body{color:var(--txt);font:400 15px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-tap-highlight-color:transparent}
-button,input{font:inherit;color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
 button{background:none;border:0;cursor:pointer}
 a{color:inherit;text-decoration:none}
 :focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
@@ -48,6 +49,7 @@ a{color:inherit;text-decoration:none}
 .grad{background:linear-gradient(92deg,var(--lime) 0%,var(--cyan) 55%,#8fb2ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .glass{background:var(--panel);border:1px solid var(--line2);-webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);box-shadow:0 24px 70px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+.scroll{overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(150,170,255,.3) transparent}
 
 #app{position:fixed;inset:0;overflow:hidden;isolation:isolate;background:radial-gradient(ellipse 75% 85% at 60% 50%,#141d5e 0%,#080c2e 42%,#02030c 100%)}
 #app::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(2,3,12,0) 50%,rgba(2,3,12,.72) 100%)}
@@ -72,45 +74,65 @@ a{color:inherit;text-decoration:none}
 @keyframes sheen{0%,72%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
 .btn-ghost{border:1.5px solid var(--line2);background:rgba(255,255,255,.04);color:#fff}
 .btn-ghost:hover{border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.08)}
+.btn-danger{border:1.5px solid rgba(255,90,90,.5);color:#ff8a8a;background:rgba(255,90,90,.06)}
+.btn-danger:hover{border-color:#ff5a5a;color:#fff;background:rgba(255,90,90,.18)}
 .btn-sm{height:40px;padding:0 16px;font-size:14px}
+.btn-xs{height:32px;padding:0 12px;font-size:13px}
 .iconbtn{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:18px;font-weight:600;border:1px solid var(--line2);background:rgba(8,11,34,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:border-color .15s,color .15s}
 .iconbtn:hover{border-color:var(--cyan);color:var(--cyan)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime);flex:none;animation:blink 2s ease-in-out infinite}
 @keyframes blink{50%{opacity:.35}}
+.linkbtn{font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;display:inline-block}
+.linkbtn:hover{color:#fff}
 
 /* top bar */
-.bar{position:absolute;z-index:30;top:0;left:0;right:0;display:flex;align-items:center;gap:14px;padding:16px 20px;pointer-events:none;background:linear-gradient(180deg,rgba(2,3,12,.8),rgba(2,3,12,0))}
+.bar{position:absolute;z-index:30;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:16px 20px;pointer-events:none;background:linear-gradient(180deg,rgba(2,3,12,.8),rgba(2,3,12,0))}
 .bar>*{pointer-events:auto}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:22px;letter-spacing:-.045em;flex:none}
 .orb{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#c8ff3d,#5ee1ff 45%,#1a5fff);box-shadow:0 0 20px rgba(94,225,255,.6)}
-.chip{transition:opacity .4s;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(200,255,61,.3);background:rgba(200,255,61,.08);color:var(--lime);font-size:10.5px;white-space:nowrap;flex:none}
-#app:not(.explore) .chip{opacity:0;pointer-events:none}
-.search{position:relative;flex:1;max-width:420px;margin:0 auto}
+.views{display:flex;gap:2px;padding:3px;border-radius:999px;flex:none}
+.views button{height:34px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--txt2);transition:background .2s,color .2s}
+.views button[aria-pressed="true"]{background:#fff;color:#071026}
+.search{position:relative;flex:1;max-width:460px;margin:0 auto}
 .search form{display:flex;align-items:center;gap:8px;height:44px;padding:4px 4px 4px 16px;border-radius:999px;transition:border-color .2s}
 .search form:focus-within{border-color:var(--cyan)}
 .search .ico{color:var(--muted);font-size:17px;line-height:1}
 .search input{flex:1;min-width:0;height:100%;background:transparent;border:0;outline:0;font-size:14px}
 .search input::placeholder{color:var(--muted)}
 .search .btn{height:34px;padding:0 14px;font-size:13px}
-.results{position:absolute;left:0;right:0;top:52px;padding:6px;border-radius:18px;max-height:340px;overflow:auto}
+.results{position:absolute;left:0;right:0;top:52px;padding:6px;border-radius:18px;max-height:min(420px,70vh)}
 .results button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;text-align:left;font-size:14px}
 .results button:hover,.results button:focus-visible{background:rgba(255,255,255,.07);outline:none}
 .results .sw{width:10px;height:10px;border-radius:3px;flex:none}
-.results small{color:var(--muted);margin-left:auto;font-size:12px;white-space:nowrap;padding-left:10px}
+.results .rt{min-width:0;flex:1}
+.results .rt b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.results .rt small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.results .tagx{flex:none;font-size:9.5px;color:var(--muted);border:1px solid var(--line2);border-radius:999px;padding:2px 7px}
+.results .all{justify-content:center;color:var(--lime);font-weight:700;font-size:13px}
+.results .none{padding:12px;color:var(--txt2);font-size:13.5px}
+.results .none button{display:inline;width:auto;padding:0;color:var(--lime);font-weight:700}
+.results .ideas{display:flex;flex-wrap:wrap;gap:6px;padding:4px 6px 8px}
+.results .ideas button{display:inline-flex;width:auto;padding:6px 10px;border-radius:999px;border:1px solid var(--line2);font-size:12.5px;color:var(--txt2)}
+.results .lbl{padding:8px 10px 4px;color:var(--muted);font-size:10px}
 .bar-r{display:flex;align-items:center;gap:8px;margin-left:auto;flex:none}
 .bar .btn-ghost{background:rgba(8,11,34,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 #searchBtn{display:none}
 #infoBtn .q{display:none}
+.short{display:none}
+@media (max-width:1060px){#mineBtn .long{display:none}#mineBtn .short{display:inline}}
 @media (max-width:900px){
   .bar{padding:12px 12px;gap:8px}
-  .chip{display:none}
   .search{display:none;position:absolute;left:12px;right:12px;top:62px;max-width:none;margin:0}
   .search.open{display:block}
   #searchBtn{display:grid}
   #infoBtn .lbl{display:none}
   #infoBtn .q{display:inline}
   #infoBtn{width:40px;padding:0}
+  .views button{padding:0 11px}
+  #addBtn .long{display:none}
+  #addBtn .short{display:inline}
 }
+@media (max-width:420px){.logo .word{display:none}.views button{padding:0 9px;font-size:12.5px}}
 
 /* ticker */
 .ticker{position:absolute;z-index:20;left:20px;top:76px;display:flex;align-items:center;gap:10px;max-width:min(520px,calc(100% - 40px));height:34px;padding:0 14px 0 5px;border-radius:999px;font-size:13px;color:var(--txt2);cursor:pointer;opacity:0;transition:opacity .45s,transform .45s var(--ease)}
@@ -118,48 +140,59 @@ a{color:inherit;text-decoration:none}
 .ticker.swap{opacity:0;transform:translateY(-5px)}
 .ticker .tag{height:24px;padding:0 9px;border-radius:999px;display:inline-flex;align-items:center;font-size:9.5px;flex:none}
 .ticker .tag.live{background:var(--lime);color:#071026}
-.ticker .tag.prev{background:rgba(255,255,255,.08);color:var(--muted)}
+.ticker .tag.prev{background:rgba(179,156,255,.18);color:var(--violet)}
 .ticker .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listing .ticker{display:none}
 @media (max-width:900px){.ticker{left:12px;right:auto;top:64px;max-width:calc(100% - 24px)}.search.open~.ticker{display:none}}
 
+/* demo mode */
+.demo-bar{position:absolute;z-index:29;left:50%;top:74px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px;border-radius:999px;border:1px solid rgba(179,156,255,.5);background:rgba(28,18,60,.92);color:#e6defd;font-size:13px;white-space:nowrap;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.demo-bar b{color:var(--violet)}
+.demo-bar .btn{height:30px;padding:0 12px;font-size:12.5px}
+.demo .ticker{top:120px}
+@media (max-width:900px){.demo-bar{top:auto;bottom:calc(84px + var(--sb));white-space:normal;width:calc(100% - 24px);justify-content:space-between}.demo-bar span{font-size:12px}.demo .ticker{top:64px}}
+
 /* hero */
-.hero{position:absolute;z-index:15;left:max(32px,env(safe-area-inset-left));bottom:36px;width:min(660px,calc(100% - 64px));pointer-events:none;opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.hero{position:absolute;z-index:15;left:max(32px,env(safe-area-inset-left));bottom:36px;width:min(680px,calc(100% - 64px));pointer-events:none;opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
 .ready .hero{opacity:1;transform:none}
-.hero .btn{pointer-events:auto}
+.hero .btn,.hero button,.hero a{pointer-events:auto}
 .hero .eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--lime);height:32px;padding:0 14px 0 12px;border-radius:999px;border:1px solid rgba(200,255,61,.28);background:rgba(200,255,61,.07);margin-bottom:20px}
 .hero h1{font-size:clamp(44px,6.4vw,108px);text-shadow:0 0 60px rgba(94,225,255,.22),0 2px 30px rgba(2,3,12,.8)}
-.hero .sub{margin-top:20px;max-width:540px;font-size:clamp(16px,1.4vw,19px);line-height:1.5;color:var(--txt2);text-shadow:0 1px 20px rgba(2,3,12,.9)}
+.hero .sub{margin-top:20px;max-width:560px;font-size:clamp(16px,1.4vw,19px);line-height:1.5;color:var(--txt2);text-shadow:0 1px 20px rgba(2,3,12,.9)}
 .hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
-.hero .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;color:var(--muted);font-size:10.5px}
+.hero .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-top:22px;color:var(--muted);font-size:10.5px}
 .hero .meta b{color:#fff;font-weight:600}
-.explore .hero,.ui .hero{opacity:0!important;transform:translateY(20px)!important}
-.explore .hero .btn,.ui .hero .btn{pointer-events:none}
+.hero .meta button{color:var(--violet);font:inherit;letter-spacing:inherit;text-transform:inherit;text-decoration:underline;text-underline-offset:3px}
+.explore .hero,.ui .hero,.listing .hero{opacity:0!important;transform:translateY(20px)!important}
+.explore .hero *,.ui .hero *,.listing .hero *{pointer-events:none!important}
 .dock{position:absolute;z-index:16;left:20px;bottom:20px;display:flex;align-items:center;gap:12px;padding:6px 6px 6px 18px;border-radius:999px;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .5s var(--ease),transform .5s var(--ease)}
 .dock span{font-size:12px;color:var(--txt2);white-space:nowrap}
 .dock span b{color:var(--lime)}
-.explore:not(.ui) .dock{opacity:1;transform:none;pointer-events:auto}
+.explore:not(.ui):not(.listing) .dock{opacity:1;transform:none;pointer-events:auto}
 @media (max-width:760px){
   .hero{left:16px;right:16px;width:auto;bottom:calc(18px + var(--sb))}
   .hero .eyebrow{margin-bottom:14px}
   .hero .sub{margin-top:14px;font-size:15.5px}
   .hero .ctas{margin-top:18px}
-  .hero .ctas .btn-primary{flex:1 1 100%}
-  .hero .ctas .btn-ghost{display:none}
+  .hero .ctas .btn{flex:1 1 40%;padding:0 14px}
   .hero .meta{margin-top:14px}
   .dock{left:12px;right:12px;bottom:calc(12px + var(--sb));justify-content:space-between}
 }
 
 /* map chrome */
 .zoom{position:absolute;z-index:20;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
+.zoom .demo-pill{width:40px;height:40px;border-radius:13px;font-size:9px;line-height:1.05;letter-spacing:.06em;color:var(--violet);border-color:rgba(179,156,255,.4)}
+.zoom .demo-pill[aria-pressed="true"]{background:var(--violet);color:#120a2c;border-color:var(--violet)}
 .minimap{position:absolute;z-index:20;right:20px;bottom:20px;width:150px;height:150px;border-radius:50%;cursor:pointer;opacity:0;transform:scale(.9);pointer-events:none;transition:opacity .4s,transform .4s var(--ease);box-shadow:0 0 0 1px var(--line2),0 20px 50px rgba(0,0,0,.5)}
 .minimap.on{opacity:1;transform:none;pointer-events:auto}
 .legend{position:absolute;z-index:14;right:20px;bottom:20px;display:flex;gap:14px;align-items:center;font-size:10px;color:var(--txt2);pointer-events:none;transition:right .4s var(--ease),opacity .3s}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:8px;height:8px;border-radius:2px}
 .has-mini .legend{right:186px}
-.ui .legend{opacity:0}
+.ui .legend,.listing .legend{opacity:0}
 @media (max-width:1100px){.legend{display:none}}
 @media (max-width:760px){.minimap{display:none}.zoom{top:118px;transform:none;right:12px}.zoom .iconbtn{width:38px;height:38px}}
+.listing .zoom,.listing .minimap{opacity:0;pointer-events:none}
 .tip{position:absolute;z-index:25;left:0;top:0;pointer-events:none;padding:9px 12px;border-radius:12px;background:rgba(4,6,22,.95);border:1px solid var(--line2);font-size:13px;line-height:1.35;max-width:280px;box-shadow:0 10px 30px rgba(0,0,0,.45);opacity:0;transition:opacity .12s}
 .tip.on{opacity:1}
 .tip b{font-weight:700}
@@ -169,41 +202,62 @@ a{color:inherit;text-decoration:none}
 .panel{position:absolute;z-index:40;border-radius:24px;padding:22px;opacity:0;visibility:hidden;transition:opacity .3s var(--ease),transform .4s var(--ease),visibility 0s .4s}
 .panel.open{opacity:1;visibility:visible;transform:none;transition:opacity .3s var(--ease),transform .4s var(--ease),visibility 0s}
 .panel:focus{outline:none}
-.pop{right:80px;top:84px;width:370px;max-height:calc(100% - 108px);overflow:auto;transform:translateX(24px)}
-.claim{left:24px;bottom:24px;width:450px;max-height:calc(100% - 110px);overflow:auto;transform:translateY(24px)}
+.pop{right:80px;top:84px;width:410px;max-height:calc(100% - 108px);transform:translateX(24px)}
+.claim,.manage{left:24px;bottom:24px;width:470px;max-height:calc(100% - 110px);transform:translateY(24px)}
+.listing .pop{right:24px;z-index:45}
 @media (max-width:760px){
-  .panel{left:0;right:0;bottom:0;top:auto;width:auto;max-height:70%;overflow:auto;border-radius:24px 24px 0 0;padding:14px 18px calc(18px + var(--sb));transform:translateY(40px)}
+  .panel{left:0;right:0;bottom:0;top:auto;width:auto;max-height:78%;border-radius:24px 24px 0 0;padding:14px 18px calc(18px + var(--sb));transform:translateY(40px)}
+  .listing .pop{right:0}
   .panel::before{content:"";display:block;width:40px;height:4px;border-radius:9px;background:var(--line2);margin:0 auto 14px}
 }
 .x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--txt2);font-size:22px;line-height:1;transition:background .15s,color .15s;z-index:2}
 .x:hover{background:rgba(255,255,255,.08);color:#fff}
-.badge{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.pmeta{color:var(--muted);font-size:10px;margin-left:8px}
+.badge{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.b-cat{color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
+.b-ver{color:#071026;background:#fff}
+.b-spon{color:var(--amber);border:1px solid rgba(255,207,74,.5)}
+.b-ex{color:#120a2c;background:var(--violet)}
+.b-st{color:#071026;background:var(--amber)}
+.b-st.live{background:var(--lime)}
+.b-st.rej{background:#ff8a8a}
+.b-st.hid{background:var(--muted)}
+.pbadges{display:flex;flex-wrap:wrap;gap:6px;padding-right:40px}
 .pname{font-size:34px;margin-top:14px;padding-right:30px;overflow-wrap:anywhere}
-.ptag{color:var(--txt2);margin-top:10px;font-size:15px}
-.pwho{color:var(--muted);margin-top:4px;font-size:13px}
+.ptag{color:var(--txt2);margin-top:10px;font-size:16px;line-height:1.4}
+.pmeta{color:var(--muted);margin-top:8px;font-size:10px}
+.imgs{display:flex;gap:8px;margin-top:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
+.imgs img{flex:none;width:86%;aspect-ratio:16/10;object-fit:cover;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);scroll-snap-align:start}
+.imgs img:only-child{width:100%}
+.pact{display:flex;gap:8px;margin-top:16px}
+.pact .btn{flex:1;min-width:0}
+.pact .btn span{overflow:hidden;text-overflow:ellipsis}
+.chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;min-width:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);font-weight:600;font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s}
+.chip-btn:hover{border-color:rgba(255,255,255,.6)}
+.sec{margin-top:18px}
+.sec h4{color:var(--muted);font-size:10px;margin-bottom:8px}
+.needs{display:flex;flex-wrap:wrap;gap:6px}
+.need{display:inline-flex;align-items:center;height:28px;padding:0 11px;border-radius:999px;background:rgba(200,255,61,.08);border:1px solid rgba(200,255,61,.3);color:var(--lime);font-size:13px;font-weight:600}
+.pdesc{color:var(--txt2);font-size:14.5px;line-height:1.55;white-space:pre-line;overflow-wrap:anywhere}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.facts div{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--line);min-width:0}
+.facts small{display:block;color:var(--muted);font-size:10px;font-family:"IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase}
+.facts span{display:block;font-size:14px;margin-top:3px;overflow-wrap:anywhere}
+.pfoot{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.fine{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.45}
+.nextto{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:12px;padding:14px 16px;border-radius:16px;border:1px dashed rgba(200,255,61,.45);background:rgba(200,255,61,.05);color:var(--lime);font-weight:700;font-size:14px;text-align:left;transition:background .15s,border-color .15s}
+.nextto:hover{background:rgba(200,255,61,.11);border-style:solid}
 .receipts{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
 .rc{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:9px;background:rgba(255,255,255,.045);border:1px solid var(--line);font-size:12.5px;color:var(--txt2)}
 .rc::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c,var(--lime))}
-.prow{display:flex;gap:8px;margin-top:18px}
-.prow .btn{flex:1;min-width:0}
-.chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);font-weight:600;font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s}
-.chip-btn:hover{border-color:rgba(255,255,255,.6)}
-.chip-btn.on{border-color:var(--pink);color:var(--pink)}
-.chip-btn.pp{animation:pp .35s var(--ease)}
-@keyframes pp{40%{transform:scale(1.15)}}
-.nextto{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:12px;padding:14px 16px;border-radius:16px;border:1px dashed rgba(200,255,61,.45);background:rgba(200,255,61,.05);color:var(--lime);font-weight:700;font-size:14px;text-align:left;transition:background .15s,border-color .15s}
-.nextto:hover{background:rgba(200,255,61,.11);border-style:solid}
-.fine{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.45}
-.linkbtn{font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;margin-top:10px;display:inline-block;margin-right:14px}
-.linkbtn:hover{color:#fff}
+
+/* wizard + forms */
 .steps{display:flex;gap:6px;margin:2px 44px 16px 0}
 .steps i{flex:1;height:4px;border-radius:9px;background:var(--line2);transition:background .3s,box-shadow .3s}
 .steps i.on{background:var(--lime);box-shadow:0 0 10px rgba(200,255,61,.5)}
 .c-eyebrow{color:var(--muted);font-size:10.5px}
-.c-title{font-size:34px;margin-top:10px}
+.c-title{font-size:32px;margin-top:10px}
 .c-text{color:var(--txt2);margin-top:8px;font-size:14.5px}
-.c-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.c-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;align-items:center}
 .c-row .btn-primary{flex:1}
 .zone{display:inline-flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap}
 .zbadge{height:24px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#071026;background:var(--cyan)}
@@ -216,24 +270,46 @@ a{color:inherit;text-decoration:none}
 .price{display:flex;align-items:center;gap:12px;margin-top:16px}
 .price b{font-size:42px;font-weight:700;letter-spacing:-.04em;line-height:1}
 .price span{color:var(--muted);font-size:12.5px;line-height:1.35}
-.field{display:block;margin-top:16px}
-.field span{display:block;color:var(--muted);font-size:10.5px;margin-bottom:8px}
-.field input{width:100%;height:52px;padding:0 16px;border-radius:14px;background:rgba(2,3,12,.7);border:1.5px solid var(--line2);outline:0;font-size:17px;font-weight:600;transition:border-color .15s}
-.field input:focus{border-color:var(--lime)}
+.field{display:block;margin-top:14px}
+.field>span{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:10.5px;margin-bottom:7px}
+.field>span em{font-style:normal;color:var(--muted);opacity:.8;text-transform:none;letter-spacing:0;font-family:"Instrument Sans",sans-serif;font-size:12px;font-weight:500}
+.field input,.field textarea,.field select{width:100%;height:48px;padding:0 14px;border-radius:13px;background:rgba(2,3,12,.7);border:1.5px solid var(--line2);outline:0;font-size:15.5px;font-weight:600;transition:border-color .15s}
+.field textarea{height:auto;min-height:120px;padding:12px 14px;line-height:1.5;resize:vertical;font-weight:500;font-size:15px}
+.field input:focus,.field textarea:focus{border-color:var(--lime)}
+.field.bad input,.field.bad textarea,.field.bad .tagbox{border-color:var(--red)}
+.field .hint{display:block;color:var(--muted);font-size:12px;margin-top:6px;line-height:1.4}
 .shake{animation:shake .4s}
 @keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
-.mpick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-.mpick button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:11px 4px;border-radius:14px;border:1.5px solid var(--line2);font-size:12.5px;font-weight:700;transition:border-color .15s,background .15s}
-.mpick button i{width:22px;height:22px;border-radius:6px;background:var(--c)}
-.mpick button:hover{border-color:rgba(255,255,255,.5)}
-.mpick button[aria-pressed="true"]{border-color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent)}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts button{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line2);font-size:13px;font-weight:600;color:var(--txt2);transition:border-color .15s,background .15s,color .15s}
+.opts button i{width:9px;height:9px;border-radius:3px;background:var(--c,#fff)}
+.opts button:hover{border-color:rgba(255,255,255,.5)}
+.opts button[aria-pressed="true"]{border-color:var(--c,var(--lime));color:#fff;background:color-mix(in srgb,var(--c,var(--lime)) 14%,transparent)}
+.tagbox{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:48px;padding:7px 10px;border-radius:13px;background:rgba(2,3,12,.7);border:1.5px solid var(--line2);cursor:text}
+.tagbox:focus-within{border-color:var(--lime)}
+.tagbox .t{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 11px;border-radius:999px;background:rgba(200,255,61,.1);border:1px solid rgba(200,255,61,.35);color:var(--lime);font-size:13px;font-weight:600}
+.tagbox .t button{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:14px;line-height:1;color:var(--lime)}
+.tagbox .t button:hover{background:rgba(200,255,61,.2)}
+.tagbox input{flex:1;min-width:120px;height:32px;background:transparent;border:0;outline:0;font-size:15px;font-weight:500}
+.ideas{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ideas button{height:28px;padding:0 10px;border-radius:999px;border:1px dashed var(--line2);color:var(--txt2);font-size:12.5px}
+.ideas button:hover{border-color:var(--lime);color:var(--lime)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13.5px;color:var(--txt2);cursor:pointer}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--lime);flex:none}
 .summary{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
 .summary i{width:30px;height:30px;border-radius:8px;flex:none;background:var(--c);box-shadow:0 0 18px var(--c)}
 .summary div{min-width:0;flex:1}
 .summary b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .summary small{color:var(--muted);font-size:12.5px}
-.summary .amt{font-size:22px;font-weight:700;letter-spacing:-.03em;flex:none}
-.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.summary .amt{font-size:13px;color:var(--muted);text-align:right;flex:none;line-height:1.3}
+.summary .amt b{font-size:20px;color:#fff;letter-spacing:-.03em}
+.keybox{margin-top:14px;padding:14px 16px;border-radius:16px;border:1px solid rgba(200,255,61,.35);background:rgba(200,255,61,.06)}
+.keybox b{color:var(--lime);display:block}
+.keybox code{display:block;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(2,3,12,.8);border:1px solid var(--line2);font:600 14px/1.4 "IBM Plex Mono",monospace;letter-spacing:.02em;overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
+.keybox small{display:block;color:var(--txt2);font-size:12.5px;margin-top:8px;line-height:1.45}
+.keybox .c-row{margin-top:10px}
+.codeblock{margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(2,3,12,.8);border:1px solid var(--line2);font:500 12.5px/1.5 "IBM Plex Mono",monospace;color:#e6eaff;overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
 .refs{margin-top:16px;padding:14px 16px;border-radius:16px;border:1px solid rgba(200,255,61,.3);background:rgba(200,255,61,.06)}
 .refs b{color:var(--lime)}
 .refs .dots{display:flex;gap:6px;margin-top:10px}
@@ -241,43 +317,114 @@ a{color:inherit;text-decoration:none}
 .refs .dots i.on{background:var(--lime);box-shadow:0 0 10px rgba(200,255,61,.6)}
 .refs small{display:block;color:var(--txt2);font-size:12.5px;margin-top:8px}
 
-/* info sheet */
+/* manage */
+.mhead{padding-right:40px}
+.mhead h2{font-size:30px;margin-top:10px;overflow-wrap:anywhere}
+.note{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(255,207,74,.08);border:1px solid rgba(255,207,74,.3);color:#ffe7a6;font-size:13.5px;line-height:1.45}
+.note.ok{background:rgba(200,255,61,.07);border-color:rgba(200,255,61,.3);color:#e3ffaa}
+.tabs{display:flex;gap:4px;margin-top:16px;padding:3px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:1;height:34px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:700;color:var(--txt2);white-space:nowrap}
+.tabs button[aria-selected="true"]{background:#fff;color:#071026}
+.tabp{margin-top:6px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
+.kpi{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.kpi b{display:block;font-size:28px;font-weight:700;letter-spacing:-.04em;line-height:1.1}
+.kpi small{color:var(--muted);font-size:12px}
+.chart{display:flex;align-items:flex-end;gap:2px;height:110px;margin-top:14px;padding:10px 10px 0;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.chart .d{flex:1;position:relative;height:100%;display:flex;align-items:flex-end}
+.chart .v{width:100%;border-radius:3px 3px 0 0;background:rgba(94,225,255,.55);min-height:1px}
+.chart .c{position:absolute;left:20%;right:20%;bottom:0;border-radius:2px 2px 0 0;background:var(--lime)}
+.chart-legend{display:flex;gap:14px;margin-top:8px;font-size:12px;color:var(--muted)}
+.chart-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* list view */
+.list{position:absolute;z-index:25;left:0;right:0;top:0;bottom:0;padding:78px 20px 20px;display:grid;grid-template-columns:250px 1fr;gap:20px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .35s var(--ease),transform .35s var(--ease),visibility 0s .35s;background:rgba(2,3,12,.62);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.listing .list{opacity:1;visibility:visible;transform:none;transition:opacity .35s var(--ease),transform .35s var(--ease),visibility 0s}
+.filters{border-radius:20px;padding:16px;align-self:start;max-height:100%}
+.filters h4{color:var(--muted);font-size:10px;margin:16px 0 8px}
+.filters h4:first-child{margin-top:0}
+.filters .opts button{height:32px;font-size:12.5px}
+.lmain{min-width:0;display:flex;flex-direction:column;min-height:0}
+.lhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lhead h2{font-size:30px}
+.lhead .count{color:var(--muted);font-size:10.5px}
+.lhead .sp{flex:1}
+.lhead select{height:36px;padding:0 12px;border-radius:999px;background:rgba(8,11,34,.9);border:1px solid var(--line2);font-size:13px;font-weight:600;color:#fff}
+.lquery{margin-top:6px;color:var(--txt2);font-size:14px}
+.lquery button{color:var(--lime);font-weight:700;margin-left:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-top:16px;overflow:auto;padding-bottom:24px;align-content:start;flex:1;min-height:0}
+.card{position:relative;display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:18px;background:rgba(8,11,34,.82);border:1px solid var(--line2);text-align:left;transition:border-color .15s,transform .2s var(--ease),background .15s;min-width:0}
+.card:hover{border-color:color-mix(in srgb,var(--c) 70%,transparent);transform:translateY(-2px);background:rgba(12,16,46,.9)}
+.card::before{content:"";position:absolute;left:16px;right:16px;top:0;height:2px;border-radius:0 0 4px 4px;background:var(--c);box-shadow:0 0 14px var(--c)}
+.card .top{display:flex;align-items:center;gap:8px;min-width:0}
+.card .top b{font-size:18px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.card .top .ver{flex:none;width:18px;height:18px;border-radius:50%;background:#fff;color:#071026;display:grid;place-items:center;font-size:11px;font-weight:800}
+.card p{color:var(--txt2);font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .needs .need{height:24px;font-size:12px;padding:0 9px}
+.card .why{font-size:12px;color:var(--lime)}
+.card .meta{display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--muted);font-size:12px;margin-top:auto}
+.card .meta .spon{color:var(--amber)}
+.empty{grid-column:1/-1;padding:40px 20px;border-radius:20px;border:1px dashed var(--line2);text-align:center;color:var(--txt2)}
+.empty h3{font-size:24px;letter-spacing:-.03em;color:#fff;margin-bottom:8px}
+.empty .c-row{justify-content:center}
+.fbtn{display:none}
+@media (max-width:900px){
+  .list{grid-template-columns:1fr;padding:66px 12px 12px;gap:10px;grid-template-rows:auto 1fr}
+  .filters{display:none;max-height:46vh;overflow:auto}
+  .list.showf .filters{display:block}
+  .fbtn{display:inline-flex}
+  .lhead h2{font-size:24px}
+  .cards{grid-template-columns:1fr}
+}
+
+/* dialogs + info sheet */
 .sheet{position:absolute;inset:0;z-index:60;display:grid;place-items:center;padding:20px;background:rgba(2,3,12,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s .3s}
 .sheet.open{opacity:1;visibility:visible;transition:opacity .3s,visibility 0s}
-.sheet-in{position:relative;width:min(880px,100%);max-height:min(88vh,940px);overflow:auto;border-radius:28px;padding:40px;transform:translateY(16px) scale(.985);transition:transform .45s var(--ease)}
+.sheet-in{position:relative;width:min(880px,100%);max-height:min(88vh,940px);border-radius:28px;padding:40px;transform:translateY(16px) scale(.985);transition:transform .45s var(--ease)}
 .sheet-in:focus{outline:none}
 .sheet.open .sheet-in{transform:none}
+.sheet.small .sheet-in{width:min(500px,100%);padding:30px}
 .sheet h2{font-size:clamp(36px,5vw,64px);margin-top:12px}
+.sheet.small h2{font-size:30px}
 .sheet h3{font-size:24px;font-weight:700;letter-spacing:-.03em;margin:40px 0 12px}
 .sheet p{color:var(--txt2)}
 .sheet .lead{font-size:17px;margin-top:16px;max-width:660px}
 .kick{color:var(--lime)}
-.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:26px}
-.mgrid div{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
-.mgrid i{display:block;width:26px;height:26px;border-radius:7px;background:var(--c);box-shadow:0 0 20px var(--c);margin-bottom:12px}
-.mgrid b{display:block}
-.mgrid small{display:block;color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.4}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.box{padding:18px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.box h4{font-size:17px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.box ul{list-style:none;margin-top:10px;display:grid;gap:8px}
+.box li{position:relative;padding-left:22px;color:var(--txt2);font-size:14px;line-height:1.45}
+.box li::before{content:"✓";position:absolute;left:0;top:0;color:var(--lime);font-weight:800}
+.box.plan li::before{content:"○";color:var(--violet)}
+.box.plan h4 .badge{color:var(--violet);border:1px solid rgba(179,156,255,.5)}
 .ptable{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
 .ptable th{text-align:left;font-weight:600;color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;padding:0 0 10px}
 .ptable td{padding:12px 0;border-top:1px solid var(--line)}
 .ptable td:first-child{font-weight:600}
 .ptable td:first-child i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);margin-right:10px;vertical-align:1px}
 .ptable td+td{color:var(--txt2)}
-.xpr{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
-.xpr div{padding:14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
-.xpr b{display:block;font-size:22px;color:var(--lime);letter-spacing:-.03em}
-.xpr small{color:var(--txt2);font-size:13px}
+.terms{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+.terms div{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.terms b{display:block;font-size:15px}
+.terms p{font-size:14px;margin-top:6px;line-height:1.45}
 .faq details{border-bottom:1px solid var(--line)}
 .faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;font-size:17px;font-weight:600;letter-spacing:-.01em}
 .faq summary::-webkit-details-marker{display:none}
 .faq summary::after{content:"+";flex:none;font-size:26px;font-weight:400;line-height:1;color:var(--lime);transition:transform .3s var(--ease)}
 .faq details[open] summary::after{transform:rotate(45deg)}
 .faq p{padding:0 0 16px;font-size:15px;max-width:680px}
-.sheet .foot{margin-top:36px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:13px}
+.sheet .foot{margin-top:36px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:13px}
+.sheet .foot div{display:flex;gap:8px;flex-wrap:wrap}
+.radios{display:grid;gap:6px;margin-top:14px}
+.radios label{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line2);cursor:pointer;font-weight:600;font-size:14.5px}
+.radios label:has(input:checked){border-color:var(--lime);background:rgba(200,255,61,.07)}
+.radios input{accent-color:var(--lime)}
 @media (max-width:760px){
   .sheet{padding:0;place-items:end stretch}
-  .sheet-in{border-radius:24px 24px 0 0;max-height:92%;padding:28px 20px calc(28px + var(--sb))}
-  .mgrid,.xpr{grid-template-columns:1fr 1fr}
+  .sheet-in,.sheet.small .sheet-in{border-radius:24px 24px 0 0;max-height:92%;padding:28px 20px calc(28px + var(--sb));width:auto}
+  .two,.terms{grid-template-columns:1fr}
 }
 
 /* intro */
@@ -301,80 +448,93 @@ a{color:inherit;text-decoration:none}
 </head>
 <body>
 <div id="app">
-  <canvas id="world" tabindex="0" role="img" aria-label="The Expanse universe: thousands of glowing squares in a spiral galaxy. Scroll or pinch to zoom, drag to fly, click a square to open it."></canvas>
+  <canvas id="world" tabindex="0" role="img" aria-label="The Expanse universe: a spiral galaxy where every glowing square is a real product. Scroll or pinch to zoom, drag to fly, click a square to open it."></canvas>
   <div class="flash" id="flash"></div>
 
   <header class="bar">
-    <a href="#" class="logo" id="logo" aria-label="Expanse — back to the whole universe"><span class="orb"></span>Expanse</a>
-    <div class="chip mono" id="chip" hidden><span class="dot"></span><span id="chipTxt"></span></div>
+    <a href="/" class="logo" id="logo" aria-label="Expanse — back to the whole universe"><span class="orb"></span><span class="word">Expanse</span></a>
+    <div class="views glass" role="group" aria-label="View">
+      <button id="vMap" aria-pressed="true">Galaxy</button>
+      <button id="vList" aria-pressed="false">List</button>
+    </div>
     <div class="search" id="search">
       <form id="searchForm" class="glass" role="search">
         <span class="ico" aria-hidden="true">⌕</span>
-        <label class="sr" for="q">Search the universe</label>
-        <input id="q" placeholder="Search squares, cities… try “sushi”" autocomplete="off" spellcheck="false">
-        <button class="btn btn-primary" type="submit">Fly</button>
+        <label class="sr" for="q">Search products by what you need</label>
+        <input id="q" placeholder="What do you need? Try “send invoices”" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <button class="btn btn-primary" type="submit">Find</button>
       </form>
-      <div class="results glass" id="results" hidden></div>
+      <div class="results glass scroll" id="results" hidden></div>
     </div>
     <div class="bar-r">
       <button class="iconbtn" id="searchBtn" aria-label="Search">⌕</button>
       <button class="btn btn-ghost btn-sm" id="infoBtn" aria-label="How it works"><span class="lbl">How it works</span><span aria-hidden="true" class="q">?</span></button>
-      <button class="btn btn-primary btn-sm" data-claim data-mine-label="My square">Claim your spot</button>
+      <button class="btn btn-ghost btn-sm" id="mineBtn" hidden><span class="long">My product</span><span class="short">Mine</span></button>
+      <button class="btn btn-primary btn-sm" id="addBtn" data-add><span class="long">Add your product</span><span class="short">+ Add</span></button>
     </div>
   </header>
 
   <div class="ticker glass" id="ticker" role="status" aria-live="polite"><span class="tag mono" id="tickTag"></span><span class="txt" id="tickTxt"></span></div>
+  <div class="demo-bar" id="demoBar" hidden><span><b>Demo mode</b> · example products to show what a full universe looks like. None of them are real.</span><button class="btn btn-ghost" id="demoExit">Exit demo</button></div>
 
   <section class="hero" id="hero" aria-labelledby="heroTitle">
     <div class="eyebrow mono"><span class="dot"></span><span id="heroLive">Founding spots are open</span></div>
     <h1 class="display" id="heroTitle">The internet,<br><span class="grad">as a universe.</span></h1>
-    <p class="sub">Every glowing square is someone — a shop, a song, a startup. Claim your spot and it lights up every time you ship. The closer to the core, the more eyes.</p>
+    <p class="sub">Find tools by what you need. Every glowing square is a real product, placed by the people who make it. Add yours — the closer to the core, the more eyes.</p>
     <div class="ctas">
-      <button class="btn btn-primary" data-claim data-mine-label="Fly to my square">Claim your spot</button>
-      <button class="btn btn-ghost" data-info>How it works</button>
+      <button class="btn btn-primary" data-add>Add your product</button>
+      <button class="btn btn-ghost" data-list>Browse products</button>
     </div>
-    <div class="meta mono"><span>From <b>€1</b> / cell</span><span>Core <b>invite only</b></span><span id="heroHint">Scroll to zoom · drag to fly</span></div>
+    <div class="meta mono"><span id="heroCounts">Listing is <b>free</b></span><button id="demoHero">See a full universe (demo)</button></div>
   </section>
 
-  <div class="dock glass" id="dock"><span id="dockTxt">Founding prices end at <b>1,000</b> spots</span><button class="btn btn-primary btn-sm" data-claim data-mine-label="My square">Claim your spot</button></div>
+  <div class="dock glass" id="dock"><span id="dockTxt">Founding prices for the first <b>1,000</b> spots</span><button class="btn btn-primary btn-sm" data-add>Add your product</button></div>
 
   <div class="zoom">
     <button class="iconbtn" id="zIn" aria-label="Zoom in">+</button>
     <button class="iconbtn" id="zOut" aria-label="Zoom out">−</button>
     <button class="iconbtn" id="zHome" aria-label="Show the whole universe">◎</button>
+    <button class="iconbtn demo-pill mono" id="demoBtn" aria-pressed="false" aria-label="Demo mode: show example products">DEMO</button>
   </div>
   <canvas class="minimap" id="minimap" width="300" height="300" aria-label="Minimap — click to fly there"></canvas>
   <div class="legend mono" aria-hidden="true">
-    <span><i style="background:var(--amber)"></i>Sell</span><span><i style="background:var(--pink)"></i>Create</span><span><i style="background:var(--cyan)"></i>Build</span><span><i style="background:var(--green)"></i>Hire me</span><span><i style="background:#fff;box-shadow:0 0 8px #fff"></i>Reserved</span>
+    <span><i style="background:var(--lime);box-shadow:0 0 8px var(--lime)"></i>Live product</span><span><i style="background:#fff;border-radius:50%;box-shadow:0 0 8px #fff"></i>Held spot</span><span>✓ Verified domain</span>
   </div>
   <div class="tip" id="tip" role="tooltip"></div>
 
-  <!-- square card -->
-  <aside class="panel pop glass" id="pop" tabindex="-1" aria-label="Square details">
-    <button class="x" data-close aria-label="Close">×</button>
-    <div><span class="badge" id="pMode"></span><span class="mono pmeta" id="pMeta"></span></div>
-    <h2 class="display pname" id="pName"></h2>
-    <p class="ptag" id="pTag"></p>
-    <p class="pwho" id="pWho"></p>
-    <div class="receipts" id="pRec"></div>
-    <div class="refs" id="pRefs" hidden></div>
-    <div class="prow" id="pRow">
-      <button class="btn btn-primary btn-sm" id="pGo"></button>
-      <button class="chip-btn" id="pLike" aria-label="Like">♥ <span id="pLikes"></span></button>
-      <button class="chip-btn" id="pShare" aria-label="Share this square">↗</button>
+  <!-- list view -->
+  <section class="list" id="list" aria-label="Product list" aria-hidden="true">
+    <aside class="filters glass scroll" id="filters">
+      <h4 class="mono">Category</h4><div class="opts" id="fCat"></div>
+      <h4 class="mono">Price</h4><div class="opts" id="fPrice"></div>
+      <h4 class="mono">Platform</h4><div class="opts" id="fPlat"></div>
+      <h4 class="mono" id="fIntH" hidden>Works with</h4><div class="opts" id="fInt"></div>
+      <button class="linkbtn" id="fClear" style="margin-top:16px">Clear filters</button>
+    </aside>
+    <div class="lmain">
+      <div class="lhead">
+        <h2 class="display">Products</h2><span class="count mono" id="lCount"></span><span class="sp"></span>
+        <button class="btn btn-ghost btn-xs fbtn" id="fToggle">Filters</button>
+        <label class="sr" for="lSort">Sort</label>
+        <select id="lSort"><option value="match">Best match</option><option value="new">Newest</option><option value="az">A–Z</option></select>
+      </div>
+      <p class="lquery" id="lQuery" hidden></p>
+      <div class="cards scroll" id="cards"></div>
     </div>
-    <button class="btn btn-ghost btn-sm" id="pCard" style="width:100%;margin-top:8px" hidden>Get my square card</button>
-    <button class="nextto" id="pNext"><span id="pNextTxt">Claim the spot next to this</span><span aria-hidden="true">→</span></button>
-    <button class="linkbtn" id="pRemove" hidden>Remove from this device</button>
-    <p class="fine" id="pFine"></p>
+  </section>
+
+  <!-- profile / square details -->
+  <aside class="panel pop glass scroll" id="pop" tabindex="-1" aria-label="Product details">
+    <button class="x" data-close aria-label="Close">×</button>
+    <div id="popBody"></div>
   </aside>
 
-  <!-- claim flow -->
-  <aside class="panel claim glass" id="claim" tabindex="-1" aria-label="Claim your spot">
+  <!-- add your product -->
+  <aside class="panel claim glass scroll" id="claim" tabindex="-1" aria-label="Add your product">
     <button class="x" data-close aria-label="Close">×</button>
-    <div class="steps" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="steps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
     <div id="cStep1">
-      <div class="mono c-eyebrow">Step 1 of 3 · Your spot</div>
+      <div class="mono c-eyebrow">Step 1 of 5 · Your spot</div>
       <div class="zone" style="margin-top:12px"><span class="zbadge" id="cZone">Inner ring</span><span class="mono c-eyebrow" id="cCloser"></span></div>
       <h2 class="display c-title" id="cTitle">Close to the core.</h2>
       <div class="sizes" id="cSizes" role="group" aria-label="Size">
@@ -383,70 +543,121 @@ a{color:inherit;text-decoration:none}
         <button data-s="4" aria-pressed="false">4×4<small></small></button>
         <button data-s="8" aria-pressed="false">8×8<small></small></button>
       </div>
-      <div class="price"><b id="cPrice">€76</b><span>founding price<br>pay nothing today</span></div>
+      <div class="price"><b id="cPrice">€76</b><span>founding price for this spot<br>free to hold today · listing is always free</span></div>
       <div class="c-row">
-        <button class="btn btn-primary" id="cNext1">Make it yours →</button>
+        <button class="btn btn-primary" id="cNext1">Continue →</button>
         <button class="btn btn-ghost btn-sm" id="cCore">Closest to core</button>
       </div>
       <p class="fine" id="cMoveHint">Click anywhere on the map to move your spot.</p>
     </div>
     <div id="cStep2" hidden>
-      <div class="mono c-eyebrow">Step 2 of 3 · Make it yours</div>
-      <label class="field"><span class="mono">Name on your square</span><input id="cName" maxlength="24" placeholder="Your name, brand or project" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
-      <div class="mono c-eyebrow" style="margin-top:16px">Mode</div>
-      <div class="mpick" id="cModes" role="group" aria-label="Mode">
-        <button data-m="sell" style="--c:var(--amber)" aria-pressed="false"><i></i>Sell</button>
-        <button data-m="create" style="--c:var(--pink)" aria-pressed="false"><i></i>Create</button>
-        <button data-m="build" style="--c:var(--cyan)" aria-pressed="true"><i></i>Build</button>
-        <button data-m="hire" style="--c:var(--green)" aria-pressed="false"><i></i>Hire me</button>
-      </div>
-      <div class="c-row">
-        <button class="btn btn-primary" id="cNext2">Continue →</button>
-        <button class="btn btn-ghost btn-sm" id="cBack2">Back</button>
-      </div>
+      <div class="mono c-eyebrow">Step 2 of 5 · Your product</div>
+      <div id="fBasics"></div>
+      <div class="c-row"><button class="btn btn-primary" id="cNext2">Continue →</button><button class="btn btn-ghost btn-sm" data-back>Back</button></div>
     </div>
     <div id="cStep3" hidden>
-      <div class="mono c-eyebrow">Step 3 of 3 · Reserve</div>
-      <h2 class="display c-title">Lock in your spot.</h2>
-      <div class="summary" id="cSummary"><i></i><div><b id="sName"></b><small id="sWhere"></small></div><span class="amt" id="sAmt"></span></div>
-      <form id="cReserve" novalidate>
-        <label class="field"><span class="mono">Your email</span><input id="cMail" type="email" inputmode="email" placeholder="you@email.com" autocomplete="email" required></label>
-        <input class="hp" id="cWeb" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <div class="c-row"><button class="btn btn-primary" type="submit" id="cHold">Reserve for €76</button><button class="btn btn-ghost btn-sm" type="button" id="cBack3">Back</button></div>
-      </form>
-      <p class="fine"><b style="color:#fff">Pay nothing today.</b> When founding claims open you get first access at this price — or you just let it go. We only use your email for that. Stored in the EU, never sold or shared; reply to any email from us to have it deleted.</p>
-      <button class="linkbtn" id="cSkip">Not now — keep it on this device</button>
+      <div class="mono c-eyebrow">Step 3 of 5 · What it solves</div>
+      <div id="fFit"></div>
+      <div class="c-row"><button class="btn btn-primary" id="cNext3">Continue →</button><button class="btn btn-ghost btn-sm" data-back>Back</button></div>
     </div>
     <div id="cStep4" hidden>
-      <div class="mono c-eyebrow" style="color:var(--lime)" id="dEyebrow">You're in</div>
+      <div class="mono c-eyebrow">Step 4 of 5 · Show it</div>
+      <div id="fStory"></div>
+      <div class="c-row"><button class="btn btn-primary" id="cNext4">Continue →</button><button class="btn btn-ghost btn-sm" data-back>Back</button></div>
+    </div>
+    <div id="cStep5" hidden>
+      <div class="mono c-eyebrow">Step 5 of 5 · Send for review</div>
+      <h2 class="display c-title">Almost live.</h2>
+      <div class="summary" id="cSummary"><i></i><div><b id="sName"></b><small id="sWhere"></small></div><span class="amt" id="sAmt"></span></div>
+      <form id="cSubmit" novalidate>
+        <label class="field" id="fMail"><span class="mono">Your email <em>only for messages about this listing</em></span><input id="cMail" type="email" inputmode="email" placeholder="you@company.com" autocomplete="email" required></label>
+        <input class="hp" id="cWeb" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <label class="check"><input type="checkbox" id="cOwn"><span>I make or represent this product, and everything here is accurate.</span></label>
+        <div class="c-row"><button class="btn btn-primary" type="submit" id="cSend">Send for review</button><button class="btn btn-ghost btn-sm" type="button" data-back>Back</button></div>
+      </form>
+      <p class="fine">We review every product before it goes live. Nothing is charged — listing is free and the spot is free to hold. Your email is stored in the EU and never shown, sold or shared.</p>
+    </div>
+    <div id="cStep6" hidden>
+      <div class="mono c-eyebrow" style="color:var(--lime)">Sent for review</div>
       <h2 class="display c-title" id="dTitle">You're on the map.</h2>
       <p class="c-text" id="dText"></p>
-      <div class="refs" id="dRefs" hidden></div>
-      <div class="c-row">
-        <button class="btn btn-primary" id="dShare">Share my square ↗</button>
-        <button class="btn btn-ghost btn-sm" id="dCard">Square card</button>
+      <div class="keybox">
+        <b>Your owner key — save it now.</b>
+        <code id="dKey"></code>
+        <small>It's how you edit your profile and see your stats. It's saved in this browser too, but we can't show it again. Lost it? You can get a new one by proving you own your site.</small>
+        <div class="c-row"><button class="btn btn-ghost btn-xs" id="dKeyCopy">Copy key</button><button class="btn btn-ghost btn-xs" id="dKeySave">Download as file</button></div>
       </div>
-      <button class="linkbtn" id="dReserve" hidden>Reserve it with your email →</button>
-      <button class="linkbtn" id="dExplore">Explore the universe</button>
+      <div class="c-row">
+        <button class="btn btn-primary" id="dManage">Verify your domain →</button>
+        <button class="btn btn-ghost btn-sm" id="dCard">Share card</button>
+      </div>
+      <button class="linkbtn" id="dExplore" style="margin-top:12px">Explore the universe</button>
     </div>
+  </aside>
+
+  <!-- owner panel -->
+  <aside class="panel manage glass scroll" id="manage" tabindex="-1" aria-label="Manage your product">
+    <button class="x" data-close aria-label="Close">×</button>
+    <div class="mhead"><div class="pbadges" id="mBadges"></div><h2 class="display" id="mName"></h2></div>
+    <div id="mNote"></div>
+    <div class="tabs" role="tablist" id="mTabs">
+      <button role="tab" data-tab="stats" aria-selected="true">Stats</button>
+      <button role="tab" data-tab="edit" aria-selected="false">Edit</button>
+      <button role="tab" data-tab="verify" aria-selected="false">Verify</button>
+      <button role="tab" data-tab="share" aria-selected="false">Share</button>
+      <button role="tab" data-tab="key" aria-selected="false">Key</button>
+    </div>
+    <div class="tabp" data-panel="stats" id="mStats"></div>
+    <div class="tabp" data-panel="edit" hidden>
+      <div id="eBasics"></div><div id="eFit"></div><div id="eStory"></div>
+      <p class="fine">Text changes go live right away. A new link or new images go back to review first, and a new domain needs to be verified again.</p>
+      <div class="c-row"><button class="btn btn-primary" id="eSave">Save changes</button></div>
+    </div>
+    <div class="tabp" data-panel="verify" id="mVerify" hidden></div>
+    <div class="tabp" data-panel="share" id="mShare" hidden></div>
+    <div class="tabp" data-panel="key" id="mKey" hidden></div>
   </aside>
 
   <!-- how it works -->
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <div class="sheet-in glass" tabindex="-1">
+    <div class="sheet-in glass scroll" tabindex="-1">
       <button class="x" data-sheet-close aria-label="Close">×</button>
       <div class="mono kick">How Expanse works</div>
-      <h2 class="display" id="sheetTitle">A universe of people.<br><span class="grad">One square each.</span></h2>
-      <p class="lead">Every glowing square is someone — a shop, a band, a startup, a freelancer. You claim a spot, plug in what you already use, and your square lights up every time you ship. No feed. No posting. No followers needed.</p>
-      <div class="mgrid">
-        <div style="--c:var(--amber)"><i></i><b>Sell</b><small>A price tag on the map. Leads with Buy, straight to your own checkout.</small></div>
-        <div style="--c:var(--pink)"><i></i><b>Create</b><small>Pulses every time you post. Leads with your latest piece.</small></div>
-        <div style="--c:var(--cyan)"><i></i><b>Build</b><small>A neon edge that flares on fresh commits. Leads with what just shipped.</small></div>
-        <div style="--c:var(--green)"><i></i><b>Hire me</b><small>Green when you're free, red when you're booked. Leads with Book.</small></div>
-      </div>
+      <h2 class="display" id="sheetTitle">Find tools by what they solve.<br><span class="grad">See them as a universe.</span></h2>
+      <p class="lead">Expanse is a map of real products. Search for the problem you have — “send invoices”, “book meetings” — and get the products that solve it, ranked by how well they match. Makers add their product, prove they own the website, and see how many people visit.</p>
 
-      <h3>Location is everything</h3>
-      <p>The universe grows from the core out. The closer you are, the more people fly past you — and the fewer spots are left. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four.</p>
+      <h3>What works today — and what's next</h3>
+      <div class="two">
+        <div class="box">
+          <h4>Live now</h4>
+          <ul>
+            <li>Product profiles: what it solves, who it's for, price, platforms, integrations, images, demo and link.</li>
+            <li>Search by need, with filters for category, price, platform and integrations.</li>
+            <li>A list view next to the galaxy, and a page with a share link for every product.</li>
+            <li>An owner key to edit your profile and see profile views and clicks to your site.</li>
+            <li>Domain verification with a meta tag or a file on your site.</li>
+            <li>Every new profile is reviewed before it goes live. Anyone can report a broken link or wrong information.</li>
+          </ul>
+        </div>
+        <div class="box plan">
+          <h4>Planned <span class="badge mono">Not live yet</span></h4>
+          <ul>
+            <li>Favorites and following products, with one combined update.</li>
+            <li>More verified signals, like a working demo, each with a date.</li>
+            <li>Release updates from GitHub for products that connect their repo.</li>
+            <li>AI search that matches what you describe, with a reason for every result.</li>
+            <li>Paid placements, with a report of the visits and clicks they delivered.</li>
+            <li>Sign-in with email.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="fine">Nothing in the planned list is switched on. Each one moves over when it actually works.</p>
+
+      <h3>Search is not for sale</h3>
+      <p>Results are ranked by how well a product matches your search — what it solves, its name and its description. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. Paid placements, when they open, will be marked <b style="color:var(--amber)">Sponsored</b>.</p>
+
+      <h3>Your spot on the map</h3>
+      <p>Every product lives somewhere in the galaxy. The closer to the core, the more people fly past it. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four.</p>
       <table class="ptable">
         <thead><tr><th>Zone</th><th>Founding price</th><th>2×2 example</th></tr></thead>
         <tbody>
@@ -457,1108 +668,42 @@ a{color:inherit;text-decoration:none}
           <tr><td style="--c:var(--muted)"><i></i>Edge</td><td>€1 / cell</td><td>€4</td></tr>
         </tbody>
       </table>
-      <p class="fine">Founding prices are for the first 1,000 reserved spots. Reserving costs nothing today — you pay when founding claims open.</p>
-
-      <h3>Activity makes you bigger</h3>
-      <div class="xpr">
-        <div><b>+10</b><small>per like</small></div>
-        <div><b>+25</b><small>per visit through your link</small></div>
-        <div><b>+50</b><small>per update — a push, a post, a sale</small></div>
-        <div><b>+1 cell</b><small>for 3 friends who reserve through your link</small></div>
+      <div class="terms">
+        <div><b>What a spot gives you</b><p>A fixed position and size in the galaxy, where people exploring the map will see it. It doesn't change search results and doesn't make you verified.</p></div>
+        <div><b>What it costs today</b><p>Nothing. Listing a product is free, and spots are free to hold during the founding period. Each spot shows the founding price it will have.</p></div>
+        <div><b>When paid placement opens</b><p>You choose: keep your spot for 12 months at its founding price, or move to the free outer edge. Your profile, search and stats stay either way. You'll see the full terms before anything is charged.</p></div>
+        <div><b>If your product goes away</b><p>Take it down anytime from your owner panel and the spot is released. If its link stops working and reports are confirmed, we hide the profile until it's fixed.</p></div>
       </div>
-      <p style="margin-top:14px">A full bar unlocks one more cell, placed anywhere touching your square. Busy squares grow and glow. Quiet ones fade.</p>
+      <p class="fine">Founding prices are for the first 1,000 spots.</p>
 
       <h3>Questions</h3>
       <div class="faq">
-        <details><summary>Do I pay now?</summary><p>No. Reserving a spot costs nothing today. When founding claims open, you get first access at the founding price you reserved — or you simply let it go.</p></details>
-        <details><summary>What does “founding” mean?</summary><p>The first 1,000 reserved spots. They get founding prices and are marked as founding spots on the map.</p></details>
-        <details><summary>Is this a social network?</summary><p>No. You never post on Expanse. Your square mirrors what you already do elsewhere, and every click goes out to your own shop, channel, repo or calendar. We only ever get read-only access to what you choose to connect.</p></details>
-        <details><summary>Do I own my square?</summary><p>Your square is your spot on the map for as long as you use it. It's a place to be seen — not property, not an investment, and not something to trade.</p></details>
-        <details><summary>What if I go quiet?</summary><p>Your square fades. If it stays quiet for months, the spot can be freed for someone new — we email you before that happens.</p></details>
-        <details><summary>What do you do with my email?</summary><p>One thing: tell you when founding claims open. It's stored in the EU (Stockholm), never sold or shared, and you can have it deleted anytime by replying to any email from us.</p></details>
-        <details><summary>Is everything on the map real?</summary><p>The universe you see is a preview of what Expanse will look like. White beacons are real founding reservations, and everything marked LIVE in the feed is real.</p></details>
+        <details><summary>Is everything on the map real?</summary><p>Squares are real products that passed review. White beacons are held spots whose profile isn't live yet. The faint dust is just the galaxy. Demo mode fills the universe with clearly labelled example products to show what it can become — none of them are real.</p></details>
+        <details><summary>Does it cost anything?</summary><p>No. Listing is free and paid placement isn't switched on, so nobody is charged today.</p></details>
+        <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and IP addresses are never stored. Known bots are left out, and so are your own visits on days you open your owner panel.</p></details>
+        <details><summary>What do you do with my email?</summary><p>We only use it to contact you about your listing. It's stored in the EU (Stockholm), never shown publicly, sold or shared. Take your listing down from the owner panel and the email is wiped.</p></details>
+        <details><summary>I lost my owner key.</summary><p>Open your product, choose “I make this”, then “Lost your key?”. Publish the code we give you on your site — that proves the product is yours and gives you a new key.</p></details>
+        <details><summary>What gets turned down in review?</summary><p>Spam, scams, anything illegal or adult, and profiles that don't match the product they link to. If yours is turned down, you'll see why in your owner panel, and you can edit it and send it again.</p></details>
       </div>
-      <div class="foot"><span>© 2026 Expanse · A Nytto Labs project</span><button class="btn btn-primary btn-sm" data-claim data-mine-label="Fly to my square">Claim your spot</button></div>
+      <div class="foot"><span>© 2026 Expanse · A Nytto Labs project</span><div><button class="btn btn-ghost btn-sm" id="ownerOpen">I already have a product here</button><button class="btn btn-primary btn-sm" data-add>Add your product</button></div></div>
+    </div>
+  </div>
+
+  <!-- small dialogs: owner key, report -->
+  <div class="sheet small" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <div class="sheet-in glass scroll" tabindex="-1">
+      <button class="x" data-dlg-close aria-label="Close">×</button>
+      <div id="dlgBody"></div>
     </div>
   </div>
 
   <div class="intro" id="intro" aria-hidden="true">
-    <div class="intro-in"><div class="intro-logo">EXPANSE</div><div class="intro-sub mono">A universe of people</div></div>
+    <div class="intro-in"><div class="intro-logo">EXPANSE</div><div class="intro-sub mono">A universe of products</div></div>
     <div class="intro-skip mono">Click to skip</div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
-<noscript><p style="padding:24px;color:#fff;font-family:system-ui">Expanse is a living universe of people who sell, create, build and get hired. It needs JavaScript to fly through.</p></noscript>
-
-<script>
-(() => {
-'use strict';
-
-/* ================= CONFIG ================= */
-/* Reservations go to Supabase project "expanse" (Stockholm). The publishable key is public by design:
-   the reservations table is locked; only the RPC functions are callable. */
-const SUPA = { rpc: 'https://gjmkhnrgznorxxaemsmo.supabase.co/rest/v1/rpc/', key: 'sb_publishable_b1uzRroOaHTGp9oXOhHjtQ_J-A-IUCZ' };
-const FOUNDING_LIMIT = 1000;
-/* Keep in sync with zone_of() and price_per_cell() in Supabase. */
-const ZONES = [
-  { id: 'core',  label: 'Core',       r: 14,       price: 49, color: '#ffffff', invite: true, line: 'Invite only.' },
-  { id: 'inner', label: 'Inner ring', r: 40,       price: 19, color: '#c8ff3d', line: 'Close to the core.' },
-  { id: 'belt',  label: 'Belt',       r: 80,       price: 9,  color: '#5ee1ff', line: 'Where the universe gets busy.' },
-  { id: 'outer', label: 'Outer rim',  r: 125,      price: 4,  color: '#b39cff', line: 'Room to grow out here.' },
-  { id: 'edge',  label: 'Edge',       r: Infinity, price: 1,  color: '#8b94c9', line: 'Out on the frontier.' }
-];
-const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
-const WORLD_R = 150, CORE_R = 14, CELL = 16, ZMIN = .025, ZMAX = 6;
-const MINE_KEY = 'expanse.mine.v2', REF_KEY = 'expanse.ref';
-
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const coarse = matchMedia('(pointer: coarse)').matches;
-const $ = s => document.querySelector(s);
-const now = () => performance.now();
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const fmt = n => n.toLocaleString('en');
-const eur = n => '€' + fmt(n);
-const store = {
-  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
-  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
-};
-const app = $('#app');
-
-/* ================= DATA ================= */
-function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const rnd = mulberry(20261012);
-const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
-const pick = a => a[Math.floor(rnd() * a.length)];
-const gauss = () => { let u = 0; while (!u) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * rnd()); };
-
-const MODES = {
-  sell:   { label: 'Sell',    color: '#ffcf4a', rgb: '255,207,74', go: 'Buy',          dest: 'checkout' },
-  create: { label: 'Create',  color: '#ff5c7a', rgb: '255,92,122', go: 'See latest',   dest: 'latest post' },
-  build:  { label: 'Build',   color: '#5ee1ff', rgb: '94,225,255', go: 'Open project', dest: 'project' },
-  hire:   { label: 'Hire me', color: '#3dff8a', rgb: '61,255,138', go: 'Book',         dest: 'calendar' }
-};
-const MK = Object.keys(MODES);
-const CITIES = ['Stockholm','Göteborg','Malmö','Uppsala','Lund','Umeå','Oslo','Copenhagen','Berlin','Helsinki','Amsterdam','London','Lisbon','Barcelona','Paris','New York','Tokyo','Reykjavík'];
-const NAMES = {
-  sell: ['Volvo 240','Saab 900 Turbo','VW Bus 1974','Lund Vintage','Fiskbod Smögen','Hemslöjd Umeå','Nordlys Prints','Notion CRM kit','Bageri Söder','Pho Hanoi','Pizzeria Luna','Vinyl crate #12','Fika Box','Linen & Oak','Cykelverkstan','Retro Consoles','Plant Swap','Kaffe Kollektiv','Moss Candles','Sill & Co','Ramen Ronin','Glasblåsarn','Tape & Thread','Kiln Club'],
-  create: ['Lo-Fi Tomten','Nattklubb 404','Pernilla P','Blue Hour','Dödsrit','Vera Ek','Ink & Salt','Fjällvandra','Mats Cooks','Pixel Diaries','Neon Fjord','Tape Hiss','North Light Films','Kladd','Sofia Draws','Brus Radio','Synth Saga','Midnight Sauna','Paper Moons','Ödemark'],
-  build: ['VATify','CSV Cleaner','Pixelnote','Shiplog','Tabby','Fjord Analytics','Orbit Notes','QR Reorder','SyncStock','Lagom UI','Ping Pal','Uptime Uggla','Formfix','Stack Sauna','Diffy','Kvitto','Lingon DB','Moose Mail','Polar Pay','Gravel CI'],
-  hire: ['Jonas · Plumber','Sara · Photographer','Nils · Fullstack','Amira · Copy','Hugo · Electrician','Maja · Illustrator','Leo · Video edit','Petra · Accountant','Ali · Motion','Ida · Brand','Oskar · Carpenter','Noor · iOS','Frida · Tattoo','Elias · DJ']
-};
-const OWNERS = ['anna','erik','maja','jonas','lisa','oskar','sofia','karl','emil','nora','ali','sara','leo','ida','frida','elias'];
-const PRICES = ['89 kr','€12','€29','199 kr','€49','€2,100','350 kr','€9','€160'];
-const TAGS = {
-  sell: ['Ships from {c}','Small batch · {c}','Open today · {c}','Handmade in {c}'],
-  create: ['New drop every week','Live on Fridays','Prints & zines','New single out'],
-  build: ['Open source','Indie SaaS','CLI tool','iOS + Android'],
-  hire: ['Same-day jobs · {c}','Remote · EU','Weekend slots · {c}','Booking for spring']
-};
-const KW = { sell: 'shop buy store sell price product', create: 'music video art creator youtube tiktok spotify', build: 'app saas tool github developer code open source', hire: 'hire freelance book available freelancer' };
-
-let texDirty = true;
-const SQ = [], occ = new Map(), K = (x, y) => x + ',' + y;
-const isFree = (x, y, w, h) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (occ.has(K(x + i, y + j))) return false; return true; };
-function put(q) {
-  q.id = SQ.length; q.w = q.h = q.size; q.cells = [];
-  for (let i = 0; i < q.size; i++) for (let j = 0; j < q.size; j++) { q.cells.push([q.x + i, q.y + j]); occ.set(K(q.x + i, q.y + j), q.id); }
-  q.d = Math.hypot(q.x + q.size / 2, q.y + q.size / 2); SQ.push(q); texDirty = true; return q;
-}
-function unput(q) { for (const c of q.cells) if (occ.get(K(c[0], c[1])) === q.id) occ.delete(K(c[0], c[1])); q.gone = true; texDirty = true; }
-const ago = d => d === 0 ? 'today' : d === 1 ? 'yesterday' : d + 'd ago';
-function receipts(s) {
-  const a = ago(s.last);
-  if (s.mode === 'sell') return [ri(12, 800) + ' sold', 'ships from ' + s.city, 'last sale ' + a];
-  if (s.mode === 'create') return [ri(1, 60) + 'k followers', 'posted ' + a, ri(2, 40) + ' pieces'];
-  if (s.mode === 'build') return [(s.last < 30 ? ri(3, 40) : 0) + ' commits / wk', fmt(ri(20, 4000)) + ' stars', 'last push ' + a];
-  return [s.avail ? 'available now' : 'booked until ' + pick(['May', 'June', 'Sept']), ri(5, 80) + ' bookings', 'based in ' + s.city];
-}
-function gen(x, y, size, mode, extra) {
-  const m = mode || pick(['sell', 'sell', 'create', 'create', 'build', 'hire']);
-  const u = rnd(), last = u < .55 ? ri(0, 6) : u < .8 ? ri(7, 29) : u < .93 ? ri(30, 89) : ri(90, 220);
-  const q = { x, y, size, mode: m, name: pick(NAMES[m]), city: pick(CITIES), owner: '@' + pick(OWNERS), last, avail: rnd() < .7, likes: ri(0, 900), price: pick(PRICES) };
-  Object.assign(q, extra || {});
-  if (!q.tag) q.tag = pick(TAGS[q.mode]).replace('{c}', q.city);
-  if (!q.rec) q.rec = receipts(q);
-  return put(q);
-}
-
-const FEATURED = [
-  [-4, -12, 8, 'sell', { name: 'Sushi Yama', city: 'Stockholm', tag: 'Cheap sushi lunch · Söder', price: 'from 89 kr', last: 0, likes: 1284, rec: ['1,912 sold', 'ships from Stockholm', 'last sale today'], kw: 'sushi lunch food cheap restaurant' }],
-  [5, 2, 4, 'create', { name: 'Kajsa & The Tides', city: 'Malmö', tag: 'Indie folk · new single out', last: 0, likes: 960, rec: ['38k listeners', 'posted today', '12 tracks'], kw: 'music band indie folk spotify' }],
-  [-11, 0, 4, 'build', { name: 'DeployCheck', city: 'Göteborg', tag: 'Catch deploy errors before they ship', last: 0, likes: 430, rec: ['14 commits / wk', '2,310 stars', 'last push today'], kw: 'deploy vercel ci check developer tool' }],
-  [-2, 6, 4, 'create', { name: 'Studio Mira', city: 'Copenhagen', tag: 'Ceramics · weekly studio vlogs', last: 0, likes: 540, rec: ['22k followers', 'posted today', '96 pieces'], kw: 'ceramics pottery video craft' }],
-  [20, -14, 4, 'sell', { name: 'Volvo 240 GL', city: 'Uppsala', tag: '1991 · 21,000 km · one owner', price: '€4,900', last: 3, likes: 210, rec: ['€4,900', 'listed 3d ago', 'in Uppsala'], kw: 'volvo car classic vintage' }],
-  [-30, -18, 4, 'sell', { name: 'Icon Pack Vol.3', city: 'Berlin', tag: '480 icons · Figma + SVG', price: '€29', last: 0, likes: 620, rec: ['212 sold', 'updated today', '4.9 ★'], kw: 'icons figma design svg ui' }],
-  [10, 24, 4, 'hire', { name: 'Elin · UX', city: 'Stockholm', tag: 'Product design · booking for June', avail: false, last: 2, likes: 310, rec: ['booked until June', '44 bookings', 'based in Stockholm'], kw: 'ux design designer product figma' }],
-  [-20, 18, 2, 'hire', { name: 'Fix my bike', city: 'Malmö', tag: 'Mobile bike repair · same day', last: 1, avail: true, likes: 88, rec: ['available now', '61 bookings', 'based in Malmö'], kw: 'bike repair cycle fix mechanic' }],
-  [32, 8, 2, 'build', { name: 'Kronor.js', city: 'Oslo', tag: 'Currency formatting in 2 kB', last: 0, likes: 150, rec: ['9 commits / wk', '880 stars', 'last push today'], kw: 'javascript library currency npm' }],
-  [-62, 38, 8, 'create', { name: 'Aurora Records', city: 'Reykjavík', tag: 'Independent label · 40 artists', last: 0, likes: 2210, rec: ['410k listeners', 'released today', '40 artists'], kw: 'music label records aurora' }],
-  [66, -34, 8, 'sell', { name: 'Nordic Pixel Co.', city: 'Helsinki', tag: 'Pixel-art posters & merch', price: '€35', last: 1, likes: 1630, rec: ['8,420 sold', 'ships worldwide', 'last sale today'], kw: 'pixel art posters merch shop' }],
-  [16, 88, 8, 'build', { name: 'Open Fjord', city: 'Oslo', tag: 'Open-source maps for everyone', last: 0, likes: 1980, rec: ['61 commits / wk', '24,100 stars', 'last push today'], kw: 'maps open source geo' }],
-  [-96, -58, 4, 'hire', { name: 'Hus & Hem', city: 'Göteborg', tag: 'Carpentry · renovations', avail: true, last: 0, likes: 340, rec: ['available now', '120 bookings', 'based in Göteborg'], kw: 'carpenter renovation home builder' }]
-];
-for (const f of FEATURED) gen(f[0], f[1], f[2], f[3], Object.assign({ featured: true }, f[4]));
-// the core: packed solid
-for (let y = -CORE_R; y <= CORE_R; y++) for (let x = -CORE_R; x <= CORE_R; x++) {
-  if (Math.hypot(x + .5, y + .5) > CORE_R || occ.has(K(x, y))) continue;
-  const p = rnd(); let s = p < .2 ? 4 : p < .62 ? 2 : 1;
-  while (s > 1 && !(isFree(x, y, s, s) && Math.hypot(x + s / 2, y + s / 2) <= CORE_R)) s >>= 1;
-  gen(x, y, s);
-}
-// spiral arms
-{
-  const ARMS = 4;
-  for (let i = 0; i < 46000; i++) {
-    const r = CORE_R + 1 + Math.pow(rnd(), 1.12) * (WORLD_R - CORE_R);
-    const arm = Math.floor(rnd() * ARMS), inArm = rnd() < .8;
-    const base = arm * (6.2832 / ARMS) + Math.log(r / CORE_R) * 2.25;
-    const a = base + (inArm ? gauss() * (.15 + .14 * r / WORLD_R) : (rnd() - .5) * 6.2832 / ARMS);
-    const p = rnd();
-    const size = r < 40 ? (p < .05 ? 8 : p < .24 ? 4 : p < .62 ? 2 : 1) : r < 80 ? (p < .012 ? 8 : p < .09 ? 4 : p < .45 ? 2 : 1) : (p < .025 ? 4 : p < .25 ? 2 : 1);
-    const keep = inArm ? (r < 40 ? .97 : r < 80 ? .82 : .62) : (r < 40 ? .8 : r < 80 ? .3 : .14);
-    const x = Math.round(Math.cos(a) * r - size / 2), y = Math.round(Math.sin(a) * r - size / 2);
-    if (rnd() < keep && isFree(x, y, size, size)) gen(x, y, size);
-  }
-}
-const DEMO_COUNT = SQ.length;
-
-const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
-const priceOf = (x, y, size) => zoneOf(x, y, size).price * size * size;
-let OFF = null;
-function offsets() {
-  if (OFF) return OFF;
-  const R = 150, tmp = [];
-  for (let dx = -R; dx <= R; dx++) for (let dy = -R; dy <= R; dy++) { const d = dx * dx + dy * dy; if (d <= R * R) tmp.push([dx, dy, d]); }
-  tmp.sort((a, b) => a[2] - b[2]);
-  OFF = new Int16Array(tmp.length * 2); tmp.forEach((t, k) => { OFF[k * 2] = t[0]; OFF[k * 2 + 1] = t[1]; });
-  return OFF;
-}
-function spotOk(x, y, size) { return isFree(x, y, size, size) && !zoneOf(x, y, size).invite && Math.hypot(x + size / 2, y + size / 2) < WORLD_R + 25; }
-function nearestFree(cx, cy, size) {
-  const o = offsets();
-  for (let k = 0; k < o.length; k += 2) { const x = cx + o[k], y = cy + o[k + 1]; if (spotOk(x, y, size)) return { x, y }; }
-  return null;
-}
-function closerThan(x, y, size) { const d = Math.hypot(x + size / 2, y + size / 2); let n = 0; for (const q of SQ) if (!q.gone && !q.mine && !q.shared && q.d < d) n++; return n; }
-const clean = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
-const today = () => new Date().toISOString().slice(0, 10);
-const glowOf = q => q.last <= 3 ? 1 : q.last <= 30 ? 1 - (q.last - 3) / 27 * .85 : 0;
-const fadeOf = q => q.last <= 30 ? 1 : q.last <= 90 ? 1 - (q.last - 30) / 60 * .5 : .3;
-
-/* ================= BACKEND ================= */
-async function rpc(fn, args) {
-  const r = await fetch(SUPA.rpc + fn, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPA.key }, body: JSON.stringify(args || {}) });
-  const t = await r.text(); let j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {}
-  if (!r.ok) { const err = new Error((j && j.message) || 'rpc ' + r.status); err.status = r.status; throw err; }
-  return j;
-}
-let STATS = null;
-async function loadStats() {
-  try { STATS = await rpc('founding_stats'); } catch (e) { STATS = null; }
-  renderLive();
-}
-async function loadSpots() {
-  try {
-    const spots = await rpc('public_spots');
-    if (Array.isArray(spots)) { let added = 0; for (const s of spots) if (addReal(s)) added++; if (added) kick(); }
-  } catch (e) {}
-}
-function addReal(s) {
-  if (!s || !Number.isInteger(s.x) || !Number.isInteger(s.y) || ![1, 2, 4, 8].includes(s.size) || !MK.includes(s.mode)) return false;
-  if (Math.hypot(s.x + s.size / 2, s.y + s.size / 2) > WORLD_R + 25) return false;
-  if (mine && mine.reserved && mine.x === s.x && mine.y === s.y) return false;
-  if (shared && shared.x === s.x && shared.y === s.y) { shared.real = true; return false; }
-  for (let i = 0; i < s.size; i++) for (let j = 0; j < s.size; j++) {
-    const id = occ.get(K(s.x + i, s.y + j)); if (id === undefined) continue;
-    const q = SQ[id];
-    if (q.real || q.shared) return false;
-    if (q.mine) { if (q.reserved) return false; relocateMine(); continue; }
-    unput(q);
-  }
-  const z = zoneOf(s.x, s.y, s.size);
-  put({ x: s.x, y: s.y, size: s.size, mode: s.mode, real: true, name: 'Founding spot', city: '', owner: '', last: 0, likes: 0, tag: `${z.label} · ${s.size}×${s.size} · ${MODES[s.mode].label}`, rec: ['founding reservation', z.label, MODES[s.mode].label] });
-  return true;
-}
-
-/* ================= CANVAS ================= */
-const cv = $('#world'), ctx = cv.getContext('2d');
-let W = 0, H = 0, DPR = 1;
-const cam = { x: 0, y: 0, z: .2 };
-const fp = { x: 0, y: 0 };
-const isMobile = () => W < 760;
-let ui = 'none', sel = null, hoverSq = null, ghost = null, filter = null, mine = null, shared = null, explored = false, introRunning = false;
-
-function focusTarget() {
-  if (ui === 'pop') return isMobile() ? { x: W / 2, y: H * .25 } : { x: (W - 460) / 2 + 20, y: H / 2 };
-  if (ui === 'claim') return isMobile() ? { x: W / 2, y: H * .24 } : { x: Math.max(W * .62, 520), y: H * .47 };
-  return isMobile() ? { x: W / 2, y: H * .36 } : { x: W * .6, y: H * .5 };
-}
-function home() {
-  const span = 2 * WORLD_R * CELL;
-  return isMobile() ? { x: 0, y: 0, z: W * 1.18 / span } : { x: 0, y: 0, z: Math.min(H * .98, W * .62) / span };
-}
-function resize() {
-  W = innerWidth; H = innerHeight; DPR = Math.min(2, devicePixelRatio || 1);
-  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-  const f = focusTarget(); fp.x = f.x; fp.y = f.y;
-  kick();
-}
-const toS = (wx, wy) => ({ x: fp.x + (wx - cam.x) * CELL * cam.z, y: fp.y + (wy - cam.y) * CELL * cam.z });
-const toW = (sx, sy) => ({ x: cam.x + (sx - fp.x) / (CELL * cam.z), y: cam.y + (sy - fp.y) / (CELL * cam.z) });
-function rrect(c, x, y, w, h, r) {
-  c.beginPath(); w = Math.max(0, w); h = Math.max(0, h); r = Math.max(0, Math.min(r, w / 2, h / 2));
-  if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h);
-}
-const SPR = {};
-function sprite(rgb) {
-  if (SPR[rgb]) return SPR[rgb];
-  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
-  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gr.addColorStop(0, `rgba(${rgb},.9)`); gr.addColorStop(.28, `rgba(${rgb},.32)`); gr.addColorStop(1, `rgba(${rgb},0)`);
-  g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (SPR[rgb] = c);
-}
-function starSprite() {
-  if (SPR.star) return SPR.star;
-  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
-  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.12, 'rgba(255,255,255,.6)'); gr.addColorStop(.4, 'rgba(255,255,255,.08)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
-  g.globalCompositeOperation = 'lighter';
-  for (const [w, h] of [[128, 3], [3, 128]]) { const l = g.createLinearGradient(64 - w / 2, 64 - h / 2, 64 + w / 2, 64 + h / 2); l.addColorStop(0, 'rgba(255,255,255,0)'); l.addColorStop(.5, 'rgba(255,255,255,.9)'); l.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = l; g.fillRect(64 - w / 2, 64 - h / 2, w, h); }
-  return (SPR.star = c);
-}
-
-/* galaxy texture: every square at 3px/cell, plus a blurred copy for bloom */
-const TPX = 3, TN = (WORLD_R + 30) * 2, TOFF = TN / 2;
-let TEX = null, GLOW = null, MINIBASE = null;
-const MINI = $('#minimap'), mctx = MINI.getContext('2d');
-function buildTexture() {
-  const S = TN * TPX;
-  if (!TEX) { TEX = document.createElement('canvas'); GLOW = document.createElement('canvas'); MINIBASE = document.createElement('canvas'); }
-  TEX.width = TEX.height = S;
-  const g = TEX.getContext('2d');
-  for (const q of SQ) {
-    if (q.gone) continue;
-    const special = q.mine || q.shared || q.real;
-    g.globalAlpha = special ? 1 : fadeOf(q) * (.55 + .45 * glowOf(q));
-    g.fillStyle = special ? '#ffffff' : MODES[q.mode].color;
-    const ins = q.w === 1 ? .45 : .7;
-    g.fillRect((q.x + TOFF) * TPX + ins, (q.y + TOFF) * TPX + ins, q.w * TPX - ins * 2, q.h * TPX - ins * 2);
-  }
-  const gs = Math.round(S / 6); GLOW.width = GLOW.height = gs;
-  const gg = GLOW.getContext('2d'); gg.imageSmoothingEnabled = true; gg.imageSmoothingQuality = 'high';
-  gg.drawImage(TEX, 0, 0, gs, gs);
-  const t = document.createElement('canvas'); t.width = t.height = Math.round(gs / 4);
-  const tg = t.getContext('2d'); tg.imageSmoothingQuality = 'high'; tg.drawImage(GLOW, 0, 0, t.width, t.height);
-  gg.globalCompositeOperation = 'lighter'; gg.globalAlpha = .9; gg.drawImage(t, 0, 0, gs, gs);
-  MINIBASE.width = MINIBASE.height = 300;
-  const mb = MINIBASE.getContext('2d');
-  const mg = mb.createRadialGradient(150, 150, 0, 150, 150, 150); mg.addColorStop(0, '#0d1446'); mg.addColorStop(1, '#03040f');
-  mb.fillStyle = mg; mb.fillRect(0, 0, 300, 300);
-  const ms = 300 / ((WORLD_R + 8) * 2 * TPX), mo = 150 - TOFF * TPX * ms;
-  mb.drawImage(TEX, mo, mo, S * ms, S * ms);
-  mb.globalCompositeOperation = 'lighter'; mb.drawImage(GLOW, mo, mo, S * ms, S * ms);
-  texDirty = false;
-}
-
-const STARS = []; for (let i = 0; i < 520; i++) STARS.push([rnd(), rnd(), rnd(), rnd() * 6.28, i % 3]);
-const NEB = [[0, 0, 90, '94,225,255', .16], [-70, -50, 80, '255,92,122', .1], [80, 50, 85, '255,207,74', .08], [50, -80, 70, '179,156,255', .11], [-90, 70, 75, '61,255,138', .07], [0, 0, 190, '60,80,200', .1]];
-const PULSES = [], SPARKS = [], PARTS = [], WAVES = [];
-let VIS = [], nextPulse = 0, nextSpark = 0;
-
-function floatLabel(wx, wy, text, col, T) {
-  const p = toS(wx, wy);
-  ctx.font = '700 13px "Instrument Sans",system-ui,sans-serif';
-  const tw = Math.min(260, ctx.measureText(text).width + 22), bob = reduce ? 0 : Math.sin(T * .004) * 2;
-  const x = p.x - tw / 2, y = p.y - 42 + bob;
-  ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(4,6,22,.95)'; rrect(ctx, x, y, tw, 26, 13); ctx.fill();
-  ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.stroke();
-  ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, p.x, y + 13.5, tw - 16);
-  ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(p.x, y + 26); ctx.lineTo(p.x, p.y - 3); ctx.stroke(); ctx.globalAlpha = 1;
-}
-function beacon(q, T, col, rgb, strength) {
-  const cp = CELL * cam.z, c = toS(q.x + q.w / 2, q.y + q.h / 2), base = Math.max(3, q.w * cp * .5);
-  if (c.x < -80 || c.x > W + 80 || c.y < -80 || c.y > H + 80) return;
-  const pu = reduce ? .5 : .5 + .5 * Math.sin(T * .004 + q.id);
-  ctx.globalCompositeOperation = 'lighter';
-  const R = base * 4 + 16 + pu * 8; ctx.globalAlpha = .55 * strength; ctx.drawImage(sprite(rgb), c.x - R, c.y - R, 2 * R, 2 * R);
-  ctx.globalCompositeOperation = 'source-over';
-  if (cp < 6) { ctx.globalAlpha = strength; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(2.5, base * .8), 0, 6.2832); ctx.fill(); }
-  if (!reduce) { const k = (T * .0006 + q.id * .37) % 1; ctx.globalAlpha = (1 - k) * .7 * strength; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(c.x, c.y, base + 4 + k * 26, 0, 6.2832); ctx.stroke(); }
-  ctx.globalAlpha = 1;
-}
-
-function draw(T) {
-  if (texDirty) buildTexture();
-  const cp = CELL * cam.z;
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  ctx.clearRect(0, 0, W, H);
-  const c0 = toS(0, 0), big = Math.max(W, H);
-  for (const st of STARS) {
-    const layer = st[4] + 1, k = [2, 5, 11][st[4]], ww = W + 200, hh = H + 200;
-    const x = ((st[0] * ww - cam.x * k) % ww + ww) % ww - 100, y = ((st[1] * hh - cam.y * k) % hh + hh) % hh - 100;
-    const tw = reduce ? .7 : .45 + .55 * Math.abs(Math.sin(T * .0009 * layer + st[3]));
-    ctx.globalAlpha = tw * (.15 + st[2] * .5); ctx.fillStyle = st[2] > .92 ? '#cfe6ff' : '#fff';
-    const r = .5 + st[2] * layer * .45; ctx.fillRect(x, y, r, r);
-  }
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'lighter';
-  if (cp < 10) for (const n of NEB) {
-    const c = toS(n[0], n[1]), r = n[2] * cp;
-    if (r < 2 || r > big * 2.5 || c.x + r < 0 || c.x - r > W || c.y + r < 0 || c.y - r > H) continue;
-    const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
-    g.addColorStop(0, `rgba(${n[3]},${n[4]})`); g.addColorStop(1, `rgba(${n[3]},0)`); ctx.fillStyle = g; ctx.fillRect(c.x - r, c.y - r, 2 * r, 2 * r);
-  }
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.setLineDash([2, 8]); ctx.lineWidth = 1;
-  for (const zz of ZONES) { if (!isFinite(zz.r)) continue; const r = zz.r * cp; if (r < 30 || r > Math.max(W, H) * 3) continue; ctx.strokeStyle = 'rgba(160,180,255,.15)'; ctx.beginPath(); ctx.arc(c0.x, c0.y, r, 0, 6.2832); ctx.stroke(); }
-  ctx.setLineDash([]);
-
-  const gA = clamp((5.6 - cp) / 2.2, 0, 1), mA = clamp((cp - 3.4) / 2.2, 0, 1);
-  if (gA > 0) {
-    const p = toS(-TOFF, -TOFF), S = TN * cp;
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = gA; ctx.drawImage(TEX, p.x, p.y, S, S);
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = gA * .9; ctx.drawImage(GLOW, p.x, p.y, S, S);
-    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  }
-  VIS = [];
-  if (mA > 0) {
-    const tl = toW(-40, -40), br = toW(W + 40, H + 40), detail = cp >= 8;
-    if (detail) {
-      ctx.globalCompositeOperation = 'lighter';
-      for (const q of SQ) {
-        if (q.gone || q.x + q.w < tl.x || q.x > br.x || q.y + q.h < tl.y || q.y > br.y || (filter && !q.mine && !q.shared && q.mode !== filter)) continue;
-        const special = q.mine || q.shared || q.real, g = special ? 1 : glowOf(q);
-        if (g <= 0) continue;
-        if (!special && q.last <= 3) VIS.push(q);
-        if (q.size < 2 && !special) continue;
-        const p = toS(q.x, q.y), bw = q.w * cp, cx = p.x + bw / 2, cy = p.y + bw / 2;
-        let R = bw * .95 + 14 * Math.min(cam.z, 1.6), a = g * (q.featured ? .7 : .32);
-        if (!reduce) {
-          if (q.mode === 'create') { const pu = .5 + .5 * Math.sin(T * .0024 + q.id); R *= 1 + .28 * pu; a *= .6 + .55 * pu; }
-          if (q.mode === 'build') a *= .8 + .35 * Math.sin(T * .003 + q.id * 1.7);
-          if (q.boost) { const b = 1 - (T - q.boost) / 900; if (b > 0) { a += b * .6; R *= 1 + b * .25; } }
-        }
-        if (special) { R *= 1.4; a = .8; }
-        ctx.globalAlpha = clamp(a, 0, 1) * mA;
-        ctx.drawImage(sprite(q.mine ? '200,255,61' : special ? '255,255,255' : MODES[q.mode].rgb), cx - R, cy - R, 2 * R, 2 * R);
-      }
-      ctx.globalCompositeOperation = 'source-over';
-    }
-    for (const q of SQ) {
-      if (q.gone || q.x + q.w < tl.x || q.x > br.x || q.y + q.h < tl.y || q.y > br.y) continue;
-      const dim = filter && !q.mine && !q.shared && q.mode !== filter, special = q.mine || q.shared || q.real;
-      const col = special ? '#ffffff' : MODES[q.mode].color;
-      const a = (dim ? .1 : 1) * (special ? 1 : fadeOf(q)) * mA;
-      const p = toS(q.x, q.y), bw = q.w * cp;
-      ctx.globalAlpha = a; ctx.fillStyle = col;
-      if (!detail) { const ins = Math.max(.4, cp * .08); ctx.fillRect(p.x + ins, p.y + ins, bw - ins * 2, bw - ins * 2); continue; }
-      const gap = Math.min(1.5, cp * .08), rr = Math.min(5, cp * .18);
-      rrect(ctx, p.x + gap, p.y + gap, bw - 2 * gap, bw - 2 * gap, rr); ctx.fill();
-      if (bw > 16 && !dim) { ctx.fillStyle = 'rgba(255,255,255,.24)'; ctx.fillRect(p.x + gap + rr, p.y + gap, bw - 2 * gap - 2 * rr, Math.max(1, cp * .07)); }
-      if (q.mode === 'build' && !dim && !special && glowOf(q) > 0 && bw > 6) { ctx.strokeStyle = 'rgba(220,250,255,.85)'; ctx.lineWidth = Math.max(1, cp * .07); rrect(ctx, p.x + gap, p.y + gap, bw - 2 * gap, bw - 2 * gap, rr); ctx.stroke(); }
-      if (special) { ctx.strokeStyle = q.mine ? '#c8ff3d' : q.shared ? MODES[q.mode].color : 'rgba(255,255,255,.7)'; ctx.lineWidth = 2.5; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke(); }
-      if (dim) continue;
-      if (!special && (q.size >= 2 ? cp >= 9 : cp >= 22)) {
-        const bs = Math.max(5, Math.min(cp * .55, 15));
-        if (q.mode === 'hire') { ctx.beginPath(); ctx.arc(p.x + bw - bs * .75, p.y + bs * .75, bs * .42, 0, 6.2832); ctx.fillStyle = q.avail ? '#3dff8a' : '#ff5a5a'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#071026'; ctx.stroke(); }
-        if (q.mode === 'sell' && q.size >= 2) { const tw = bs * 1.5, th = bs * .95; ctx.fillStyle = '#071026'; rrect(ctx, p.x + bw - tw - 2.5, p.y + 2.5, tw, th, 2); ctx.fill(); ctx.fillStyle = '#ffcf4a'; ctx.font = '700 ' + Math.max(6, th * .78) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('€', p.x + bw - tw / 2 - 2.5, p.y + 2.5 + th / 2 + .5); }
-      }
-      const showN = q.size >= 8 ? cp >= 8 : q.size >= 4 ? cp >= 13 : q.size >= 2 ? cp >= 27 : cp >= 52;
-      if (showN && (!special || q.real || bw >= 44)) {
-        ctx.fillStyle = '#071026'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        const fs = Math.max(8, Math.min(bw / (q.name.length * .56 + 1), cp * .95, 30));
-        ctx.font = '700 ' + fs + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillText(q.name, p.x + cp * .28, p.y + cp * .28, bw - cp * .5);
-        if (q.size >= 4 && cp >= 17 && q.tag) { ctx.font = '500 ' + Math.max(7, fs * .58) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillStyle = 'rgba(7,16,38,.78)'; ctx.fillText(q.tag, p.x + cp * .28, p.y + cp * .28 + fs * 1.18, bw - cp * .5); }
-        if (q.mode === 'sell' && q.size >= 4 && cp >= 17 && q.price && !special) { ctx.font = '700 ' + Math.max(7, fs * .72) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillStyle = '#071026'; ctx.textBaseline = 'bottom'; ctx.fillText(q.price, p.x + cp * .28, p.y + bw - cp * .25); }
-      }
-      if (q === hoverSq || q === sel) { ctx.globalAlpha = mA; ctx.strokeStyle = '#fff'; ctx.lineWidth = q === sel ? 3 : 1.5; rrect(ctx, p.x - 3, p.y - 3, bw + 6, bw + 6, rr + 3); ctx.stroke(); }
-    }
-    ctx.globalAlpha = 1;
-  }
-  { const r = CORE_R * cp * 2.6; if (r > 4 && r < big * 3 && c0.x + r > 0 && c0.x - r < W && c0.y + r > 0 && c0.y - r < H) { const g = ctx.createRadialGradient(c0.x, c0.y, 0, c0.x, c0.y, r); const s = .2 + .5 * gA; g.addColorStop(0, `rgba(255,255,255,${.55 * s})`); g.addColorStop(.25, `rgba(190,235,255,${.3 * s})`); g.addColorStop(1, 'rgba(94,225,255,0)'); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(c0.x - r, c0.y - r, 2 * r, 2 * r); ctx.globalCompositeOperation = 'source-over'; } }
-  if (gA > .25) {
-    ctx.globalCompositeOperation = 'lighter';
-    for (let i = SPARKS.length - 1; i >= 0; i--) {
-      const s = SPARKS[i], k = (T - s.t) / 1100; if (k > 1) { SPARKS.splice(i, 1); continue; }
-      const c = toS(s.q.x + s.q.w / 2, s.q.y + s.q.h / 2), R = 6 + s.q.w * cp * 2.5, a = Math.sin(k * Math.PI) * gA;
-      ctx.globalAlpha = a; ctx.drawImage(starSprite(), c.x - R, c.y - R, 2 * R, 2 * R);
-      ctx.globalAlpha = a * .7; ctx.drawImage(sprite(MODES[s.q.mode].rgb), c.x - R * 1.4, c.y - R * 1.4, R * 2.8, R * 2.8);
-    }
-    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  } else SPARKS.length = 0;
-  for (let i = PULSES.length - 1; i >= 0; i--) {
-    const pl = PULSES[i], k = (T - pl.t) / 1300; if (k > 1) { PULSES.splice(i, 1); continue; }
-    const q = pl.q, p = toS(q.x + q.w / 2, q.y + q.h / 2);
-    ctx.globalAlpha = (1 - k) * .75 * Math.max(mA, .4); ctx.strokeStyle = MODES[q.mode].color; ctx.lineWidth = 2 * (1 - k) + .5;
-    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(4, q.w * cp * .6) + k * Math.max(cp * 5, 24), 0, 6.2832); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-  for (const q of SQ) if (q.real && !q.gone) beacon(q, T, '#ffffff', '255,255,255', .9);
-  if (ghost && ui === 'none' && mA > .5) {
-    const p = toS(ghost.x, ghost.y), sz = ghost.size * cp;
-    ctx.fillStyle = 'rgba(200,255,61,.12)'; rrect(ctx, p.x + 1, p.y + 1, sz - 2, sz - 2, Math.min(5, cp * .18)); ctx.fill();
-    ctx.setLineDash([4, 4]); ctx.strokeStyle = '#c8ff3d'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
-  }
-  if (ui === 'claim' && claim.spot && claim.step < 3) {
-    const c = claim.spot, s = claim.size, p = toS(c.x, c.y), sz = s * cp, named = claim.step >= 2;
-    const col = named ? MODES[claim.mode].color : '#c8ff3d', rgb = named ? MODES[claim.mode].rgb : '200,255,61';
-    const pu = reduce ? .6 : .5 + .5 * Math.sin(T * .006);
-    const bg = ctx.createLinearGradient(0, p.y - 240, 0, p.y); bg.addColorStop(0, `rgba(${rgb},0)`); bg.addColorStop(1, `rgba(${rgb},.55)`);
-    ctx.fillStyle = bg; ctx.fillRect(p.x + sz / 2 - 1, p.y - 240, 2, 240);
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5 + .4 * pu; const R = Math.max(sz * 1.7 + 22, 30);
-    ctx.drawImage(sprite(rgb), p.x + sz / 2 - R, p.y + sz / 2 - R, 2 * R, 2 * R);
-    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    const vs = Math.max(sz, 6), vx = p.x + sz / 2 - vs / 2, vy = p.y + sz / 2 - vs / 2;
-    rrect(ctx, vx + 1, vy + 1, vs - 2, vs - 2, Math.min(5, vs * .18));
-    if (named) { ctx.fillStyle = col; ctx.fill(); }
-    else { ctx.fillStyle = `rgba(${rgb},${.18 + .16 * pu})`; ctx.fill(); ctx.setLineDash([4, 4]); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
-    floatLabel(c.x + s / 2, c.y, named ? (claim.name || 'Your name here') : `YOUR SPOT · ${eur(priceOf(c.x, c.y, s))}`, col, T);
-  }
-  if (mine && !mine.gone && !(ui === 'claim' && claim.step < 3 && claim.moving)) { beacon(mine, T, '#c8ff3d', '200,255,61', 1); floatLabel(mine.x + mine.w / 2, mine.y, '★ ' + mine.name, '#c8ff3d', T); }
-  if (shared && !shared.gone) { beacon(shared, T, MODES[shared.mode].color, MODES[shared.mode].rgb, 1); floatLabel(shared.x + shared.w / 2, shared.y, shared.name, MODES[shared.mode].color, T); }
-  ctx.font = '600 10px "IBM Plex Mono",monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-  for (const zz of ZONES) {
-    const r = (isFinite(zz.r) ? zz.r : WORLD_R + 8) * cp; if (r < 70 || r > Math.max(W, H) * 2.2) continue;
-    const y = c0.y - r; if (y < 70 || y > H - 20 || c0.x < -200 || c0.x > W + 200) continue;
-    const label = zz.invite ? `${zz.label.toUpperCase()} · INVITE ONLY` : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL`;
-    const tw = ctx.measureText(label).width + 20;
-    ctx.globalAlpha = .92; ctx.fillStyle = 'rgba(4,6,22,.88)'; rrect(ctx, c0.x - tw / 2, y - 11, tw, 22, 11); ctx.fill();
-    ctx.strokeStyle = zz.color; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.stroke();
-    ctx.globalAlpha = 1; ctx.fillStyle = zz.color; ctx.fillText(label, c0.x + 1, y + .5);
-  }
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  for (let i = WAVES.length - 1; i >= 0; i--) {
-    const w = WAVES[i], k = (T - w.t) / 1200; if (k < 0) continue; if (k > 1) { WAVES.splice(i, 1); continue; }
-    const p = toS(w.x, w.y); ctx.globalAlpha = 1 - k; ctx.strokeStyle = w.col; ctx.lineWidth = 3 * (1 - k) + .5;
-    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(cp, 6) * (1 + k * 16), 0, 6.2832); ctx.stroke();
-  }
-  for (const pt of PARTS) { if (pt.life <= 0) continue; const p = toS(pt.x, pt.y), s = Math.max(2, pt.sz * cp); ctx.globalAlpha = Math.min(1, pt.life * 1.4); ctx.fillStyle = pt.c; ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s); }
-  ctx.globalAlpha = 1;
-  drawMini();
-}
-let miniShown = false;
-function drawMini() {
-  const show = cam.z > home().z * 2.2 && !isMobile();
-  if (show !== miniShown) { miniShown = show; MINI.classList.toggle('on', show); app.classList.toggle('has-mini', show); }
-  if (!show || !MINIBASE) return;
-  mctx.save(); mctx.clearRect(0, 0, 300, 300);
-  mctx.beginPath(); mctx.arc(150, 150, 150, 0, 6.2832); mctx.clip();
-  mctx.drawImage(MINIBASE, 0, 0);
-  const sc = 300 / ((WORLD_R + 8) * 2), tl = toW(0, 0), br = toW(W, H);
-  mctx.strokeStyle = '#c8ff3d'; mctx.lineWidth = 3; mctx.strokeRect(150 + tl.x * sc, 150 + tl.y * sc, Math.max(4, (br.x - tl.x) * sc), Math.max(4, (br.y - tl.y) * sc));
-  if (mine) { mctx.fillStyle = '#c8ff3d'; mctx.beginPath(); mctx.arc(150 + (mine.x + mine.w / 2) * sc, 150 + (mine.y + mine.h / 2) * sc, 5, 0, 6.2832); mctx.fill(); }
-  mctx.restore();
-}
-
-/* ================= CAMERA ================= */
-let fly = null, zAnim = null;
-const vel = { x: 0, y: 0 };
-const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-const easeOut = t => 1 - Math.pow(1 - t, 3);
-function flyTo(x, y, z, ms, ease) {
-  zAnim = null; vel.x = vel.y = 0; hideTip(); hoverSq = null; ghost = null;
-  if (reduce) { cam.x = x; cam.y = y; cam.z = clamp(z || cam.z, ZMIN, ZMAX); fly = null; kick(); return; }
-  fly = { sx: cam.x, sy: cam.y, sz: cam.z, x, y, z: clamp(z || cam.z, ZMIN, ZMAX), t0: now(), ms: ms || 900, e: ease || easeOut }; kick();
-}
-function centerOn(q, z) { flyTo(q.x + q.w / 2, q.y + q.h / 2, z || clamp(Math.max(cam.z, q.size >= 8 ? 1.3 : q.size >= 4 ? 2 : 2.8), ZMIN, ZMAX), 950, easeInOut); }
-function zoomBy(f, sx, sy) {
-  fly = null; vel.x = vel.y = 0; hideTip(); ghost = null;
-  const base = zAnim ? zAnim.target : cam.z;
-  zAnim = { target: clamp(base * f, ZMIN, ZMAX), sx, sy }; markExplore(); kick();
-}
-function goHome() { const h = home(); flyTo(h.x, h.y, h.z, 1400, easeInOut); explored = false; app.classList.remove('explore'); }
-function markExplore() { if (!explored && !introRunning) { explored = true; app.classList.add('explore'); } }
-
-/* ================= LOOP ================= */
-let running = !document.hidden, raf = 0, lastT = now(), idle = now();
-function tick(T) {
-  raf = 0; if (!running) return;
-  const dt = Math.min(50, T - lastT) / 1000; lastT = T;
-  if (fly) {
-    const k = clamp((T - fly.t0) / fly.ms, 0, 1), e = fly.e(k);
-    cam.x = fly.sx + (fly.x - fly.sx) * e; cam.y = fly.sy + (fly.y - fly.sy) * e; cam.z = fly.sz * Math.pow(fly.z / fly.sz, e);
-    if (k >= 1) fly = null;
-  }
-  if (zAnim) {
-    const a = toW(zAnim.sx, zAnim.sy), k = reduce ? 1 : 1 - Math.exp(-dt * 13);
-    cam.z = Math.exp(Math.log(cam.z) + (Math.log(zAnim.target) - Math.log(cam.z)) * k);
-    const b = toW(zAnim.sx, zAnim.sy); cam.x += a.x - b.x; cam.y += a.y - b.y;
-    if (Math.abs(Math.log(cam.z / zAnim.target)) < .002) zAnim = null;
-  }
-  if (!drag && (vel.x || vel.y)) {
-    cam.x += vel.x * dt; cam.y += vel.y * dt; const d = Math.pow(.004, dt); vel.x *= d; vel.y *= d;
-    if (Math.hypot(vel.x, vel.y) * CELL * cam.z < 4) vel.x = vel.y = 0;
-  }
-  const ft = focusTarget(), lf = reduce ? 1 : Math.min(1, dt * 6); fp.x += (ft.x - fp.x) * lf; fp.y += (ft.y - fp.y) * lf;
-  if (!reduce && !drag && !pinch && !fly && !zAnim && ui === 'none' && T - idle > 7000) { const s = dt / Math.sqrt(cam.z * 4); cam.x += Math.cos(T * .00011) * s * .9; cam.y += Math.sin(T * .00009) * s * .6; }
-  if (!reduce) {
-    if (T > nextSpark) { const q = SQ[Math.floor(Math.random() * SQ.length)]; if (q && !q.gone && q.last <= 6) SPARKS.push({ q, t: T }); nextSpark = T + 60 + Math.random() * 140; }
-    if (T > nextPulse && VIS.length) { const q = VIS[Math.floor(Math.random() * VIS.length)]; PULSES.push({ q, t: T }); q.boost = T; nextPulse = T + 450 + Math.random() * 650; }
-  }
-  for (const pt of PARTS) { if (pt.life <= 0) continue; pt.x += pt.vx * dt; pt.y += pt.vy * dt; const d = Math.pow(.12, dt); pt.vx *= d; pt.vy *= d; pt.life -= pt.dec * dt; }
-  if (PARTS.length && PARTS.every(p => p.life <= 0)) PARTS.length = 0;
-  draw(T);
-  raf = requestAnimationFrame(tick);
-}
-function kick() { if (running && !raf) { lastT = now(); raf = requestAnimationFrame(tick); } }
-document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) kick(); });
-addEventListener('resize', resize);
-
-/* ================= INPUT ================= */
-const tip = $('#tip');
-const sqAt = (cx, cy) => { const id = occ.get(K(cx, cy)); const q = id === undefined ? null : SQ[id]; return q && !q.gone ? q : null; };
-const local = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-function showTip(m, title, sub, col) {
-  tip.replaceChildren();
-  const b = document.createElement('b'); b.textContent = title; if (col) b.style.color = col;
-  const sm = document.createElement('small'); sm.textContent = sub; tip.append(b, sm);
-  tip.style.transform = `translate(${Math.min(m.x + 16, W - 290)}px,${Math.min(m.y + 18, H - 70)}px)`; tip.classList.add('on');
-}
-const hideTip = () => tip.classList.remove('on');
-function freeAround(cx, cy, size) {
-  for (let dx = 0; dx < size; dx++) for (let dy = 0; dy < size; dy++) { const x = cx - dx, y = cy - dy; if (spotOk(x, y, size)) return { x, y, size }; }
-  return null;
-}
-function hover(m) {
-  const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
-  hoverSq = null; ghost = null; cv.classList.remove('pointy', 'dive');
-  if (introRunning) return;
-  if (ui === 'claim' && claim.step < 3) { cv.classList.add('pointy'); hideTip(); return; }
-  if (cp < 4.5) {
-    const d = Math.hypot(w.x, w.y);
-    if (d > WORLD_R + 20) { hideTip(); return; }
-    const z = ZONES.find(zz => d < zz.r);
-    cv.classList.add('dive');
-    showTip(m, z.label, z.invite ? 'Invite only · click to dive in' : `Founding price ${eur(z.price)} / cell · click to dive in`, z.color);
-    return;
-  }
-  const q = sqAt(cx, cy);
-  if (q) {
-    hoverSq = q; cv.classList.add('pointy');
-    if (q.mine) showTip(m, '★ ' + q.name, 'Your square · ' + zoneOf(q.x, q.y, q.size).label, '#c8ff3d');
-    else if (q.real) showTip(m, 'Founding spot', 'Reserved · ' + q.tag, '#fff');
-    else showTip(m, q.name, MODES[q.mode].label + ' · ' + q.rec[0], MODES[q.mode].color);
-    return;
-  }
-  if (zoneOf(cx, cy, 1).invite) { showTip(m, 'Core', 'Invite only', '#fff'); return; }
-  const f = freeAround(cx, cy, 2);
-  if (f) { ghost = f; cv.classList.add('pointy'); showTip(m, `Free spot · ${zoneOf(f.x, f.y, 2).label}`, `2×2 for ${eur(priceOf(f.x, f.y, 2))} · click to claim`, '#c8ff3d'); }
-  else hideTip();
-}
-function tap(m) {
-  const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
-  if (introRunning) return;
-  if (ui === 'claim' && claim.step < 3) { const s = nearestFree(cx - (claim.size >> 1), cy - (claim.size >> 1), claim.size); if (s) setSpot(s, true); return; }
-  if (cp < 4.5) { markExplore(); flyTo(w.x, w.y, clamp(18 / CELL, ZMIN, ZMAX), 1300, easeInOut); return; }
-  const q = sqAt(cx, cy);
-  if (q) { openPop(q); return; }
-  if (ui !== 'none') { closeUI(); return; }
-  if (zoneOf(cx, cy, 1).invite) { toast('The core is invite only. Pick a spot just outside it.'); return; }
-  const f = freeAround(cx, cy, 2) || nearestFree(cx - 1, cy - 1, 2);
-  if (f) startClaim({ x: f.x, y: f.y }, true);
-}
-const ptrs = new Map(); let drag = null, pinch = null, moved = false, samples = [];
-cv.addEventListener('pointerdown', e => {
-  if (e.button > 0) return;
-  if (introRunning) { endIntro(); return; }
-  ptrs.set(e.pointerId, local(e)); fly = null; zAnim = null; vel.x = vel.y = 0; idle = now();
-  if (ptrs.size === 1) { drag = { m: local(e), cx: cam.x, cy: cam.y }; moved = false; samples = [{ x: e.clientX, y: e.clientY, t: now() }]; }
-  else if (ptrs.size === 2) {
-    const [a, b] = [...ptrs.values()], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: cam.z, w: toW(mid.x, mid.y) }; drag = null; moved = true;
-  }
-  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
-});
-cv.addEventListener('pointermove', e => {
-  const m = local(e);
-  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, m);
-  if (pinch && ptrs.size >= 2) {
-    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    cam.z = clamp(pinch.z * d / pinch.d, ZMIN, ZMAX);
-    cam.x = pinch.w.x - (mid.x - fp.x) / (CELL * cam.z); cam.y = pinch.w.y - (mid.y - fp.y) / (CELL * cam.z); markExplore(); kick(); return;
-  }
-  if (drag) {
-    const dx = m.x - drag.m.x, dy = m.y - drag.m.y;
-    if (!moved && Math.abs(dx) + Math.abs(dy) > 5) { moved = true; cv.classList.add('dragging'); hideTip(); ghost = null; hoverSq = null; markExplore(); }
-    if (moved) {
-      cam.x = drag.cx - dx / (CELL * cam.z); cam.y = drag.cy - dy / (CELL * cam.z); idle = now();
-      samples.push({ x: e.clientX, y: e.clientY, t: now() }); if (samples.length > 6) samples.shift(); kick();
-    }
-    return;
-  }
-  if (e.pointerType === 'mouse') hover(m);
-});
-function endPtr(e, cancel) {
-  ptrs.delete(e.pointerId); cv.classList.remove('dragging');
-  if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
-  const was = drag; drag = null;
-  if (was && moved && !reduce && samples.length > 1) {
-    const s0 = samples[0], s1 = samples[samples.length - 1], dtm = (s1.t - s0.t) / 1000;
-    if (dtm > 0 && now() - s1.t < 80) { const cp = CELL * cam.z; vel.x = -(s1.x - s0.x) / dtm / cp; vel.y = -(s1.y - s0.y) / dtm / cp; kick(); }
-  }
-  if (!cancel && was && !moved) { const m = local(e); tap(m); if (e.pointerType === 'mouse') hover(m); }
-}
-cv.addEventListener('pointerup', e => endPtr(e, false));
-cv.addEventListener('pointercancel', e => endPtr(e, true));
-cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) { hideTip(); hoverSq = null; ghost = null; } });
-cv.addEventListener('wheel', e => {
-  e.preventDefault(); if (introRunning) { endIntro(); return; }
-  const m = local(e); idle = now();
-  const k = e.deltaMode === 1 ? .055 : e.ctrlKey ? .012 : .0019;
-  zoomBy(Math.exp(-e.deltaY * k), m.x, m.y);
-}, { passive: false });
-addEventListener('keydown', e => {
-  const typing = e.target.closest && e.target.closest('input,textarea');
-  if (e.key === 'Escape') { if (introRunning) endIntro(); if (sheet.classList.contains('open')) closeSheet(); else if (!results.hidden) results.hidden = true; else if (ui !== 'none') closeUI(); return; }
-  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.target.closest && e.target.closest('button,a,summary') && (e.key === 'Enter' || e.key === ' ')) return;
-  if (introRunning) { endIntro(); return; }
-  const st = 360 / (CELL * cam.z); let used = true;
-  if (e.key === 'ArrowLeft' || e.key === 'a') vel.x = -st; else if (e.key === 'ArrowRight' || e.key === 'd') vel.x = st;
-  else if (e.key === 'ArrowUp' || e.key === 'w') vel.y = -st; else if (e.key === 'ArrowDown' || e.key === 's') vel.y = st;
-  else if (e.key === '+' || e.key === '=') zoomBy(1.6, fp.x, fp.y); else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.6, fp.x, fp.y);
-  else if (e.key === '0') goHome();
-  else if (e.key === '/') openSearch();
-  else if (e.key === '?') openSheet();
-  else used = false;
-  if (used) { e.preventDefault(); if (e.key !== '0') markExplore(); kick(); }
-});
-$('#zIn').onclick = () => zoomBy(1.8, fp.x, fp.y);
-$('#zOut').onclick = () => zoomBy(1 / 1.8, fp.x, fp.y);
-$('#zHome').onclick = () => { closeUI(); goHome(); };
-$('#logo').onclick = e => { e.preventDefault(); closeUI(); closeSheet(); goHome(); };
-MINI.addEventListener('click', e => {
-  const r = MINI.getBoundingClientRect(), sc = r.width / ((WORLD_R + 8) * 2);
-  flyTo((e.clientX - r.left - r.width / 2) / sc, (e.clientY - r.top - r.height / 2) / sc, cam.z, 900, easeInOut);
-});
-$('#heroHint').textContent = coarse ? 'Pinch to zoom · drag to fly' : 'Scroll to zoom · drag to fly · click to dive';
-
-/* ================= TOAST / SHARE ================= */
-const toastEl = $('#toast'); let toastT = 0;
-function toast(msg, ms) { toastEl.textContent = msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('on'), ms || 3400); }
-async function copy(text) {
-  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
-  try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok; } catch (e) { return false; }
-}
-const b64e = o => { const b = new TextEncoder().encode(JSON.stringify(o)); let s = ''; for (const c of b) s += String.fromCharCode(c); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
-const b64d = s => { try { const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)))); } catch (e) { return null; } };
-const baseUrl = () => location.origin + location.pathname;
-function mineLink() { const o = { x: mine.x, y: mine.y, s: mine.size, m: mine.mode, n: mine.name }; if (mine.code) o.r = mine.code; return baseUrl() + '#s=' + b64e(o); }
-function mineText() { return mine.number ? `I'm founding spot #${mine.number} in Expanse — the internet, as a universe. Grab the spot next to me:` : `I'm on the Expanse map — the internet, as a universe. Grab the spot next to me:`; }
-async function shareUrl(url, title, text, okMsg) {
-  try { history.replaceState(null, '', url.slice(url.indexOf('#'))); } catch (e) {}
-  if (coarse && navigator.share) { try { await navigator.share({ title, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
-  toast((await copy(url)) ? okMsg : 'The link is in your address bar — copy it from there.');
-}
-function shareMine() { if (mine) shareUrl(mineLink(), 'My square on Expanse', mineText(), 'Link copied. Friends who open it land right next to you.'); }
-
-async function squareCard() {
-  if (document.fonts && document.fonts.ready) await document.fonts.ready;
-  const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; const g = c.getContext('2d');
-  const bg = g.createRadialGradient(540, 620, 0, 540, 620, 950); bg.addColorStop(0, '#16206a'); bg.addColorStop(.45, '#080c2c'); bg.addColorStop(1, '#02030c');
-  g.fillStyle = bg; g.fillRect(0, 0, 1080, 1350);
-  const r3 = mulberry(mine.x * 7919 + mine.y * 104729 + 7);
-  for (let i = 0; i < 320; i++) { g.globalAlpha = .15 + r3() * .6; g.fillStyle = '#fff'; const s = .6 + r3() * 1.8; g.fillRect(r3() * 1080, r3() * 1350, s, s); }
-  const sc = 26, cx = 540, cy = 640, wx = mine.x + mine.w / 2, wy = mine.y + mine.h / 2;
-  for (const q of SQ) {
-    if (q.gone) continue;
-    const sx = cx + (q.x - wx) * sc, sy = cy + (q.y - wy) * sc, sw = q.w * sc;
-    if (sx > 1080 || sy > 1350 || sx + sw < 0 || sy + sw < 0) continue;
-    const fade = clamp(1 - Math.hypot(sx + sw / 2 - cx, sy + sw / 2 - cy) / 600, 0, 1); if (fade <= 0) continue;
-    const special = q.mine || q.real || q.shared;
-    if (!special && glowOf(q) > 0 && q.size >= 2) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = fade * .35; const R = sw * 1.1; g.drawImage(sprite(MODES[q.mode].rgb), sx + sw / 2 - R, sy + sw / 2 - R, R * 2, R * 2); g.globalCompositeOperation = 'source-over'; }
-    g.globalAlpha = fade * (q === mine ? 1 : special ? .95 : fadeOf(q) * .92);
-    g.fillStyle = special ? '#fff' : MODES[q.mode].color; rrect(g, sx + 2, sy + 2, sw - 4, sw - 4, 6); g.fill();
-  }
-  g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
-  const ms = mine.w * sc, mx = cx - ms / 2, my = cy - ms / 2, R = ms * 2.6 + 80;
-  g.drawImage(sprite('200,255,61'), cx - R, cy - R, R * 2, R * 2); g.globalCompositeOperation = 'source-over';
-  g.fillStyle = '#fff'; rrect(g, mx + 2, my + 2, ms - 4, ms - 4, 8); g.fill();
-  g.strokeStyle = '#c8ff3d'; g.lineWidth = 6; rrect(g, mx - 6, my - 6, ms + 12, ms + 12, 12); g.stroke();
-  g.font = '700 34px "Instrument Sans",sans-serif'; const label = '★ ' + mine.name, lw = Math.min(900, g.measureText(label).width + 48);
-  g.fillStyle = 'rgba(4,6,22,.95)'; rrect(g, cx - lw / 2, my - 110, lw, 64, 32); g.fill(); g.strokeStyle = '#c8ff3d'; g.lineWidth = 3; g.stroke();
-  g.fillStyle = '#c8ff3d'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, cx, my - 77, lw - 40);
-  g.beginPath(); g.moveTo(cx, my - 46); g.lineTo(cx, my - 10); g.stroke();
-  const top = g.createLinearGradient(0, 0, 0, 260); top.addColorStop(0, 'rgba(2,3,12,.95)'); top.addColorStop(1, 'rgba(2,3,12,0)'); g.fillStyle = top; g.fillRect(0, 0, 1080, 260);
-  const bot = g.createLinearGradient(0, 960, 0, 1350); bot.addColorStop(0, 'rgba(2,3,12,0)'); bot.addColorStop(.45, 'rgba(2,3,12,.92)'); bot.addColorStop(1, '#02030c'); g.fillStyle = bot; g.fillRect(0, 960, 1080, 390);
-  const og = g.createRadialGradient(92, 98, 2, 100, 106, 26); og.addColorStop(0, '#c8ff3d'); og.addColorStop(.5, '#5ee1ff'); og.addColorStop(1, '#1a5fff'); g.fillStyle = og; g.beginPath(); g.arc(100, 106, 26, 0, 6.2832); g.fill();
-  g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '700 46px "Instrument Sans",sans-serif'; g.fillText('Expanse', 142, 108);
-  g.textAlign = 'right'; g.font = '600 22px "IBM Plex Mono",monospace'; g.fillStyle = '#c8ff3d'; g.fillText('THE INTERNET, AS A UNIVERSE', 1000, 108);
-  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-  g.font = '700 96px "Instrument Sans",sans-serif'; g.fillStyle = '#fff';
-  g.fillText(mine.number ? `Founding spot #${mine.number}` : "I'm on the map.", 80, 1150, 920);
-  const z = zoneOf(mine.x, mine.y, mine.size);
-  g.font = '500 34px "Instrument Sans",sans-serif'; g.fillStyle = '#c3caf0';
-  g.fillText(`${mine.name} · ${z.label} · ${mine.size}×${mine.size} · ${MODES[mine.mode].label}`, 80, 1210, 920);
-  g.font = '600 26px "IBM Plex Mono",monospace'; g.fillStyle = '#c8ff3d';
-  g.fillText((location.host || 'expanse-inky.vercel.app').toUpperCase() + ' — CLAIM THE SPOT NEXT TO ME →', 80, 1280, 920);
-  return new Promise(res => c.toBlob(res, 'image/png'));
-}
-async function shareCard() {
-  if (!mine) return;
-  toast('Rendering your square card…', 1500);
-  const blob = await squareCard(); if (!blob) return;
-  const file = new File([blob], 'my-expanse-square.png', { type: 'image/png' }), url = mineLink();
-  if (coarse && navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'My square on Expanse', text: mineText() + ' ' + url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
-  }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'my-expanse-square.png'; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  toast((await copy(url)) ? 'Square card saved and link copied — post them together.' : 'Square card saved.');
-}
-
-/* ================= SQUARE CARD ================= */
-const pop = $('#pop'), claimEl = $('#claim'), sheet = $('#sheet');
-function setUI(v) { ui = v; app.classList.toggle('ui', v !== 'none'); hideTip(); ghost = null; kick(); }
-function renderRefs(el, code) {
-  if (!code) { el.hidden = true; return; }
-  el.hidden = false; el.replaceChildren();
-  const t = document.createElement('b'); t.textContent = 'Invite 3 friends → +1 free cell.';
-  const dots = document.createElement('div'); dots.className = 'dots'; for (let i = 0; i < 3; i++) dots.appendChild(document.createElement('i'));
-  const sm = document.createElement('small'); sm.textContent = 'Friends who reserve through your link count.';
-  el.append(t, dots, sm);
-  rpc('referral_count', { p_code: code }).then(n => {
-    n = Math.max(0, n | 0); dots.querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i < n));
-    sm.textContent = n >= 3 ? 'Done — your extra cell is waiting for launch.' : `${n} of 3 friends have reserved through your link.`;
-  }).catch(() => {});
-}
-function openPop(q) {
-  claimEl.classList.remove('open'); sel = q; setUI('pop');
-  const M = MODES[q.mode], special = q.mine || q.shared || q.real, z = zoneOf(q.x, q.y, q.size);
-  $('#pMode').textContent = q.mine ? 'Your square' : q.shared ? 'Shared with you' : q.real ? 'Founding spot' : M.label;
-  $('#pMode').style.cssText = special ? 'color:#071026;background:' + (q.mine ? '#c8ff3d' : q.shared ? M.color : '#fff') : `color:${M.color};background:rgba(${M.rgb},.14)`;
-  $('#pMeta').textContent = `${q.size}×${q.size} · ${z.label}${q.city ? ' · ' + q.city : ''}`;
-  $('#pName').textContent = q.name;
-  $('#pTag').textContent = q.mine ? (mine.number ? `Founding spot #${fmt(mine.number)} · ${eur(mine.price || priceOf(q.x, q.y, q.size))} founding price` : `${eur(priceOf(q.x, q.y, q.size))} founding price · not reserved yet`) : q.tag || '';
-  $('#pWho').textContent = q.mine ? (mine.email ? `Reserved for ${maskEmail(mine.email)}.` : 'Saved on this device only.') : q.shared ? 'A square on the Expanse map.' : q.real ? 'This spot is reserved by a founding member.' : `${q.owner} · active ${ago(q.last)}`;
-  $('#pRec').replaceChildren(...(q.mine ? [z.label, MODES[q.mode].label, mine.email ? 'reserved' : 'on this device'] : q.rec).map(r => { const e = document.createElement('span'); e.className = 'rc'; e.textContent = r; e.style.setProperty('--c', q.mine ? '#c8ff3d' : special ? '#fff' : M.color); return e; }));
-  const like = $('#pLike'), shareB = $('#pShare'), go = $('#pGo');
-  like.hidden = shareB.hidden = special; $('#pRemove').hidden = !q.mine || !!mine.email; $('#pCard').hidden = !q.mine; $('#pNext').hidden = !!q.shared;
-  $('#pFine').textContent = special ? '' : 'Example square on the preview map.'; $('#pFine').hidden = special;
-  if (q.mine) { renderRefs($('#pRefs'), mine.code); go.textContent = mine.email ? 'Share my square ↗' : 'Reserve it →'; $('#pNextTxt').textContent = 'Move or resize my square'; }
-  else {
-    $('#pRefs').hidden = true;
-    if (q.shared) go.textContent = mine ? `Move next to ${q.name}` : `Claim the spot next to ${q.name}`;
-    else if (q.real) go.textContent = 'Claim a spot near it';
-    else go.textContent = M.go + (q.mode === 'sell' && q.price ? ' · ' + q.price : '');
-    $('#pNextTxt').textContent = mine ? 'Move my square next to this' : 'Claim the spot next to this';
-    if (!special) { const liked = store.get('expanse.like.' + q.id) === today(); like.classList.toggle('on', liked); $('#pLikes').textContent = fmt(q.likes + (liked ? 1 : 0)); }
-  }
-  pop.classList.add('open'); pop.focus({ preventScroll: true }); centerOn(q); markExplore();
-}
-function nextTo(q) { const s = mine ? mine.size : 2; return nearestFree(Math.round(q.x + q.w / 2 - s / 2), Math.round(q.y + q.h / 2 - s / 2), s); }
-$('#pGo').onclick = () => {
-  const q = sel; if (!q) return;
-  if (q.mine) { if (mine.email) shareMine(); else startClaim({ x: mine.x, y: mine.y, keep: true }, false, 3); return; }
-  if (q.shared || q.real) { const s = nextTo(q); if (s) startClaim(s); return; }
-  toast(`Example square — at launch this goes straight to their ${MODES[q.mode].dest}.`);
-};
-$('#pNext').onclick = () => { const q = sel; if (!q) return; if (q.mine) startClaim({ x: q.x, y: q.y }); else { const s = nextTo(q); if (s) startClaim(s); } };
-$('#pCard').onclick = shareCard;
-$('#pLike').onclick = () => {
-  const q = sel; if (!q) return; const k = 'expanse.like.' + q.id, b = $('#pLike');
-  if (store.get(k) === today()) { toast('One like per square per day.'); return; }
-  store.set(k, today()); b.classList.add('on'); $('#pLikes').textContent = fmt(q.likes + 1);
-  b.classList.remove('pp'); void b.offsetWidth; b.classList.add('pp'); PULSES.push({ q, t: now() }); q.boost = now();
-};
-$('#pShare').onclick = () => { const q = sel; if (q) shareUrl(baseUrl() + '#sq=' + q.id, q.name + ' on Expanse', q.name + ' on the Expanse map', 'Link copied.'); };
-$('#pRemove').onclick = () => {
-  if (!mine || mine.email) return; unput(mine); mine = null; store.del(MINE_KEY); updateCTAs(); closeUI();
-  try { history.replaceState(null, '', location.pathname); } catch (e) {}
-  toast('Removed. Claim a new spot anytime.');
-};
-
-/* ================= CLAIM ================= */
-const claim = { step: 0, spot: null, size: 2, name: '', mode: 'build', moving: false };
-const cName = $('#cName');
-function setStep(n) {
-  claim.step = n;
-  ['#cStep1', '#cStep2', '#cStep3', '#cStep4'].forEach((id, i) => { $(id).hidden = i !== n - 1; });
-  claimEl.querySelectorAll('.steps i').forEach((el, i) => el.classList.toggle('on', i < n));
-  claimEl.querySelectorAll('[data-m]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === claim.mode)));
-  claimEl.querySelectorAll('[data-s]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.s === claim.size)));
-  if (n === 3) renderSummary();
-  kick();
-}
-function startClaim(spot, fromMap, step) {
-  pop.classList.remove('open'); sel = null; closeSheet();
-  claim.moving = !!mine; claim.name = mine ? mine.name : claim.name; claim.mode = mine ? mine.mode : claim.mode; claim.size = mine ? mine.size : (claim.size || 2);
-  cName.value = claim.name;
-  setUI('claim'); markExplore();
-  claimEl.classList.add('open'); claimEl.focus({ preventScroll: true });
-  if (spot && spot.keep) { claim.spot = { x: spot.x, y: spot.y }; describe(); setStep(step || 2); centerOnSpot(false); return; }
-  setStep(1);
-  const s = spot || nearestFree(-(claim.size >> 1), -(claim.size >> 1), claim.size);
-  if (s) setSpot(s, !!fromMap);
-}
-function describe() {
-  const s = claim.spot, z = zoneOf(s.x, s.y, claim.size), n = closerThan(s.x, s.y, claim.size);
-  const zb = $('#cZone'); zb.textContent = z.label; zb.style.background = z.color;
-  $('#cCloser').textContent = n === 0 ? 'Nothing closer to the core' : `${fmt(n)} squares closer to the core`;
-  $('#cTitle').textContent = z.line;
-  $('#cPrice').textContent = eur(z.price * claim.size * claim.size);
-  claimEl.querySelectorAll('[data-s]').forEach(b => { const sz = +b.dataset.s; b.querySelector('small').textContent = eur(zoneOf(s.x, s.y, sz).price * sz * sz) + (sz === 8 ? ' · landmark' : ''); });
-  $('#cMoveHint').textContent = (coarse ? 'Tap' : 'Click') + ' anywhere on the map to move your spot.';
-}
-function centerOnSpot(quick) { const s = claim.spot; flyTo(s.x + claim.size / 2, s.y + claim.size / 2, clamp(Math.max(cam.z, (isMobile() ? 26 : 34) / CELL / Math.max(1, claim.size / 2)), ZMIN, ZMAX), quick ? 550 : 1300, easeInOut); }
-function setSpot(s, quick) { claim.spot = { x: s.x, y: s.y }; describe(); centerOnSpot(quick); if (claim.step !== 1) setStep(1); }
-$('#cSizes').addEventListener('click', e => {
-  const b = e.target.closest('[data-s]'); if (!b) return; const sz = +b.dataset.s; if (sz === claim.size) return;
-  const c = claim.spot || { x: 0, y: 0 }, old = claim.size; claim.size = sz;
-  const s = nearestFree(Math.round(c.x + old / 2 - sz / 2), Math.round(c.y + old / 2 - sz / 2), sz);
-  if (s) setSpot(s, true); setStep(1);
-});
-$('#cNext1').onclick = () => { setStep(2); if (!coarse) setTimeout(() => cName.focus({ preventScroll: true }), 220); };
-$('#cCore').onclick = () => { const s = nearestFree(-(claim.size >> 1), -(claim.size >> 1), claim.size); if (s) setSpot(s, false); };
-$('#cBack2').onclick = () => setStep(1);
-$('#cBack3').onclick = () => setStep(2);
-cName.addEventListener('input', () => { claim.name = clean(cName.value); kick(); });
-cName.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#cNext2').click(); } });
-$('#cModes').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; claim.mode = b.dataset.m; setStep(2); });
-$('#cNext2').onclick = () => {
-  const name = clean(cName.value);
-  if (!name) { cName.classList.remove('shake'); void cName.offsetWidth; cName.classList.add('shake'); cName.focus({ preventScroll: true }); toast('Give your square a name first.'); return; }
-  claim.name = name; placeLocal();
-  if (mine.email) { reserve(mine.email, true); return; }
-  setStep(3); if (!coarse) setTimeout(() => $('#cMail').focus({ preventScroll: true }), 220);
-};
-function renderSummary() {
-  const s = claim.spot, z = zoneOf(s.x, s.y, claim.size), price = z.price * claim.size * claim.size;
-  $('#cSummary').style.setProperty('--c', MODES[claim.mode].color);
-  $('#sName').textContent = claim.name; $('#sWhere').textContent = `${z.label} · ${claim.size}×${claim.size} · ${MODES[claim.mode].label}`;
-  $('#sAmt').textContent = eur(price); $('#cHold').textContent = `Reserve for ${eur(price)}`;
-}
-function placeLocal() {
-  const s = claim.spot, old = mine;
-  if (old) unput(old);
-  const spot = spotOk(s.x, s.y, claim.size) ? s : (nearestFree(s.x, s.y, claim.size) || s);
-  claim.spot = { x: spot.x, y: spot.y };
-  mine = put({ x: spot.x, y: spot.y, size: claim.size, mode: claim.mode, name: claim.name, mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: '', rec: [] });
-  if (old) Object.assign(mine, { email: old.email, code: old.code, number: old.number, price: old.price, reserved: old.reserved });
-  saveMine(); updateCTAs();
-}
-function saveMine() { store.set(MINE_KEY, { v: 2, x: mine.x, y: mine.y, size: mine.size, mode: mine.mode, name: mine.name, email: mine.email || '', code: mine.code || '', number: mine.number || 0, price: mine.price || 0 }); }
-const maskEmail = e => { const [u, d] = String(e).split('@'); return (u.length <= 2 ? u[0] : u.slice(0, 2)) + '•••@' + d; };
-async function reserve(email, silent) {
-  const btn = $('#cHold'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'Reserving…';
-  try {
-    const ref = store.get(REF_KEY);
-    const r = await rpc('reserve_spot', { p_email: email, p_name: mine.name, p_mode: mine.mode, p_x: mine.x, p_y: mine.y, p_size: mine.size, p_ref: ref && ref !== mine.code ? ref : null });
-    Object.assign(mine, { email, code: r.code, number: r.number, price: r.price, reserved: true }); saveMine(); texDirty = true;
-    finish(true); loadStats();
-  } catch (err) {
-    const m = String(err.message || '');
-    if (m.includes('spot_taken')) {
-      await loadSpots();
-      const s = nearestFree(mine.x, mine.y, mine.size);
-      if (s) { claim.spot = s; placeLocal(); describe(); }
-      toast('Someone just reserved that exact spot! We moved you to the nearest free one — try again.', 5000);
-      setStep(silent ? 1 : 3);
-    } else if (m.includes('core_invite_only')) { toast('The core is invite only — pick a spot just outside it.'); setStep(1); }
-    else if (m.includes('busy')) toast('Lots of people are claiming right now — try again in a minute.', 4500);
-    else { toast("Couldn't reserve right now — check your connection and try again."); if (silent) finish(false); }
-  } finally { btn.disabled = false; btn.textContent = label; }
-}
-$('#cReserve').addEventListener('submit', e => {
-  e.preventDefault(); if (!mine) return;
-  if ($('#cWeb').value) { finish(false); return; }
-  const input = $('#cMail'), email = input.value.trim().toLowerCase();
-  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake'); input.focus(); toast('That email looks off.'); return; }
-  reserve(email, false);
-});
-$('#cSkip').onclick = () => finish(false);
-function finish(reserved) {
-  setStep(4);
-  const z = zoneOf(mine.x, mine.y, mine.size), price = mine.price || priceOf(mine.x, mine.y, mine.size);
-  $('#dEyebrow').textContent = mine.email ? 'Reserved · pay nothing today' : 'Saved on this device';
-  $('#dTitle').textContent = mine.number ? `Founding spot #${fmt(mine.number)}.` : "You're on the map.";
-  $('#dText').textContent = `${mine.name} · ${z.label} · ${mine.size}×${mine.size} · ${eur(price)} founding price. ` + (mine.email ? 'Share it — friends who open your link land right next to you.' : "It's only saved in this browser until you reserve it.");
-  renderRefs($('#dRefs'), mine.code);
-  $('#dReserve').hidden = !!mine.email;
-  if (reserved || !claim.celebrated) celebrate(mine);
-  claim.celebrated = true;
-  setTimeout(() => { if (ui === 'claim' && claim.step === 4) flyTo(mine.x + mine.w / 2, mine.y + mine.h / 2, clamp(cam.z * .45, ZMIN, ZMAX), 2200, easeInOut); }, 1200);
-}
-function celebrate(q) {
-  const cx = q.x + q.w / 2, cy = q.y + q.h / 2, t = now();
-  if (!reduce) {
-    const cols = [MODES[q.mode].color, '#c8ff3d', '#ffffff', '#5ee1ff'];
-    for (let i = 0; i < 90; i++) { const a = Math.random() * 6.2832, v = (5 + Math.random() * 16) * Math.max(1, q.size / 2); PARTS.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, dec: .45 + Math.random() * .6, c: cols[i % 4], sz: .22 + Math.random() * .5 }); }
-    for (let i = 0; i < 3; i++) WAVES.push({ x: cx, y: cy, t: t + i * 170, col: i === 1 ? MODES[q.mode].color : '#c8ff3d' });
-  }
-  const p = toS(cx, cy), f = $('#flash'); f.style.setProperty('--fx', p.x + 'px'); f.style.setProperty('--fy', p.y + 'px');
-  f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); kick();
-}
-$('#dShare').onclick = shareMine;
-$('#dCard').onclick = shareCard;
-$('#dReserve').onclick = () => setStep(3);
-$('#dExplore').onclick = () => closeUI();
-
-function closeUI() { pop.classList.remove('open'); claimEl.classList.remove('open'); sel = null; claim.celebrated = false; setUI('none'); cv.focus({ preventScroll: true }); }
-document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeUI);
-function onCTA() { closeSheet(); if (mine) openPop(mine); else startClaim(null); }
-const ctas = [...document.querySelectorAll('[data-claim]')];
-ctas.forEach(b => { b.dataset.def = b.textContent; b.onclick = onCTA; });
-function updateCTAs() { ctas.forEach(b => { b.textContent = mine ? b.dataset.mineLabel : b.dataset.def; }); }
-
-/* ================= INFO SHEET ================= */
-function openSheet() { sheet.classList.add('open'); hideTip(); setTimeout(() => sheet.querySelector('.sheet-in').focus({ preventScroll: true }), 50); }
-function closeSheet() { sheet.classList.remove('open'); }
-document.querySelectorAll('[data-info]').forEach(b => b.onclick = openSheet);
-$('#infoBtn').onclick = openSheet;
-sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-sheet-close]')) closeSheet(); });
-
-/* ================= SEARCH ================= */
-const results = $('#results'), qIn = $('#q'), searchEl = $('#search');
-function openSearch() { searchEl.classList.add('open'); qIn.focus(); }
-$('#searchBtn').onclick = () => { searchEl.classList.toggle('open'); if (searchEl.classList.contains('open')) qIn.focus(); };
-function search(qs) {
-  const q = qs.toLowerCase().trim(); if (q.length < 2) return [];
-  const terms = q.split(/\s+/).filter(t => t.length > 1), city = CITIES.find(c => q.includes(c.toLowerCase())), out = [];
-  for (const s of SQ) {
-    if (s.gone) continue;
-    const hay = (s.name + ' ' + (s.tag || '') + ' ' + (s.kw || '') + ' ' + KW[s.mode] + ' ' + (s.city || '') + ' ' + MODES[s.mode].label).toLowerCase();
-    let sc = 0; for (const t of terms) if (hay.includes(t)) sc += t.length;
-    if (city && s.city === city) sc += 3; if (s.name.toLowerCase().includes(q)) sc += 20;
-    if (sc > 0) { if (s.featured) sc += 4; if (s.mine || s.shared) sc += 25; out.push([sc, s]); }
-  }
-  return out.sort((a, b) => b[0] - a[0] || a[1].d - b[1].d).slice(0, 7).map(r => r[1]);
-}
-qIn.addEventListener('input', () => {
-  const r = search(qIn.value); if (!r.length) { results.hidden = true; return; }
-  results.replaceChildren(...r.map(s => {
-    const b = document.createElement('button'); b.type = 'button';
-    const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = s.mine ? '#c8ff3d' : s.real ? '#fff' : MODES[s.mode].color;
-    const nm = document.createElement('b'); nm.textContent = s.name;
-    const sm = document.createElement('small'); sm.textContent = (s.mine ? 'Your square' : MODES[s.mode].label) + ' · ' + zoneOf(s.x, s.y, s.size).label;
-    b.append(sw, nm, sm); b.onclick = () => { results.hidden = true; searchEl.classList.remove('open'); openPop(s); }; return b;
-  }));
-  results.hidden = false;
-});
-$('#searchForm').addEventListener('submit', e => {
-  e.preventDefault(); const r = search(qIn.value); results.hidden = true;
-  if (!r.length) { toast('Nothing out there yet. Maybe that spot is yours?'); return; }
-  searchEl.classList.remove('open'); qIn.blur(); openPop(r[0]); if (r.length > 1) toast(r.length + ' matches — flew to the best one.');
-});
-document.addEventListener('pointerdown', e => { if (!e.target.closest('.search') && !e.target.closest('#searchBtn')) { results.hidden = true; if (isMobile() && !qIn.value) searchEl.classList.remove('open'); } });
-
-/* ================= LIVE: COUNTER + FEED ================= */
-function renderLive() {
-  const chip = $('#chip'), dock = $('#dockTxt');
-  if (!STATS) { chip.hidden = true; $('#heroLive').textContent = 'Founding prices for the first 1,000 spots'; return; }
-  const left = Math.max(0, FOUNDING_LIMIT - (STATS.reserved | 0));
-  chip.hidden = false; $('#chipTxt').textContent = `${fmt(left)} of ${fmt(FOUNDING_LIMIT)} founding spots left`;
-  $('#heroLive').textContent = `${fmt(left)} of ${fmt(FOUNDING_LIMIT)} founding spots left`;
-  dock.replaceChildren(); const b = document.createElement('b'); b.textContent = fmt(left); dock.append(b, ' founding spots left');
-}
-const ticker = $('#ticker'); let tickN = 0, tickItem = null;
-function timeAgo(iso) { const s = (Date.now() - Date.parse(iso)) / 1000; if (!(s >= 60)) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; }
-function demoLine(q) {
-  if (q.mode === 'sell') return `${q.name} just made a sale · ${q.city}`;
-  if (q.mode === 'create') return `${q.name} posted something new`;
-  if (q.mode === 'build') return `${q.name} shipped ${2 + Math.floor(Math.random() * 8)} commits`;
-  return `${q.name} is ${q.avail ? 'available this week' : 'booked solid'}`;
-}
-function nextTick() {
-  if (document.hidden || introRunning) return;
-  const live = ((STATS && STATS.recent) || []).filter(r => Date.now() - Date.parse(r.at) < 30 * 864e5 && MODES[r.mode] && ZONE_BY_ID[r.zone]);
-  let item;
-  if (live.length && tickN % 2 === 0) {
-    const r = live[(tickN / 2) % live.length];
-    item = { live: true, text: `A ${MODES[r.mode].label} spot was reserved in the ${ZONE_BY_ID[r.zone].label} · ${timeAgo(r.at)}`, zone: r.zone };
-  } else {
-    let q = null; for (let i = 0; i < 60 && !q; i++) { const c = SQ[Math.floor(Math.random() * DEMO_COUNT)]; if (c && !c.gone && c.last <= 3 && (c.featured || c.size >= 2)) q = c; }
-    if (!q) return; item = { live: false, text: demoLine(q), q }; PULSES.push({ q, t: now() }); SPARKS.push({ q, t: now() }); q.boost = now();
-  }
-  tickN++; tickItem = item;
-  ticker.classList.add('swap');
-  setTimeout(() => {
-    const tag = $('#tickTag'); tag.textContent = item.live ? 'Live' : 'Preview'; tag.className = 'tag mono ' + (item.live ? 'live' : 'prev');
-    $('#tickTxt').textContent = item.text; ticker.classList.remove('swap'); ticker.classList.add('on');
-  }, 380);
-}
-ticker.onclick = () => { if (!tickItem) return; if (tickItem.q) openPop(tickItem.q); else if (tickItem.zone) { const z = ZONE_BY_ID[tickItem.zone], r = isFinite(z.r) ? z.r : WORLD_R; markExplore(); flyTo(0, -r + 6, clamp(10 / CELL, ZMIN, ZMAX), 1400, easeInOut); } };
-
-/* ================= BOOT ================= */
-function validShare(d) { return !!d && Number.isInteger(d.x) && Number.isInteger(d.y) && Math.abs(d.x) <= 200 && Math.abs(d.y) <= 200 && MK.includes(d.m || d.mode) && clean(d.n || d.name).length > 0; }
-function relocateMine() {
-  if (!mine) return; unput(mine);
-  const keep = mine, s = nearestFree(keep.x, keep.y, keep.size);
-  if (!s) { mine = null; store.del(MINE_KEY); return; }
-  mine = put({ x: s.x, y: s.y, size: keep.size, mode: keep.mode, name: keep.name, mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: '', rec: [] });
-  Object.assign(mine, { email: keep.email, code: keep.code, number: keep.number, price: keep.price, reserved: keep.reserved }); saveMine();
-}
-function clearArea(x, y, size) { for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) { const id = occ.get(K(x + i, y + j)); if (id !== undefined && !SQ[id].mine) unput(SQ[id]); } }
-{
-  let saved = store.get(MINE_KEY);
-  if (!saved) { const v1 = store.get('expanse.mine.v1'); if (v1 && validShare(v1)) saved = { x: v1.x, y: v1.y, size: 2, mode: v1.mode, name: v1.name, email: v1.email || '' }; }
-  if (saved && validShare(saved)) {
-    const size = [1, 2, 4, 8].includes(saved.size) ? saved.size : 2;
-    let p = { x: saved.x, y: saved.y };
-    if (saved.code) clearArea(p.x, p.y, size);
-    else if (!spotOk(p.x, p.y, size)) p = nearestFree(saved.x, saved.y, size);
-    if (p) {
-      mine = put({ x: p.x, y: p.y, size, mode: saved.mode, name: clean(saved.name), mine: true, last: 0, likes: 0, city: '', owner: 'you', tag: '', rec: [] });
-      Object.assign(mine, { email: saved.email || '', code: saved.code || '', number: saved.number || 0, price: saved.price || 0, reserved: !!saved.code });
-      saveMine();
-    }
-  }
-}
-let deep = null;
-{
-  const h = location.hash, ms = h.match(/^#s=([\w-]{4,800})$/), mq = h.match(/^#sq=(\d{1,6})$/);
-  if (ms) {
-    const d = b64d(ms[1]);
-    if (validShare(d)) {
-      const n = clean(d.n), size = [1, 2, 4, 8].includes(d.s) ? d.s : 2, mode = d.m;
-      if (typeof d.r === 'string' && /^[\w-]{6,20}$/.test(d.r) && (!mine || mine.code !== d.r)) store.set(REF_KEY, d.r);
-      if (mine && mine.x === d.x && mine.y === d.y && mine.name === n) deep = mine;
-      else {
-        clearArea(d.x, d.y, size);
-        const p = isFree(d.x, d.y, size, size) ? { x: d.x, y: d.y } : nearestFree(d.x, d.y, size);
-        if (p) { const z = zoneOf(p.x, p.y, size); shared = put({ x: p.x, y: p.y, size, mode, name: n, shared: true, last: 0, likes: 0, city: '', owner: '', tag: `${z.label} · ${size}×${size} · ${MODES[mode].label}`, rec: [z.label, MODES[mode].label, d.r ? 'founding spot' : 'on the map'] }); deep = shared; }
-      }
-    }
-  } else if (mq) { const q = SQ[+mq[1]]; if (q && !q.gone && !q.mine) deep = q; }
-}
-updateCTAs();
-resize();
-
-const introEl = $('#intro');
-function endIntro() {
-  if (!introRunning) return; introRunning = false; introEl.classList.add('out'); app.classList.add('ready');
-  if (fly && fly.intro) { const f = fly; flyTo(f.x, f.y, f.z, 1000, easeOut); }
-  else if (!fly && cam.z < home().z * .9) { const h = home(); flyTo(h.x, h.y, h.z, 1000, easeOut); }
-}
-{
-  const h = home();
-  if (deep) {
-    introEl.classList.add('out'); app.classList.add('ready', 'explore'); explored = true;
-    cam.x = deep.x + deep.w / 2; cam.y = deep.y + deep.h / 2; cam.z = deep.size >= 4 ? 2 : 2.6;
-    setTimeout(() => { openPop(deep); if (deep.shared) toast(`${deep.name} is on the map. Grab the spot next to them?`, 4200); }, 500);
-  } else if (reduce) {
-    introEl.classList.add('out'); app.classList.add('ready'); cam.x = h.x; cam.y = h.y; cam.z = h.z;
-  } else {
-    introRunning = true; cam.x = h.x; cam.y = h.y; cam.z = h.z * .07;
-    setTimeout(() => { if (introRunning) introEl.classList.add('out'); }, 1500);
-    setTimeout(() => { if (!introRunning) return; flyTo(h.x, h.y, h.z, 4200, easeInOut); if (fly) fly.intro = true; }, 900);
-    setTimeout(() => { introRunning = false; app.classList.add('ready'); }, 3700);
-    introEl.addEventListener('pointerdown', endIntro);
-  }
-}
-kick();
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
-loadStats(); loadSpots();
-setInterval(() => { if (!document.hidden) loadStats(); }, 30000);
-setInterval(() => { if (!document.hidden) loadSpots(); }, 90000);
-setTimeout(nextTick, 4400); setInterval(nextTick, 5200);
-if (window.requestIdleCallback) requestIdleCallback(() => offsets(), { timeout: 5000 }); else setTimeout(offsets, 2500);
-})();
-</script>
+<noscript><p style="padding:24px;color:#fff;font-family:system-ui">Expanse is a living map of real products. It needs JavaScript to fly through.</p></noscript>
+<script src="/app.js" defer></script>
 </body>
 </html>
