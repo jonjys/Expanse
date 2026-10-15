@@ -275,7 +275,7 @@ function emailPanel(e) {
   return el('div', { class: 'panel' }, el('h3', { text: 'Email sending' }),
     el('p', { class: 'sub', text: state }),
     e.last_error ? el('div', { class: 'note', text: 'Last problem: ' + e.last_error }) : null,
-    el('p', { class: 'fine', text: 'Emails go out from expanse@nyttolabs.com through Resend. In Resend: API Keys → Create API key → permission “Sending access”, domain nyttolabs.com. Paste it here. It is stored encrypted in Supabase Vault and can’t be shown again.' }),
+    el('p', { class: 'fine', text: 'Review decisions, sign-in codes and your digest go out from expanse@nyttolabs.com through Resend. Without a key, makers can’t sign in with email. In Resend: API Keys → Create API key → permission “Sending access”, domain nyttolabs.com. Paste it here. It is stored encrypted in Supabase Vault and can’t be shown again.' }),
     el('label', { class: 'field' }, el('span', { class: 'mono', text: e.connected ? 'Replace the Resend API key' : 'Resend API key' }), key),
     el('div', { class: 'bar' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Save key', onclick: async ev => {
       const btn = ev.currentTarget; btn.disabled = true;

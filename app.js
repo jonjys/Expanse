@@ -1521,7 +1521,7 @@ async function openManage(slug, tab) {
   openPanel(manageEl, 'manage'); markExplore();
   const it = ITEMS.find(i => i.slug === slug); if (it) { sel = it; centerOn(it); }
   try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: own.key }); own.name = OWNDATA[slug].name; saveOwned(); if (mSlug === slug) renderManage(); }
-  catch (e) { if (errCode(e) === 'bad_key') { delete OWNED[slug]; saveOwned(); closeUI(); toast('That owner key no longer works. Use “Lost your key?” to get a new one.', 5000); } }
+  catch (e) { if (errCode(e) === 'bad_key') { delete OWNED[slug]; saveOwned(); closeUI(); toast('That key no longer works. Sign in again with your email, or use “Lost your key?”.', 5000); } }
 }
 function renderManage() {
   const o = OWNDATA[mSlug] || { name: (OWNED[mSlug] || {}).name || mSlug, status: '' };
@@ -1628,18 +1628,30 @@ function renderShare(o) {
       el('small', { text: n >= 3 ? 'Done — your extra cell is waiting for when placement opens.' : `${n} of 3 makers have added a product after opening your page.` })));
 }
 function renderKey(o) {
-  const key = OWNED[mSlug].key, code = el('code', { text: '•'.repeat(24) });
+  const slug = mSlug, own = OWNED[slug], key = own.key, viaEmail = own.via === 'email', code = el('code', { text: '•'.repeat(24) });
+  const others = Math.max(0, (o.devices || 0) - (viaEmail ? 1 : 0));
+  const forget = msg => { delete OWNED[slug]; delete OWNDATA[slug]; saveOwned(); rebuildItems(); closeUI(); toast(msg); };
   let shown = false;
-  box_($('#mKey'),
-    el('div', { class: 'keybox' }, el('b', { text: 'Owner key' }), code,
+  box_($('#mKey'), ...[
+    el('div', { class: 'keybox' }, el('b', { text: viaEmail ? 'Key for this device' : 'Owner key' }), code,
       el('div', { class: 'c-row' },
         el('button', { class: 'btn btn-ghost btn-xs', text: 'Show', onclick: e => { shown = !shown; code.textContent = shown ? key : '•'.repeat(24); e.target.textContent = shown ? 'Hide' : 'Show'; } }),
-        el('button', { class: 'btn btn-ghost btn-xs', text: 'Copy', onclick: async () => toast((await copy(key)) ? 'Owner key copied.' : 'Couldn’t copy.') }),
-        el('button', { class: 'btn btn-ghost btn-xs', text: 'Download', onclick: () => saveKeyFile(mSlug, o.name, key) })),
-      el('small', { text: 'Anyone with this key can edit your listing. Contact email on file: ' + (o.email || '—') })),
+        el('button', { class: 'btn btn-ghost btn-xs', text: 'Copy', onclick: async () => toast((await copy(key)) ? 'Key copied.' : 'Couldn’t copy.') }),
+        viaEmail ? null : el('button', { class: 'btn btn-ghost btn-xs', text: 'Download', onclick: () => saveKeyFile(slug, o.name, key) })),
+      el('small', { text: viaEmail
+        ? `This browser is signed in with ${o.email || 'your email'}. Its key works until you sign out here; your original owner key keeps working.`
+        : 'Anyone with this key can edit your listing. Contact email on file: ' + (o.email || '—') })),
+    others ? el('p', { class: 'fine' }, `Signed in with email on ${others} other ${others === 1 ? 'device' : 'devices'}. `,
+      el('button', { class: 'linkbtn', text: 'Sign them out', onclick: async e => {
+        e.currentTarget.disabled = true;
+        try { const r = await rpc('owner_signout', { p_slug: slug, p_key: key, p_scope: 'others' }); toast(`Signed out on ${r.revoked} ${r.revoked === 1 ? 'device' : 'devices'}.`); OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: key }); if (mSlug === slug) renderManage(); }
+        catch (err) { toast("Couldn't sign them out right now — try again."); }
+      } })) : null,
     el('div', { class: 'c-row' },
-      el('button', { class: 'btn btn-ghost btn-sm', text: 'Forget on this device', onclick: () => { delete OWNED[mSlug]; delete OWNDATA[mSlug]; saveOwned(); rebuildItems(); closeUI(); toast('Removed from this browser. Your listing is unchanged.'); } }),
-      el('button', { class: 'btn btn-danger btn-sm', text: 'Take listing down', onclick: () => confirmRemove(o) })));
+      viaEmail
+        ? el('button', { class: 'btn btn-ghost btn-sm', text: 'Sign out on this device', onclick: async () => { try { await rpc('owner_signout', { p_slug: slug, p_key: key, p_scope: 'this' }); } catch (e) {} forget('Signed out on this device. Your listing is unchanged.'); } })
+        : el('button', { class: 'btn btn-ghost btn-sm', text: 'Forget on this device', onclick: () => forget('Removed from this browser. Your listing is unchanged.') }),
+      el('button', { class: 'btn btn-danger btn-sm', text: 'Take listing down', onclick: () => confirmRemove(o) }))].filter(Boolean));
 }
 function box_(b, ...kids) { b.replaceChildren(...kids); }
 function confirmRemove(o) {
@@ -1690,8 +1702,69 @@ function openOwnerLogin(slug, name) {
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Owner key' }), keyIn),
     el('div', { class: 'c-row' }, go));
   openDlg(el('div', { class: 'mono kick', text: 'For makers' }), el('h2', { class: 'display', text: name ? `Manage ${name}` : 'Manage your product' }),
-    el('p', { style: 'margin-top:10px', text: 'Use the owner key you got when you added the product.' }), form,
-    el('button', { class: 'linkbtn', style: 'margin-top:14px', text: 'Lost your key?', onclick: () => { const s = slug || slugFrom(slugIn && slugIn.value); if (!isSlug(s)) { toast('First enter your product link or name.'); return; } startRecovery(s, name); } }));
+    el('p', { style: 'margin-top:10px', text: 'Use the owner key you got when you added the product, or sign in with the email address you added it with.' }), form,
+    el('div', { class: 'c-row', style: 'margin-top:14px' },
+      el('button', { class: 'btn btn-ghost btn-sm', text: 'Sign in with email', onclick: () => openEmailSignin(slug, name) }),
+      el('button', { class: 'linkbtn', text: 'Lost your key?', onclick: () => { const s = slug || slugFrom(slugIn && slugIn.value); if (!isSlug(s)) { toast('First enter your product link or name.'); return; } startRecovery(s, name); } })));
+}
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// Sign-in with email: a 6-digit code to the product's contact email gives this browser its own key for every product
+// listed with that address. The answer is the same whether or not the address is on file.
+function openEmailSignin(slug, name, email) {
+  const emailIn = el('input', { type: 'email', placeholder: 'you@company.com', autocomplete: 'email', spellcheck: 'false', value: email || '' });
+  const send = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Email me a code' });
+  openDlg(el('div', { class: 'mono kick', text: 'For makers' }), el('h2', { class: 'display', text: 'Sign in with email' }),
+    el('p', { style: 'margin-top:10px', text: 'Use the address you gave when you added your product. We send a 6-digit code — no password.' }),
+    el('form', { onsubmit: async e => {
+      e.preventDefault(); const v = emailIn.value.trim();
+      if (!EMAIL_RE.test(v)) { toast('Enter the email address you added your product with.'); return; }
+      send.disabled = true;
+      try {
+        const r = await rpc('email_signin_start', { p_email: v });
+        if (r && r.delivery === 'unavailable') { toast('Email sign-in is paused right now. Use your owner key, or “Lost your key?”.', 6000); return; }
+        openEmailCode(slug, name, v);
+      } catch (err) { toast(errCode(err) === 'slow_down' ? 'Too many tries from here. Wait a while and try again.' : "Couldn't send a code right now — try again."); }
+      finally { send.disabled = false; }
+    } }, el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Email' }), emailIn), el('div', { class: 'c-row' }, send)),
+    el('button', { class: 'linkbtn', style: 'margin-top:14px', text: 'Use my owner key instead', onclick: () => openOwnerLogin(slug, name) }));
+}
+function openEmailCode(slug, name, email) {
+  const codeIn = el('input', { inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '7', placeholder: '000000', 'aria-label': '6-digit code', style: 'font-family:"IBM Plex Mono",monospace;letter-spacing:.3em;font-size:20px' });
+  const go = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Sign in' });
+  const again = el('button', { class: 'linkbtn', type: 'button' });
+  let left = 0, timer = 0;
+  const tick = () => { if (!again.isConnected || left <= 0) { clearInterval(timer); again.disabled = false; again.textContent = 'Send a new code'; return; } again.disabled = true; again.textContent = `Send a new code (${left--} s)`; };
+  const wait = () => { left = 60; clearInterval(timer); tick(); timer = setInterval(tick, 1000); };
+  again.onclick = async () => {
+    wait();
+    try { await rpc('email_signin_start', { p_email: email }); toast('If the address is on file, a new code is on its way.'); }
+    catch (e) { toast(errCode(e) === 'slow_down' ? 'Too many tries from here. Wait a while and try again.' : "Couldn't send a code right now."); }
+  };
+  openDlg(el('div', { class: 'mono kick', text: 'Check your inbox' }), el('h2', { class: 'display', text: 'Enter your code' }),
+    el('p', { style: 'margin-top:10px', text: `If ${email} is the contact email for a product on Expanse, a 6-digit code is on its way. It works for 15 minutes — check spam if it hasn't arrived in a minute.` }),
+    el('form', { onsubmit: async e => {
+      e.preventDefault(); const v = codeIn.value.replace(/\D/g, '');
+      if (v.length !== 6) { toast('The code has 6 digits.'); return; }
+      go.disabled = true;
+      try {
+        const r = await rpc('email_signin_verify', { p_email: email, p_code: v });
+        if (!r || !r.ok) { toast(r && r.reason === 'slow_down' ? 'Too many tries from here. Wait a while and try again.' : 'That code doesn’t match or has expired. Use the newest email, or send a new code.', 5000); return; }
+        const list = (r.products || []).filter(p => p && isSlug(p.slug) && typeof p.key === 'string');
+        if (!list.length) { closeDlg(); toast('No product is listed with this address any more.'); return; }
+        // A key already saved in this browser stays; the new device key fills in where there is none (or it stopped working).
+        const add = () => { let n = 0; for (const p of list) if (!OWNED[p.slug]) { OWNED[p.slug] = { key: p.key, name: p.name, via: 'email' }; n++; } return n; };
+        add(); await loadOwned(); if (add()) await loadOwned();
+        rebuildItems();
+        const mine = list.filter(p => OWNED[p.slug]);
+        const target = slug && OWNED[slug] ? slug : mine.length === 1 ? mine[0].slug : null;
+        if (target) { closeDlg(); openManage(target); toast('Signed in.'); return; }
+        openDlg(el('div', { class: 'mono kick', text: 'Signed in' }), el('h2', { class: 'display', text: `You manage ${mine.length} products` }),
+          el('div', { class: 'c-row', style: 'flex-wrap:wrap;margin-top:14px' }, mine.map(p => el('button', { class: 'btn btn-ghost btn-sm', text: p.name, onclick: () => { closeDlg(); openManage(p.slug); } }))));
+      } catch (err) { toast("Couldn't check the code right now — try again."); }
+      finally { go.disabled = false; }
+    } }, el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Code' }), codeIn), el('div', { class: 'c-row' }, go)),
+    el('div', { class: 'c-row', style: 'margin-top:14px' }, again, el('button', { class: 'linkbtn', type: 'button', text: 'Use a different email', onclick: () => openEmailSignin(slug, name, email) })));
+  wait();
 }
 $('#ownerOpen').onclick = () => { closeSheet(); openOwnerLogin(null); };
 async function startRecovery(slug, name) {
