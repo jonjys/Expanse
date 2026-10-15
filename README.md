@@ -10,7 +10,8 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, products, overview, settings).
 - `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
 - `supabase/migrations/` — the database schema (already applied to the Supabase project).
-- `supabase/functions/verify-domain/` — the domain check. `supabase/functions/worker/` — background jobs (link checks, email).
+- `supabase/functions/verify-domain/` — the domain and GitHub checks. `supabase/functions/worker/` — background jobs
+  (link checks, email, releases, embeddings). `supabase/functions/search/` — AI search.
 - `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `favicon.svg`, `og.jpg` — browser icon and 1200×630 share image.
 
 Vercel deploys the repo root: every push to `main` goes to production, every other branch gets a preview URL.
@@ -28,6 +29,13 @@ Vercel deploys the repo root: every push to `main` goes to production, every oth
 Search ranks products by relevance only: the problems they solve (`needs`), name, tagline, integrations, category, audience,
 platforms and description. Map position, zone, price and the sponsored flag never affect ranking. The list view has filters
 for category, price (has a free option / paid), platform and integrations.
+
+**AI search** runs next to the keyword search. The `search` edge function turns the query into an embedding with
+`gte-small` (run inside Supabase; the text is not sent anywhere else) and compares it with each live product's embedding
+(`products.embedding`, plus one per need). Only products that clearly stand out from the rest of the catalog come back,
+with the closest stated need. The browser merges both result sets and shows why each product is there ("Solves: send
+invoices · Free plan · On iOS"); it also reads simple hints from the query (free, a platform, an integration).
+Embeddings are made by the worker's `embed` job when a product is approved or its text changes.
 
 ## Zones and founding prices
 
@@ -99,6 +107,7 @@ listing down from their owner panel, or use *Remove* in the admin page — both 
 - **Link checks** — once a day each product's website and demo link is opened (https only, up to 5 redirects, 10 s).
   Passing checks show on the profile with their date ("Website answers", "Demo works"). Three failed website checks in a
   row add an automatic report to the admin queue.
+- **Embeddings** — new or changed live profiles get their AI-search vectors (also right after an admin approves).
 - **GitHub releases** — every 6 hours for connected repos, from `github.com/<repo>/releases.atom` (no token needed).
 - **Email** — queued emails in `outbox` go out through Resend from `expanse@nyttolabs.com`. The Resend key is stored in
   Vault as `resend_api_key`; set or replace it from the admin settings. Without a key, emails wait in the outbox.
