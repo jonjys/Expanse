@@ -1,0 +1,147 @@
+// Background jobs for Expanse. pg_cron calls this every 10 minutes (see the worker_cron migration),
+// and the database calls it right away when an email is queued.
+//
+// POST { task: "all" | "mail" | "health", wait?: boolean }   header x-worker-secret: <Vault secret "worker_secret">
+//
+// - health: daily check that each product's website (and demo link) still answers
+// - mail:   sends queued emails (review decisions, sign-in codes, admin digest) through Resend
+//
+// Only the database decides what to fetch or send; the request only picks which jobs run.
+import postgres from "npm:postgres@3.4.5";
+
+const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 3, idle_timeout: 20 });
+const FROM = "Expanse <expanse@nyttolabs.com>";
+const UA = "ExpanseBot/1.0 (+https://expanse.nyttolabs.com; link check)";
+const HOST = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/i;
+
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
+// The Resend key lives in Vault (name "resend_api_key"), next to the worker secret. Read on every run,
+// so replacing it in Vault takes effect at once.
+async function resend(): Promise<string> {
+  const rows = await sql`select decrypted_secret from vault.decrypted_secrets where name = 'resend_api_key'`;
+  return rows.length ? String(rows[0].decrypted_secret ?? "") : "";
+}
+
+async function authorized(req: Request): Promise<boolean> {
+  const s = req.headers.get("x-worker-secret") ?? "";
+  if (s.length < 16 || s.length > 200) return false;
+  const rows = await sql`select decrypted_secret = ${s} as ok from vault.decrypted_secrets where name = 'worker_secret'`;
+  return rows.length === 1 && rows[0].ok === true;
+}
+
+/* ---------- health: does the website / demo still answer? ---------- */
+
+type Probe = { ok: boolean; status: string };
+
+// Follows up to 5 redirects, https only, to public host names; reads no body.
+async function probe(url: string, good: (status: number) => boolean): Promise<Probe> {
+  let next = url;
+  for (let hop = 0; hop < 6; hop++) {
+    let u: URL;
+    try { u = new URL(next); } catch { return { ok: false, status: "bad_url" }; }
+    if (u.protocol !== "https:" || !HOST.test(u.hostname) || (u.port && u.port !== "443")) return { ok: false, status: "bad_redirect" };
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 10000);
+    try {
+      const r = await fetch(u, { redirect: "manual", signal: ctl.signal, headers: { "User-Agent": UA, Accept: "text/html,*/*;q=0.8" } });
+      await r.body?.cancel().catch(() => {});
+      const loc = r.headers.get("location");
+      if (r.status >= 300 && r.status < 400 && loc) { next = new URL(loc, u).toString(); continue; }
+      return { ok: good(r.status), status: "http_" + r.status };
+    } catch {
+      return { ok: false, status: ctl.signal.aborted ? "timeout" : "unreachable" };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return { ok: false, status: "too_many_redirects" };
+}
+
+// A site behind bot protection (401/403/429) still exists; a demo only counts as working on a 2xx.
+const siteUp = (s: number) => s < 400 || s === 401 || s === 403 || s === 405 || s === 429;
+const demoWorks = (s: number) => s >= 200 && s < 300;
+
+async function pool<T>(items: T[], n: number, fn: (t: T) => Promise<void>) {
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) { const t = items[i++]; try { await fn(t); } catch (e) { console.error(e); } }
+  }));
+}
+
+async function health(limit = 20) {
+  const [{ due }] = await sql`select public._health_due(${limit}) as due`;
+  let up = 0, down = 0;
+  await pool(due as { id: number; url: string; demo_url: string }[], 5, async (p) => {
+    const site = await probe(p.url, siteUp);
+    const demo = p.demo_url ? await probe(p.demo_url, demoWorks) : null;
+    await sql`select public._health_record(${p.id}, ${site.ok}, ${site.status}, ${demo ? demo.ok : null}, ${demo ? demo.status : null})`;
+    site.ok ? up++ : down++;
+  });
+  return { checked: up + down, down };
+}
+
+/* ---------- mail ---------- */
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+function toHtml(text: string): string {
+  const paras = esc(text).split(/\n{2,}/).map((p) =>
+    `<p style="margin:0 0 14px">${p.replace(/https:\/\/[^\s<]+/g, (u) => `<a href="${u}" style="color:#1a5fff">${u}</a>`).replace(/\n/g, "<br>")}</p>`);
+  return `<!doctype html><html><body style="margin:0;padding:24px;background:#f4f6fb"><div style="max-width:560px;margin:0 auto;padding:28px;background:#fff;border-radius:16px;font:15px/1.55 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#141a33">${paras.join("")}</div></body></html>`;
+}
+
+async function mail() {
+  await sql`select public._admin_digest()`;
+  const key = await resend();
+  if (!key) return { sent: 0, skipped: "no resend_api_key in Vault" };
+  const [{ due }] = await sql`select public._outbox_claim(20) as due`;
+  let sent = 0, failed = 0;
+  for (const m of due as { id: number; to: string; subject: string; body: string }[]) {
+    let ok = false, error = "";
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `expanse-outbox-${m.id}` },
+        body: JSON.stringify({ from: FROM, to: [m.to], subject: m.subject, text: m.body, html: toHtml(m.body) }),
+      });
+      ok = r.ok;
+      if (!ok) error = `resend ${r.status}: ${(await r.text()).slice(0, 200)}`;
+      else await r.body?.cancel().catch(() => {});
+    } catch (e) {
+      error = String((e as Error)?.message ?? e).slice(0, 200);
+    }
+    await sql`select public._outbox_done(${m.id}, ${ok}, ${error})`;
+    ok ? sent++ : failed++;
+  }
+  return { sent, failed };
+}
+
+/* ---------- entry ---------- */
+
+const JOBS: Record<string, () => Promise<unknown>> = { mail, health: () => health() };
+
+async function run(task: string) {
+  const names = task === "all" ? ["mail", "health"] : [task];
+  const out: Record<string, unknown> = { at: new Date().toISOString(), task };
+  for (const n of names) {
+    try { out[n] = await JOBS[n](); } catch (e) { console.error(n, e); out[n] = { error: String((e as Error)?.message ?? e).slice(0, 200) }; }
+  }
+  await sql`select public._set_setting('worker_last_run', case when jsonb_typeof(public._setting('worker_last_run')) = 'object' then public._setting('worker_last_run') else '{}'::jsonb end || ${sql.json(out as postgres.JSONValue)})`
+    .catch((e) => console.error(e));
+  return out;
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST") return json({ ok: false }, 405);
+  if (!(await authorized(req))) return json({ ok: false }, 401);
+  let body: { task?: unknown; wait?: unknown } = {};
+  try { body = await req.json(); } catch { /* empty body: run everything */ }
+  const task = typeof body.task === "string" && (body.task === "all" || Object.hasOwn(JOBS, body.task)) ? body.task : "all";
+  if (body.wait === true) return json(await run(task));
+  // Answer at once; the jobs keep running in the background.
+  const job = run(task);
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt && typeof rt.waitUntil === "function") rt.waitUntil(job);
+  return json({ ok: true, accepted: task }, 202);
+});

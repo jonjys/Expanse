@@ -988,16 +988,27 @@ function openProduct(p, opts) {
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
+    signals(p),
     el('div', { class: 'pfoot' },
       it && it.owned ? el('button', { class: 'linkbtn', text: 'Manage my product', onclick: () => openManage(p.slug) }) : el('button', { class: 'linkbtn', text: 'I make this', onclick: () => openOwnerLogin(p.slug, p.name) }),
       el('button', { class: 'linkbtn', text: 'Report a problem', onclick: () => openReport(p) }),
       view === 'list' ? el('button', { class: 'linkbtn', text: 'Show on map', onclick: () => { setView('map'); setTimeout(() => openProduct(p), 60); } }) : null),
-    el('p', { class: 'fine', text: (p.verified_at ? `Verified on ${dateStr(p.verified_at)}: the maker proved they control ${p.domain}. ` : '') + 'Where a product sits on the map is a placement, not a ranking — it never affects search.' })
+    el('p', { class: 'fine', text: 'Where a product sits on the map is a placement, not a ranking — it never affects search.' })
   );
   openPanel(pop, 'pop');
   setPath('/p/' + p.slug);
   track(p.slug, 'view');
   if (it && view === 'map' && !(opts && opts.noFly)) { centerOn(it); markExplore(); }
+}
+/* Checked facts about a product, each with its date. None of them can be bought. */
+function signals(p) {
+  const rows = [];
+  if (p.verified_at) rows.push(['ver', 'Verified domain', `The maker proved they control ${p.domain} · ${dateStr(p.verified_at)}`]);
+  if (p.site_ok_at) rows.push(['up', 'Website answers', `We open ${p.domain} every day · last checked ${timeAgo(p.site_ok_at)}`]);
+  if (p.demo_ok_at) rows.push(['demo', 'Demo works', `The demo link loaded on our daily check · ${timeAgo(p.demo_ok_at)}`]);
+  if (!rows.length) return null;
+  return el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Checked by Expanse' }),
+    el('ul', { class: 'signals' }, rows.map(r => el('li', { class: 's-' + r[0] }, el('b', { text: r[1] }), el('small', { text: r[2] })))));
 }
 function openSpot(it) {
   sel = it; const z = zoneOf(it.x, it.y, it.size);
@@ -1446,10 +1457,18 @@ async function renderStats(o) {
     el('div', { class: 'chart-legend' }, el('span', null, el('i', { style: 'background:rgba(94,225,255,.55)' }), 'Profile views'), el('span', null, el('i', { style: 'background:var(--lime)' }), 'Clicks')),
     el('p', { class: 'fine', text: 'Unique visitors per day. Counted without cookies; your own visits on days you open this panel and known bots are left out, as far as we can tell.' }));
 }
+function checksBox(o) {
+  const c = o.checks || {}, row = (label, at, fails, status, okText) => el('li', { class: !at ? '' : fails ? 's-bad' : 's-up' },
+    el('b', { text: label + ': ' + (!at ? 'not checked yet' : fails ? `didn’t load on the last ${fails === 1 ? 'check' : fails + ' checks'}` : okText) }),
+    el('small', { text: at ? `Last check ${timeAgo(at)}${fails && status ? ' · ' + status.replace('http_', 'HTTP ') : ''}` : 'We check once a day, starting soon after you add or change a link.' }));
+  return el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Daily checks' }),
+    el('ul', { class: 'signals' }, row('Website', c.site_checked_at, c.site_fails, c.site_status, 'answers'), o.demo_url ? row('Demo', c.demo_checked_at, c.demo_fails, c.demo_status, 'works') : null),
+    el('p', { class: 'fine', text: 'Passing checks show on your profile with their date. If your website doesn’t answer three days in a row, we take a look.' }));
+}
 function renderVerify(o) {
   const box = $('#mVerify');
   if (!o.slug) { box.replaceChildren(el('p', { class: 'fine', text: 'Loading…' })); return; }
-  if (o.verified_at) { box.replaceChildren(el('div', { class: 'note ok', style: 'margin-top:14px' }, el('b', { text: `✓ ${o.domain} verified on ${dateStr(o.verified_at)}.` }), ' The badge shows on your profile. It proves you control the domain — it is not a rating and it is never sold.')); return; }
+  if (o.verified_at) { fill(box, el('div', { class: 'note ok', style: 'margin-top:14px' }, el('b', { text: `✓ ${o.domain} verified on ${dateStr(o.verified_at)}.` }), ' The badge shows on your profile. It proves you control the domain — it is not a rating and it is never sold.'), checksBox(o)); return; }
   const meta = `<meta name="expanse-verification" content="${o.verify_token}">`;
   const btn = el('button', { class: 'btn btn-primary btn-sm', text: 'Check now', onclick: async () => {
     btn.disabled = true; btn.textContent = 'Checking ' + o.domain + '…';
@@ -1466,7 +1485,8 @@ function renderVerify(o) {
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'A · Add a meta tag to your home page' }), el('div', { class: 'codeblock', text: meta }), el('button', { class: 'linkbtn', style: 'margin-top:6px', text: 'Copy tag', onclick: async () => toast((await copy(meta)) ? 'Tag copied — paste it inside <head>.' : 'Select the tag and copy it.') })),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'B · Or upload a text file' }), el('div', { class: 'codeblock', text: `https://${o.domain}/.well-known/expanse-verification.txt` }), el('small', { class: 'hint', style: 'display:block;color:var(--muted);font-size:12px;margin-top:6px', text: 'containing only: ' + o.verify_token })),
     el('div', { class: 'c-row' }, btn),
-    el('p', { class: 'fine', text: 'Verification is free and separate from payment. If you change your website to another domain, you verify again.' }));
+    el('p', { class: 'fine', text: 'Verification is free and separate from payment. If you change your website to another domain, you verify again.' }),
+    checksBox(o));
 }
 function renderShare(o) {
   const box = $('#mShare'), live = o.status === 'approved', url = productUrl(mSlug), n = Math.max(0, o.referrals | 0);

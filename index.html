@@ -243,6 +243,14 @@ a{color:inherit;text-decoration:none}
 .facts div{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--line);min-width:0}
 .facts small{display:block;color:var(--muted);font-size:10px;font-family:"IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase}
 .facts span{display:block;font-size:14px;margin-top:3px;overflow-wrap:anywhere}
+.signals{list-style:none;display:grid;gap:6px}
+.signals li{position:relative;padding:9px 12px 9px 36px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.signals li::before{content:"";position:absolute;left:12px;top:13px;width:14px;height:14px;border-radius:50%;background:var(--muted)}
+.signals li.s-ver::before{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.5 7.2l2.3 2.3 4.7-4.9' fill='none' stroke='%23071026' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat}
+.signals li.s-up::before,.signals li.s-demo::before{background:var(--lime);box-shadow:0 0 10px rgba(200,255,61,.6)}
+.signals li.s-bad::before{background:var(--red);box-shadow:0 0 10px rgba(255,90,90,.6)}
+.signals b{display:block;font-size:14px}
+.signals small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
 .pfoot{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
 .fine{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.45}
 .nextto{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:12px;padding:14px 16px;border-radius:16px;border:1px dashed rgba(200,255,61,.45);background:rgba(200,255,61,.05);color:var(--lime);font-weight:700;font-size:14px;text-align:left;transition:background .15s,border-color .15s}
@@ -637,6 +645,7 @@ a{color:inherit;text-decoration:none}
             <li>A list view next to the galaxy, and a page with a share link for every product.</li>
             <li>An owner key to edit your profile and see profile views and clicks to your site.</li>
             <li>Domain verification with a meta tag or a file on your site.</li>
+            <li>Daily checks that each website and demo link still works, shown on the profile with the date.</li>
             <li>Every new profile is reviewed before it goes live. Anyone can report a broken link or wrong information.</li>
           </ul>
         </div>
@@ -644,7 +653,6 @@ a{color:inherit;text-decoration:none}
           <h4>Planned <span class="badge mono">Not live yet</span></h4>
           <ul>
             <li>Favorites and following products, with one combined update.</li>
-            <li>More verified signals, like a working demo, each with a date.</li>
             <li>Release updates from GitHub for products that connect their repo.</li>
             <li>AI search that matches what you describe, with a reason for every result.</li>
             <li>Paid placements, with a report of the visits and clicks they delivered.</li>
