@@ -16,7 +16,7 @@ const ZONES = [
 ];
 const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
 const WORLD_R = 150, CORE_R = 14, CELL = 16, ZMIN = .025, ZMAX = 6, MAX_R = WORLD_R + 25;
-const OWNED_KEY = 'expanse.owned.v1', REF_KEY = 'expanse.ref', RECOVER_KEY = 'expanse.recover.v1', DRAFT_KEY = 'expanse.draft.v1';
+const OWNED_KEY = 'expanse.owned.v1', REF_KEY = 'expanse.ref', RECOVER_KEY = 'expanse.recover.v1', DRAFT_KEY = 'expanse.draft.v1', FOLLOW_KEY = 'expanse.follow.v1';
 
 /* Keep in sync with the category / pricing / platform checks on public.products. */
 const CATS = {
@@ -176,6 +176,8 @@ const fadeOf = q => q.last <= 30 ? 1 : q.last <= 90 ? 1 - (q.last - 30) / 60 * .
    product: an approved product · spot: a held spot without a live profile · mine: your own product in review */
 const ITEMS = [], occ = new Map();
 let PRODUCTS = [], BY_SLUG = new Map(), SPOTS = [], OWNED = store.get(OWNED_KEY) || {}, OWNDATA = {};
+/* Followed products live only in this browser: { slugs: { slug: followedAt }, seen: lastOpenedAt } */
+let FOLLOW = (() => { const f = store.get(FOLLOW_KEY); return f && typeof f.slugs === 'object' && f.slugs ? f : { slugs: {}, seen: null }; })(), UPDATES = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
 const priceOf = (x, y, size) => zoneOf(x, y, size).price * size * size;
 const isFree = (x, y, w, h) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (occ.has(K(x + i, y + j))) return false; return true; };
@@ -504,6 +506,7 @@ function drawItems(T, cp) {
       if (bw > 16) { ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(p.x + gap + rr, p.y + gap, bw - 2 * gap - 2 * rr, Math.max(1, cp * .07)); }
       if (it.kind === 'mine') { ctx.globalAlpha = 1; ctx.setLineDash([4, 4]); ctx.strokeStyle = '#c8ff3d'; ctx.lineWidth = 2; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke(); ctx.setLineDash([]); }
       else if (it.owned) { ctx.globalAlpha = 1; ctx.strokeStyle = '#c8ff3d'; ctx.lineWidth = 2.5; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke(); }
+      else if (FOLLOW.slugs[it.slug]) { ctx.globalAlpha = .9; ctx.setLineDash([3, 4]); ctx.strokeStyle = '#ffcf4a'; ctx.lineWidth = 1.6; rrect(ctx, p.x - 3, p.y - 3, bw + 6, bw + 6, rr + 3); ctx.stroke(); ctx.setLineDash([]); }
       ctx.globalAlpha = 1;
       if (it.p && it.p.verified_at && bw >= 18) {
         const r = Math.max(5, Math.min(cp * .32, 10)), bx = p.x + bw - r - 3, by = p.y + r + 3;
@@ -984,17 +987,20 @@ function openProduct(p, opts) {
     el('p', { class: 'ptag', text: p.tagline }),
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
     imgs,
-    el('div', { class: 'pact' }, visit, demoBtn, el('button', { class: 'chip-btn', 'aria-label': 'Share ' + p.name, text: '↗', onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') })),
+    el('div', { class: 'pact' }, visit, demoBtn),
+    el('div', { class: 'ptools' }, followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
     signals(p),
+    releasesSec(p),
     el('div', { class: 'pfoot' },
       it && it.owned ? el('button', { class: 'linkbtn', text: 'Manage my product', onclick: () => openManage(p.slug) }) : el('button', { class: 'linkbtn', text: 'I make this', onclick: () => openOwnerLogin(p.slug, p.name) }),
       el('button', { class: 'linkbtn', text: 'Report a problem', onclick: () => openReport(p) }),
       view === 'list' ? el('button', { class: 'linkbtn', text: 'Show on map', onclick: () => { setView('map'); setTimeout(() => openProduct(p), 60); } }) : null),
     el('p', { class: 'fine', text: 'Where a product sits on the map is a placement, not a ranking — it never affects search.' })
   );
+  popBody.dataset.slug = p.slug;
   openPanel(pop, 'pop');
   setPath('/p/' + p.slug);
   track(p.slug, 'view');
@@ -1006,9 +1012,26 @@ function signals(p) {
   if (p.verified_at) rows.push(['ver', 'Verified domain', `The maker proved they control ${p.domain} · ${dateStr(p.verified_at)}`]);
   if (p.site_ok_at) rows.push(['up', 'Website answers', `We open ${p.domain} every day · last checked ${timeAgo(p.site_ok_at)}`]);
   if (p.demo_ok_at) rows.push(['demo', 'Demo works', `The demo link loaded on our daily check · ${timeAgo(p.demo_ok_at)}`]);
+  if (p.repo) rows.push(['up', 'GitHub connected', `The maker connected github.com/${p.repo}${p.repo_verified_at ? ' · ' + dateStr(p.repo_verified_at) : ''}`]);
   if (!rows.length) return null;
   return el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Checked by Expanse' }),
     el('ul', { class: 'signals' }, rows.map(r => el('li', { class: 's-' + r[0] }, el('b', { text: r[1] }), el('small', { text: r[2] })))));
+}
+function followBtn(p) {
+  const b = el('button', { class: 'chip-btn follow-btn', type: 'button' });
+  const paint = () => { const on = isFollowed(p.slug); b.setAttribute('aria-pressed', String(on)); b.title = on ? 'Stop following' : 'Follow updates from ' + p.name; b.replaceChildren(el('span', { 'aria-hidden': 'true', text: on ? '★' : '☆' }), el('span', { class: 'fl', text: on ? 'Following' : 'Follow' })); };
+  b.onclick = () => { toggleFollow(p); paint(); };
+  paint(); return b;
+}
+const relItem = r => el('li', null, el('a', { href: r.url, target: '_blank', rel: 'noopener nofollow' }, el('b', { text: r.title || r.tag }), el('small', { text: (r.title && r.title !== r.tag ? r.tag + ' · ' : '') + dateStr(r.at) }), r.notes ? el('p', { text: r.notes }) : null));
+/* Releases from the product's connected GitHub repo: the latest comes with the product, the rest load when the profile opens. */
+function releasesSec(p) {
+  if (!p.repo) return null;
+  const box = el('ul', { class: 'rels' }, p.release ? relItem(p.release) : null);
+  if (p.release) rpc('public_releases', { p_slug: p.slug }).then(list => { if (Array.isArray(list) && list.length && popBody.dataset.slug === p.slug) fill(box, list.slice(0, 5).map(relItem)); }).catch(() => {});
+  return el('div', { class: 'sec' },
+    el('h4', { class: 'mono' }, 'Releases · ', el('a', { href: 'https://github.com/' + p.repo, target: '_blank', rel: 'noopener nofollow', style: 'text-transform:none;letter-spacing:.02em;text-decoration:underline', text: 'github.com/' + p.repo })),
+    p.release ? box : el('p', { class: 'fine', style: 'margin-top:0', text: 'No releases published on GitHub yet.' }));
 }
 function openSpot(it) {
   sel = it; const z = zoneOf(it.x, it.y, it.size);
@@ -1146,7 +1169,7 @@ function filtered() {
 }
 function card(p, why) {
   return el('button', { class: 'card', style: '--c:' + CATS[p.category].color, onclick: () => openProduct(p) },
-    el('div', { class: 'top' }, el('b', { text: p.name }), p.verified_at ? el('span', { class: 'ver', title: 'Verified domain', text: '✓' }) : null),
+    el('div', { class: 'top' }, el('b', { text: p.name }), p.verified_at ? el('span', { class: 'ver', title: 'Verified domain', text: '✓' }) : null, isFollowed(p.slug) ? el('span', { class: 'fol', title: 'You follow this', text: '★' }) : null),
     el('p', { text: p.tagline }),
     why ? el('div', { class: 'why', text: why }) : el('div', { class: 'needs' }, p.needs.slice(0, 3).map(n => el('span', { class: 'need', text: n }))),
     el('div', { class: 'meta' }, el('span', { text: CATS[p.category].label }), el('span', { text: PRICING[p.pricing] }), p.platforms.length ? el('span', { text: p.platforms.slice(0, 3).map(x => PLATFORMS[x]).join(' · ') }) : null, p.sponsored ? el('span', { class: 'spon', text: 'Sponsored' }) : null));
@@ -1468,7 +1491,7 @@ function checksBox(o) {
 function renderVerify(o) {
   const box = $('#mVerify');
   if (!o.slug) { box.replaceChildren(el('p', { class: 'fine', text: 'Loading…' })); return; }
-  if (o.verified_at) { fill(box, el('div', { class: 'note ok', style: 'margin-top:14px' }, el('b', { text: `✓ ${o.domain} verified on ${dateStr(o.verified_at)}.` }), ' The badge shows on your profile. It proves you control the domain — it is not a rating and it is never sold.'), checksBox(o)); return; }
+  if (o.verified_at) { fill(box, el('div', { class: 'note ok', style: 'margin-top:14px' }, el('b', { text: `✓ ${o.domain} verified on ${dateStr(o.verified_at)}.` }), ' The badge shows on your profile. It proves you control the domain — it is not a rating and it is never sold.'), checksBox(o), repoBox(o)); return; }
   const meta = `<meta name="expanse-verification" content="${o.verify_token}">`;
   const btn = el('button', { class: 'btn btn-primary btn-sm', text: 'Check now', onclick: async () => {
     btn.disabled = true; btn.textContent = 'Checking ' + o.domain + '…';
@@ -1486,7 +1509,34 @@ function renderVerify(o) {
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'B · Or upload a text file' }), el('div', { class: 'codeblock', text: `https://${o.domain}/.well-known/expanse-verification.txt` }), el('small', { class: 'hint', style: 'display:block;color:var(--muted);font-size:12px;margin-top:6px', text: 'containing only: ' + o.verify_token })),
     el('div', { class: 'c-row' }, btn),
     el('p', { class: 'fine', text: 'Verification is free and separate from payment. If you change your website to another domain, you verify again.' }),
-    checksBox(o));
+    checksBox(o), repoBox(o));
+}
+/* GitHub: the repo counts once the product's site links to it, or the repo holds the verify code. */
+function repoBox(o) {
+  const inp = el('input', { placeholder: 'github.com/you/your-repo', autocomplete: 'off', spellcheck: 'false', inputmode: 'url' });
+  inp.value = o.repo_requested ? 'github.com/' + o.repo_requested : '';
+  const status = o.repo ? el('div', { class: 'note ok' }, el('b', { text: `✓ Connected to github.com/${o.repo}.` }), o.release ? ` Latest release: ${o.release.title || o.release.tag}, ${timeAgo(o.release.at)}.` : ' New releases show up on your profile within a few minutes of being published.')
+    : o.repo_requested ? el('div', { class: 'note' }, `Not connected yet. Link to https://github.com/${o.repo_requested} from ${o.domain}, or add a file named expanse-verification.txt containing ${o.verify_token} to the repo. Then check again.`) : null;
+  const btn = el('button', { class: 'btn btn-primary btn-sm', text: o.repo_requested && !o.repo ? 'Check again' : 'Save & check' });
+  btn.onclick = async () => {
+    const slug = mSlug, v = inp.value.trim(); btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      OWNDATA[slug] = await rpc('owner_set_repo', { p_slug: slug, p_key: OWNED[slug].key, p_repo: v });
+      if (!v) { toast('GitHub disconnected.'); await refreshAll(); renderManage(); return; }
+      const r = await fnCall('verify-domain', { slug, key: OWNED[slug].key, repo: true });
+      if (r.ok) { toast('Connected! Your releases show on your profile and in your followers’ updates.', 4500); OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: OWNED[slug].key }); await refreshAll(); }
+      else if (r.reason === 'missing') toast(`We didn’t find a link to github.com/${r.repo} on ${r.domain}, or the code file in the repo.`, 6000);
+      else if (r.reason === 'unreachable') toast(`We couldn’t reach https://${r.domain} or the repo. Check that both are public.`, 5500);
+      else if (r.reason === 'slow_down') toast('Give it a few seconds between checks.');
+      else toast('Couldn’t check right now — try again in a moment.');
+      if (mSlug === slug) renderManage();
+    } catch (e) {
+      const m = errCode(e); toast(m === 'invalid:repo' ? 'Use the repo link, like github.com/you/your-repo.' : m === 'hidden' ? 'This product is hidden while it is being checked.' : 'Couldn’t save right now — try again.');
+    } finally { btn.disabled = false; btn.textContent = 'Save & check'; }
+  };
+  return el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'GitHub releases' }),
+    el('p', { class: 'c-text', style: 'font-size:13.5px;margin-top:0', text: 'Connect your public repo: new releases show on your profile and in the updates of everyone who follows you.' }),
+    el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Repository' }), inp), status, el('div', { class: 'c-row' }, btn));
 }
 function renderShare(o) {
   const box = $('#mShare'), live = o.status === 'approved', url = productUrl(mSlug), n = Math.max(0, o.referrals | 0);
@@ -1609,6 +1659,46 @@ function openReport(p) {
     el('p', { class: 'fine', text: 'Reports are anonymous. We check them by hand.' }));
 }
 
+/* ================= FOLLOWING: saved in this browser, one combined feed of updates ================= */
+const isFollowed = slug => !!FOLLOW.slugs[slug];
+function saveFollow() { store.set(FOLLOW_KEY, FOLLOW); renderFollowBtn(); }
+function toggleFollow(p) {
+  const now = new Date().toISOString();
+  if (isFollowed(p.slug)) { delete FOLLOW.slugs[p.slug]; toast(`Stopped following ${p.name}.`); }
+  else { FOLLOW.slugs[p.slug] = now; if (!FOLLOW.seen) FOLLOW.seen = now; toast(`Following ${p.name}. Its releases and changes show up under ★ Following.`, 4200); }
+  saveFollow(); loadUpdates(); kick();
+  if (view === 'list') renderList();
+}
+async function loadUpdates() {
+  const slugs = Object.keys(FOLLOW.slugs).filter(isSlug).slice(0, 200);
+  if (!slugs.length) { UPDATES = []; renderFollowBtn(); return; }
+  try { const u = await rpc('public_updates', { p_slugs: slugs }); if (Array.isArray(u)) UPDATES = u.filter(x => x && isSlug(x.slug) && x.at); } catch (e) {}
+  renderFollowBtn();
+}
+const isNewUpdate = u => !!FOLLOW.seen && Date.parse(u.at) > Math.max(Date.parse(FOLLOW.seen) || 0, Date.parse(FOLLOW.slugs[u.slug]) || 0);
+function renderFollowBtn() {
+  const n = Object.keys(FOLLOW.slugs).length, k = UPDATES.filter(isNewUpdate).length, c = $('#followCount');
+  $('#followBtn').hidden = !n; c.hidden = !k; c.textContent = k;
+  $('#followBtn').setAttribute('aria-label', 'Products you follow' + (k ? ` · ${k} new update${k === 1 ? '' : 's'}` : ''));
+}
+const KIND = { launched: ['★', '#c8ff3d', 'Launched'], verified: ['✓', '#ffffff', 'Verified'], updated: ['✎', '#5ee1ff', 'Profile updated'], release: ['↑', '#b39cff', 'GitHub release'] };
+function openFollowing() {
+  const slugs = Object.keys(FOLLOW.slugs);
+  const chips = el('div', { class: 'fchips' }, slugs.map(s => { const p = BY_SLUG.get(s); return el('span', null, p ? p.name : s, el('button', { type: 'button', 'aria-label': 'Stop following ' + (p ? p.name : s), text: '×', onclick: () => { delete FOLLOW.slugs[s]; saveFollow(); kick(); loadUpdates().then(() => { if (Object.keys(FOLLOW.slugs).length) openFollowing(); else closeDlg(); }); } })); }));
+  const items = UPDATES.slice(0, 60);
+  const list = items.length ? el('ul', { class: 'feed' }, items.map(u => {
+    const k = KIND[u.kind] || KIND.updated;
+    const inner = [el('span', { class: 'ic', style: '--c:' + k[1], text: k[0], 'aria-hidden': 'true' }), el('span', { class: 'tx' }, el('b', { text: `${u.name} · ${u.title}` }), el('small', { text: `${k[2]} · ${timeAgo(u.at)}` }))];
+    return el('li', { class: isNewUpdate(u) ? 'new' : null }, u.url
+      ? el('a', { href: u.url, target: '_blank', rel: 'noopener nofollow' }, inner)
+      : el('button', { type: 'button', onclick: () => { const p = BY_SLUG.get(u.slug); if (p) { closeDlg(); openProduct(p); } } }, inner));
+  })) : el('p', { class: 'fine', text: 'Nothing new in the last 90 days. Launches, verifications, profile changes and GitHub releases show up here.' });
+  openDlg(el('div', { class: 'mono kick', text: '★ Following' }), el('h2', { class: 'display', text: 'Your updates' }), chips, list,
+    el('p', { class: 'fine', text: 'Saved in this browser only — no account needed. Follow more from any product page.' }));
+  FOLLOW.seen = new Date(Math.max(Date.now(), ...UPDATES.map(u => Date.parse(u.at) || 0))).toISOString(); saveFollow();
+}
+$('#followBtn').onclick = openFollowing;
+
 /* ================= INFO SHEET ================= */
 function openSheet() { sheet.classList.add('open'); hideTip(); setTimeout(() => sheet.querySelector('.sheet-in').focus({ preventScroll: true }), 50); }
 function closeSheet() { sheet.classList.remove('open'); }
@@ -1678,7 +1768,7 @@ let deepSlug = null, deepSpot = null;
   }
   if (h === '#demo') setDemo(true);
 }
-updateMine();
+updateMine(); renderFollowBtn();
 resize();
 const introEl = $('#intro');
 function endIntro() {
@@ -1702,7 +1792,7 @@ kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 (async () => {
   await Promise.all([loadProducts(), loadSpots(), loadOwned()]);
-  rebuildItems(); renderLive();
+  rebuildItems(); renderLive(); loadUpdates();
   if (deepSlug) {
     const p = BY_SLUG.get(deepSlug);
     if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true }); }
@@ -1716,6 +1806,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 loadStats();
 setInterval(() => { if (!document.hidden) loadStats(); }, 30000);
 setInterval(() => { if (!document.hidden && ui === 'none') refreshAll(); }, 120000);
+setInterval(() => { if (!document.hidden) loadUpdates(); }, 300000);
 setTimeout(nextTick, 4400); setInterval(nextTick, 5200);
 if (window.requestIdleCallback) requestIdleCallback(() => offsets(), { timeout: 5000 }); else setTimeout(offsets, 2500);
 })();

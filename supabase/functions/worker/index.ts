@@ -1,10 +1,11 @@
 // Background jobs for Expanse. pg_cron calls this every 10 minutes (see the worker_cron migration),
 // and the database calls it right away when an email is queued.
 //
-// POST { task: "all" | "mail" | "health", wait?: boolean }   header x-worker-secret: <Vault secret "worker_secret">
+// POST { task: "all" | "mail" | "health" | "releases", wait?: boolean }   header x-worker-secret: <Vault secret "worker_secret">
 //
-// - health: daily check that each product's website (and demo link) still answers
-// - mail:   sends queued emails (review decisions, sign-in codes, admin digest) through Resend
+// - health:   daily check that each product's website (and demo link) still answers
+// - mail:     sends queued emails (review decisions, sign-in codes, admin digest) through Resend
+// - releases: reads the public releases feed of each connected GitHub repo every 6 hours
 //
 // Only the database decides what to fetch or send; the request only picks which jobs run.
 import postgres from "npm:postgres@3.4.5";
@@ -81,6 +82,57 @@ async function health(limit = 20) {
   return { checked: up + down, down };
 }
 
+/* ---------- releases: GitHub's public Atom feed, no API token needed ---------- */
+
+const decode = (s: string) => s.replace(/&(#x[0-9a-f]+|#\d+|lt|gt|amp|quot|apos|#39);/gi, (_, e: string) => {
+  const k = e.toLowerCase();
+  if (k[0] === "#") { const n = k[1] === "x" ? parseInt(k.slice(2), 16) : parseInt(k.slice(1), 10); return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : ""; }
+  return ({ lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" } as Record<string, string>)[k] ?? "";
+});
+const tagText = (xml: string, tag: string) => (xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`)) || [])[1] ?? "";
+
+type Release = { tag: string; title: string; url: string; at: string; notes: string };
+
+// The newest 10 entries: tag (from the release link), title, link, date and the start of the notes as plain text.
+function parseFeed(xml: string): Release[] {
+  return xml.split("<entry>").slice(1, 11).map((e) => {
+    const url = decode((e.match(/<link[^>]*href="([^"]+)"/) || [])[1] ?? "");
+    let tag = "";
+    try { tag = decodeURIComponent(url.split("/releases/tag/")[1] ?? "").slice(0, 120); } catch { /* malformed link */ }
+    const html = decode(tagText(e, "content"));
+    const notes = decode(html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim().slice(0, 280);
+    return { tag, title: decode(tagText(e, "title")).trim().slice(0, 160), url, at: tagText(e, "updated").trim(), notes };
+  }).filter((x) => x.tag && x.url.startsWith("https://github.com/") && !isNaN(Date.parse(x.at)));
+}
+
+async function feed(repo: string): Promise<Release[] | null> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 10000);
+  try {
+    const r = await fetch(`https://github.com/${repo}/releases.atom`, { signal: ctl.signal, headers: { "User-Agent": UA, Accept: "application/atom+xml" } });
+    if (new URL(r.url).hostname !== "github.com") { await r.body?.cancel(); return null; }
+    if (r.status === 404) { await r.body?.cancel(); return []; }
+    if (!r.ok) { await r.body?.cancel(); return null; }
+    return parseFeed((await r.text()).slice(0, 512 * 1024));
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function releases(limit = 15) {
+  const [{ due }] = await sql`select public._releases_due(${limit}) as due`;
+  let checked = 0, added = 0;
+  await pool(due as { id: number; repo: string }[], 4, async (p) => {
+    const items = await feed(p.repo);
+    if (items === null) return; // try again next run
+    const [{ n }] = await sql`select public._releases_record(${p.id}, ${p.repo}, ${sql.json(items as unknown as postgres.JSONValue)}) as n`;
+    checked++; added += Number(n) || 0;
+  });
+  return { checked, added };
+}
+
 /* ---------- mail ---------- */
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -118,10 +170,10 @@ async function mail() {
 
 /* ---------- entry ---------- */
 
-const JOBS: Record<string, () => Promise<unknown>> = { mail, health: () => health() };
+const JOBS: Record<string, () => Promise<unknown>> = { mail, health: () => health(), releases: () => releases() };
 
 async function run(task: string) {
-  const names = task === "all" ? ["mail", "health"] : [task];
+  const names = task === "all" ? ["mail", "health", "releases"] : [task];
   const out: Record<string, unknown> = { at: new Date().toISOString(), task };
   for (const n of names) {
     try { out[n] = await JOBS[n](); } catch (e) { console.error(n, e); out[n] = { error: String((e as Error)?.message ?? e).slice(0, 200) }; }
