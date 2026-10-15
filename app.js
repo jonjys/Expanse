@@ -1057,7 +1057,7 @@ function openDemo(q) {
 }
 
 /* ================= SEARCH (relevance only — placement never affects ranking) ================= */
-const STOP = new Set('a an and are as at be by can for from get help how i in is it me my need needs of on or so some that the this to tool tools app apps want with without who your'.split(' '));
+const STOP = new Set('a an and are as at be by can for from get help how i in is it me my need needs of on or so some that the this to tool tools app apps want with without who your something anything thing things stuff way best good great simple easy'.split(' '));
 function stem(w) { return w.length > 5 ? w.replace(/(ings|ing|ers|er|ed|es|s)$/, '') : w.length > 3 ? w.replace(/s$/, '') : w; }
 function normQ(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim(); }
 function terms(q) { return normQ(q).split(/[^a-z0-9+#.]+/).filter(t => t.length > 1 && !STOP.has(t)).map(stem); }
@@ -1100,6 +1100,68 @@ function searchDemo(qs) {
   return out.sort((a, b) => b[0] - a[0]).slice(0, 4).map(r => r[1]);
 }
 const whyLabel = r => r.why ? (r.why.startsWith('Works with') ? r.why : `Solves “${r.why}”`) : r.p.tagline;
+
+/* ---------- AI search: matched by meaning (gte-small in Supabase), merged with the word matches above ---------- */
+const AI = new Map();       // query → results from the search function (or null while loading / on failure)
+async function aiSearch(qs) {
+  const q = String(qs || '').replace(/\s+/g, ' ').trim(), k = q.toLowerCase();
+  if (q.length < 3 || !PRODUCTS.length) return null;
+  if (AI.has(k)) return AI.get(k);
+  AI.set(k, null);
+  try {
+    const r = await fetch(SUPA.url + '/functions/v1/search', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPA.key }, body: JSON.stringify({ q }) });
+    const j = await r.json();
+    if (r.ok && Array.isArray(j.results)) { AI.set(k, j.results); if (AI.size > 80) AI.delete(AI.keys().next().value); return j.results; }
+  } catch (e) {}
+  AI.set(k, []); return [];   // unavailable: fall back to word matches only
+}
+const aiCached = qs => AI.get(String(qs || '').replace(/\s+/g, ' ').trim().toLowerCase()) || null;
+/* What the words ask for besides the need itself: price, platform, tools it should work with. */
+const PLAT_WORDS = [[/\b(ios|iphone|ipad)\b/, 'ios'], [/\bandroid\b/, 'android'], [/\b(mac|macos|macbook)\b/, 'macos'], [/\b(windows|pc)\b/, 'windows'], [/\blinux\b/, 'linux'], [/\b(chrome extension|browser extension|extension|plugin)\b/, 'extension'], [/\b(api|sdk)\b/, 'api'], [/\b(web app|in the browser|web)\b/, 'web']];
+function interpret(qs) {
+  const q = ' ' + normQ(qs) + ' ', out = { free: /\b(free|gratis|no cost|open source|free plan|freemium)\b/.test(q), plat: [], ints: [] };
+  for (const [re, k] of PLAT_WORDS) if (re.test(q) && !out.plat.includes(k)) out.plat.push(k);
+  const seen = new Set();
+  for (const p of PRODUCTS) for (const i of p.integrations) {
+    const n = normQ(i); if (n.length < 2 || seen.has(n)) continue; seen.add(n);
+    if (q.includes(' ' + n + ' ') || q.includes(' ' + n + ',') || q.includes(' ' + n + '.')) out.ints.push(i);
+  }
+  return out;
+}
+/* Word matches and meaning matches together. Each result says why it's there; asked-for price, platform or
+   integration lift the products that have it. Placement and sponsorship never play a part. */
+function rankAll(qs, list) {
+  const pool = list || PRODUCTS, inPool = new Set(pool.map(p => p.slug));
+  const kw = searchProducts(qs, pool), it = interpret(qs), max = Math.max(1, ...kw.map(r => r.s)), m = new Map();
+  for (const r of kw) m.set(r.p.slug, { p: r.p, kw: r.s / max, raw: r.s, why: r.why, sem: 0 });
+  for (const a of aiCached(qs) || []) {
+    const p = BY_SLUG.get(a.slug); if (!p || !inPool.has(p.slug)) continue;
+    const e = m.get(p.slug) || { p, kw: 0, why: null };
+    e.sem = a.score; e.need = a.need; e.strength = a.strength; m.set(p.slug, e);
+  }
+  const out = [], strongAi = [...m.values()].some(e => e.strength === 'strong');
+  for (const e of m.values()) {
+    if (!e.kw && e.strength === 'possible' && kw.length) continue;   // weak meaning-only matches only when nothing else fits
+    if (strongAi && !e.sem && e.raw < 2) continue;                     // a stray word in a description doesn't beat a real match
+    let s = Math.max(e.kw, e.sem) + .25 * Math.min(e.kw, e.sem);
+    const why = [];
+    if (e.why) why.push(e.why.startsWith('Works with') ? e.why : `Solves “${e.why}”`);
+    else if (e.need) why.push(`Closest to what you asked: “${e.need}”`);
+    else if (e.sem) why.push('Matches what you described');
+    if (it.free) { if (['free', 'freemium', 'trial'].includes(e.p.pricing)) why.push(PRICING[e.p.pricing]); else s *= .7; }
+    for (const k of it.plat) { if (e.p.platforms.includes(k)) why.push('On ' + PLATFORMS[k]); else s *= .75; }
+    for (const i of it.ints) { if (e.p.integrations.some(x => normQ(x) === normQ(i))) why.push('Works with ' + i); else s *= .8; }
+    out.push({ p: e.p, s, why: [...new Set(why)].slice(0, 3).join(' · '), ai: !e.kw && !!e.sem });
+  }
+  return out.sort((a, b) => b.s - a.s || a.p.name.localeCompare(b.p.name));
+}
+function understood(qs) {
+  const it = interpret(qs), bits = [];
+  if (it.free) bits.push('free option');
+  for (const k of it.plat) bits.push(PLATFORMS[k]);
+  for (const i of it.ints) bits.push('works with ' + i);
+  return bits;
+}
 const results = $('#results'), qIn = $('#q'), searchEl = $('#search');
 function openSearch() { searchEl.classList.add('open'); qIn.focus(); if (!qIn.value) renderResults(); }
 $('#searchBtn').onclick = () => { searchEl.classList.toggle('open'); if (searchEl.classList.contains('open')) { qIn.focus(); renderResults(); } };
@@ -1115,15 +1177,22 @@ function renderResults() {
     results.replaceChildren(el('div', { class: 'lbl mono', text: PRODUCTS.length ? 'Popular needs' : 'Try a need' }), el('div', { class: 'ideas' }, topNeeds(8).map(n => el('button', { type: 'button', text: n, onclick: () => runSearch(n) }))));
     results.hidden = false; return;
   }
-  const r = searchProducts(v).slice(0, 6), d = searchDemo(v), kids = [];
+  const all = rankAll(v), r = all.slice(0, 6), d = searchDemo(v), kids = [], u = understood(v), anyAi = r.some(x => x.ai);
+  if (u.length || anyAi) kids.push(el('div', { class: 'lbl mono' }, anyAi ? el('span', { class: 'ai', text: '✦ AI' }) : null, u.length ? 'Looking for: ' + u.join(' · ') : 'Matched by meaning, not just words'));
   for (const x of r) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p); } },
-    el('span', { class: 'sw', style: 'background:' + CATS[x.p.category].color }), el('span', { class: 'rt' }, el('b', { text: x.p.name }), el('small', { text: whyLabel(x) })), x.p.verified_at ? el('span', { class: 'tagx', text: '✓' }) : null));
+    el('span', { class: 'sw', style: 'background:' + CATS[x.p.category].color }), el('span', { class: 'rt' }, el('b', { text: x.p.name }), el('small', { text: x.why || x.p.tagline })), x.p.verified_at ? el('span', { class: 'tagx', text: '✓' }) : null));
   for (const q of d) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openDemo(q); } },
     el('span', { class: 'sw', style: 'background:' + MODES[q.mode].color }), el('span', { class: 'rt' }, el('b', { text: q.name }), el('small', { text: q.tag })), el('span', { class: 'tagx mono', text: 'Example' })));
-  if (r.length) kids.push(el('button', { type: 'button', class: 'all', text: `See all ${plural(searchProducts(v).length, 'match', 'matches')} in the list →`, onclick: () => runSearch(v) }));
-  if (!r.length) kids.unshift(el('div', { class: 'none' }, `No live product solves “${v}” yet. `, el('button', { type: 'button', text: 'Add yours →', onclick: () => { results.hidden = true; startSubmit(null); } })));
+  if (r.length) kids.push(el('button', { type: 'button', class: 'all', text: `See all ${plural(all.length, 'match', 'matches')} in the list →`, onclick: () => runSearch(v) }));
+  if (!aiCached(v) && v.length >= 3 && PRODUCTS.length) {
+    clearTimeout(aiT); aiT = setTimeout(() => aiSearch(v).then(res => { if (res && qIn.value.trim() === v && !results.hidden) renderResults(); }), 420);
+  }
+  const pendingAi = !r.length && v.length >= 3 && PRODUCTS.length && !aiCached(v);
+  if (pendingAi) kids.unshift(el('div', { class: 'none' }, el('span', { class: 'ai mono', text: '✦ AI' }), ' Searching by meaning…'));
+  else if (!r.length) kids.unshift(el('div', { class: 'none' }, `No live product solves “${v}” yet. `, el('button', { type: 'button', text: 'Add yours →', onclick: () => { results.hidden = true; startSubmit(null); } })));
   results.replaceChildren(...kids); results.hidden = false;
 }
+let aiT = 0;
 qIn.addEventListener('input', renderResults);
 qIn.addEventListener('focus', renderResults);
 function runSearch(v) {
@@ -1176,14 +1245,25 @@ function card(p, why) {
 }
 function renderList() {
   const base = filtered(); let rows;
-  if (listQ) rows = searchProducts(listQ, base).map(r => ({ p: r.p, why: whyLabel(r) }));
+  if (listQ) {
+    rows = rankAll(listQ, base).map(r => ({ p: r.p, why: (r.ai ? '✦ ' : '') + (r.why || r.p.tagline) }));
+    if (!aiCached(listQ)) { const q = listQ; aiSearch(q).then(res => { if (res && listQ === q && view === 'list') renderList(); }); }
+  }
   else rows = base.map(p => ({ p, why: null }));
   const sort = lSort.value;
   if (sort === 'new') rows.sort((a, b) => Date.parse(b.p.approved_at || 0) - Date.parse(a.p.approved_at || 0));
   else if (sort === 'az' || (sort === 'match' && !listQ)) rows.sort((a, b) => a.p.name.localeCompare(b.p.name));
   const lq = $('#lQuery'); lq.hidden = !listQ;
-  if (listQ) lq.replaceChildren(`Best matches for “${listQ}”`, el('button', { type: 'button', text: 'Clear search', onclick: () => { listQ = ''; qIn.value = ''; renderList(); } }));
+  if (listQ) {
+    const u = understood(listQ), aiAny = rows.some(r => r.why.startsWith('✦'));
+    lq.replaceChildren(aiAny ? el('span', { class: 'ai mono', text: '✦ AI' }) : '', `Best matches for “${listQ}”`, u.length ? ` · looking for ${u.join(', ')}` : '',
+      el('button', { type: 'button', text: 'Clear search', onclick: () => { listQ = ''; qIn.value = ''; renderList(); } }));
+  }
   $('#lCount').textContent = plural(rows.length, 'product', 'products');
+  if (!rows.length && listQ && PRODUCTS.length && AI.has(listQ.replace(/\s+/g, ' ').trim().toLowerCase()) && !aiCached(listQ)) {
+    cardsEl.replaceChildren(el('div', { class: 'empty' }, el('h3', { text: 'Searching by meaning…' }), el('p', { text: 'No product uses those exact words — checking what they mean.' })));
+    return;
+  }
   if (!rows.length) {
     const none = !PRODUCTS.length;
     cardsEl.replaceChildren(el('div', { class: 'empty' },

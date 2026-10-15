@@ -1,11 +1,13 @@
 // Background jobs for Expanse. pg_cron calls this every 10 minutes (see the worker_cron migration),
 // and the database calls it right away when an email is queued.
 //
-// POST { task: "all" | "mail" | "health" | "releases", wait?: boolean }   header x-worker-secret: <Vault secret "worker_secret">
+// POST { task: "all" | "review" | "mail" | "embed" | "health" | "releases", wait?: boolean }   header x-worker-secret: <Vault secret "worker_secret">
 //
 // - health:   daily check that each product's website (and demo link) still answers
 // - mail:     sends queued emails (review decisions, sign-in codes, admin digest) through Resend
 // - releases: reads the public releases feed of each connected GitHub repo every 6 hours
+// - embed:    turns new or changed live profiles into embeddings for AI search (gte-small, inside Supabase)
+// - review:   mail + embed, run right after an admin decision
 //
 // Only the database decides what to fetch or send; the request only picks which jobs run.
 import postgres from "npm:postgres@3.4.5";
@@ -133,6 +135,29 @@ async function releases(limit = 15) {
   return { checked, added };
 }
 
+/* ---------- embed: vectors for AI search ---------- */
+
+// deno-lint-ignore no-explicit-any
+let embedder: any = null;
+async function vec(text: string): Promise<string> {
+  // deno-lint-ignore no-explicit-any
+  embedder ??= new (globalThis as any).Supabase.ai.Session("gte-small");
+  const v = await embedder.run(text, { mean_pool: true, normalize: true }) as number[];
+  return "[" + Array.from(v).join(",") + "]";
+}
+
+async function embed(limit = 15) {
+  const [{ due }] = await sql`select public._embed_due(${limit}) as due`;
+  let embedded = 0;
+  for (const p of due as { id: number; hash: string; text: string; needs: string[] }[]) {
+    const needs: string[] = [];
+    for (const n of p.needs) needs.push(await vec(n));
+    await sql`select public._embed_record(${p.id}, ${p.hash}, ${await vec(p.text)}, ${sql.array(needs)}::text[])`;
+    embedded++;
+  }
+  return { embedded };
+}
+
 /* ---------- mail ---------- */
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -170,10 +195,11 @@ async function mail() {
 
 /* ---------- entry ---------- */
 
-const JOBS: Record<string, () => Promise<unknown>> = { mail, health: () => health(), releases: () => releases() };
+const JOBS: Record<string, () => Promise<unknown>> = { mail, embed: () => embed(), health: () => health(), releases: () => releases() };
+const GROUPS: Record<string, string[]> = { all: ["mail", "embed", "health", "releases"], review: ["mail", "embed"] };
 
 async function run(task: string) {
-  const names = task === "all" ? ["mail", "health", "releases"] : [task];
+  const names = GROUPS[task] ?? [task];
   const out: Record<string, unknown> = { at: new Date().toISOString(), task };
   for (const n of names) {
     try { out[n] = await JOBS[n](); } catch (e) { console.error(n, e); out[n] = { error: String((e as Error)?.message ?? e).slice(0, 200) }; }
@@ -188,7 +214,7 @@ Deno.serve(async (req) => {
   if (!(await authorized(req))) return json({ ok: false }, 401);
   let body: { task?: unknown; wait?: unknown } = {};
   try { body = await req.json(); } catch { /* empty body: run everything */ }
-  const task = typeof body.task === "string" && (body.task === "all" || Object.hasOwn(JOBS, body.task)) ? body.task : "all";
+  const task = typeof body.task === "string" && (Object.hasOwn(GROUPS, body.task) || Object.hasOwn(JOBS, body.task)) ? body.task : "all";
   if (body.wait === true) return json(await run(task));
   // Answer at once; the jobs keep running in the background.
   const job = run(task);
