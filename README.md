@@ -7,8 +7,10 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 
 - `index.html` — markup and CSS. `app.js` — all the behaviour. No build step, no external dependencies.
 - `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and share image in the `<head>`.
-- `vercel.json` — the `/p/<slug>` rewrite and a few security headers.
-- `supabase/migrations/` — the database schema (already applied to the Supabase project). `supabase/functions/verify-domain/` — the domain check.
+- `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, products, overview, settings).
+- `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
+- `supabase/migrations/` — the database schema (already applied to the Supabase project).
+- `supabase/functions/verify-domain/` — the domain check. `supabase/functions/worker/` — background jobs (link checks, email).
 - `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `favicon.svg`, `og.jpg` — browser icon and 1200×630 share image.
 
 Vercel deploys the repo root: every push to `main` goes to production, every other branch gets a preview URL.
@@ -60,25 +62,36 @@ opens are in the "How it works" sheet in `index.html` (12 months at the founding
 user agent with a salt that is replaced every day. No cookies, no stored IP addresses. Known bots are ignored, and hashes that
 opened the owner panel that day are left out of the owner's numbers. The owner sees the last 30 days.
 
-## Review and reports (for whoever runs Expanse)
+## Running Expanse: the admin page
 
-New products start as `pending` and are not public until approved. In the Supabase dashboard → project **expanse**:
-
-- **Table Editor → `moderation_queue`** lists everything waiting: pending products and live products with open reports.
-- To approve: Table Editor → `products` → set `status` to `approved` (`approved_at` is filled in automatically).
-- To turn one down: set `status` to `rejected` and write the reason in `review_note` — the owner sees it and can resubmit.
-- To hide a live product after reports: set `status` to `hidden` (and a `review_note`). Mark reports handled with `resolved = true`.
-- `sponsored` marks a paid placement. It only adds a "Sponsored" label; it never changes search.
+Everything that needs a decision is at **<https://expanse.nyttolabs.com/admin>**. Sign in with an admin key
+(only its SHA-256 is stored). To create the first key, run this once in the Supabase SQL editor and save the result:
 
 ```sql
--- waiting for review
-select id, name, url, category, contact_email, created_at from products where status = 'pending' order by created_at;
--- open reports
-select p.name, r.reason, r.details, r.created_at from reports r join products p on p.id = r.product_id where not r.resolved order by r.created_at;
+select public._admin_issue();
 ```
 
-Deletion requests: take the listing down from the owner panel (wipes the email and key), or set `status = 'removed'` and
-replace `contact_email`.
+- **To review** — new products plus live products that were reported or whose website stopped answering.
+  *Approve* puts a product live at once; *Needs changes* sends it back with a note; *Hide* takes a live product off the
+  site; *Remove* is for spam (frees the spot and wipes the maker's email and key). The maker gets an email for each decision.
+- **Reports** — from visitors and from the daily link check. Mark them handled when done.
+- **Products** — everything, filterable by status, with contact email, checks and 30-day stats.
+- **Overview** — live/pending counts, views and clicks over 30 days, most viewed products, background job status.
+- **Settings** — an optional email address for "something is waiting" notifications, the Resend key for sending email,
+  and *Make a new key* to rotate the admin key.
+
+`sponsored` on a product only adds a "Sponsored" label; it never changes search. Deletion requests: the maker can take the
+listing down from their owner panel, or use *Remove* in the admin page — both wipe the contact email and owner key.
+
+## Background jobs
+
+`pg_cron` calls the `worker` edge function every 10 minutes (secret shared through Vault as `worker_secret`):
+
+- **Link checks** — once a day each product's website and demo link is opened (https only, up to 5 redirects, 10 s).
+  Passing checks show on the profile with their date ("Website answers", "Demo works"). Three failed website checks in a
+  row add an automatic report to the admin queue.
+- **Email** — queued emails in `outbox` go out through Resend from `expanse@nyttolabs.com`. The Resend key is stored in
+  Vault as `resend_api_key`; set or replace it from the admin settings. Without a key, emails wait in the outbox.
 
 ## Supabase API
 
@@ -95,5 +108,6 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `start_recovery(slug)` | Starts the lost-key flow. |
 | `referral_count(code)` | "Invite 3 makers → +1 cell" progress. |
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
+| `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, settings, key rotation. Each checks the admin key. |
 
 Functions starting with `_` are internal and not callable through the API; the edge function reaches them over the database connection.
