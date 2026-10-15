@@ -97,3 +97,12 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
 
 Functions starting with `_` are internal and not callable through the API; the edge function reaches them over the database connection.
+
+
+## UI reliability checks
+
+ui-helpers.js adds dependency-free modal focus management and storage results. The information sheet and product-action dialogs keep Tab/Shift+Tab inside the topmost dialog, return focus to the opener on close, and give dynamically generated dialogs an accessible name.
+
+Owner keys still use the existing browser storage and backend owner-key architecture. If browser storage is blocked, full, or silently discards a write, a persistent alert tells the owner to download their key before closing the tab. This alert does not mean the product failed to save in Supabase. It does not expose or send the private key.
+
+Run node --test test/*.test.cjs with Node 20+ (no dependencies). Tests cover successful persistence, storage failures, corrupt JSON, focus wrapping, nested dialogs and focus restoration. No database migrations are needed for these UI changes.

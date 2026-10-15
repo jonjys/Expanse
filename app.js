@@ -43,11 +43,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fmt = n => Number(n || 0).toLocaleString('en');
 const eur = n => '€' + fmt(n);
 const plural = (n, one, many) => fmt(n) + ' ' + (n === 1 ? one : many);
-const store = {
-  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
-  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
-};
+const store = ExpanseUI.storage(() => localStorage);
 function el(tag, props, ...kids) {
   const e = document.createElement(tag);
   if (props) for (const k in props) {
@@ -271,10 +267,23 @@ async function loadOwned() {
     try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: OWNED[slug].key }); OWNED[slug].name = OWNDATA[slug].name; }
     catch (e) { if (errCode(e) === 'bad_key') { delete OWNED[slug]; delete OWNDATA[slug]; } }
   }));
-  store.set(OWNED_KEY, OWNED); updateMine();
+  saveOwned();
 }
 async function refreshAll() { await Promise.all([loadProducts(), loadSpots()]); rebuildItems(); if (ui === 'none' && view === 'list') renderList(); }
-function saveOwned() { store.set(OWNED_KEY, OWNED); updateMine(); }
+function saveOwned() {
+  const saved = store.set(OWNED_KEY, OWNED);
+  let notice = $('#ownerStorageNotice');
+  if (!saved && Object.keys(OWNED).length) {
+    if (!notice) {
+      notice = el('div', { id: 'ownerStorageNotice', role: 'alert', class: 'storage-notice' });
+      app.appendChild(notice);
+    }
+    notice.textContent = 'This browser could not save your owner key. Download the key before closing this tab, or you will need domain recovery to edit your product.';
+    notice.hidden = false;
+  } else if (notice) notice.hidden = true;
+  updateMine();
+  return saved;
+}
 
 /* ================= CANVAS ================= */
 const cv = $('#world'), ctx = cv.getContext('2d');
@@ -1519,8 +1528,15 @@ $('#eSave').onclick = async () => {
 };
 
 /* ================= DIALOGS: owner key, recovery, report ================= */
-function openDlg(...kids) { fill(dlgBody, ...kids); dlg.classList.add('open'); hideTip(); setTimeout(() => { const f = dlgBody.querySelector('input,textarea,button'); (f || dlg.querySelector('.sheet-in')).focus({ preventScroll: true }); }, 60); }
-function closeDlg() { dlg.classList.remove('open'); }
+const modalFocus = ExpanseUI.dialogs(document);
+function openDlg(...kids) {
+  fill(dlgBody, ...kids); hideTip();
+  const heading = dlgBody.querySelector('h2');
+  if (heading) { heading.id = 'dlgTitle'; dlg.setAttribute('aria-labelledby', 'dlgTitle'); dlg.removeAttribute('aria-label'); }
+  else { dlg.removeAttribute('aria-labelledby'); dlg.setAttribute('aria-label', 'Product action'); }
+  modalFocus.open(dlg, dlgBody.querySelector('input,textarea,button') || dlg.querySelector('.sheet-in'));
+}
+function closeDlg() { modalFocus.close(dlg); }
 dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[data-dlg-close]')) closeDlg(); });
 function slugFrom(v) { v = String(v || '').trim(); const m = v.match(/\/p\/([a-z0-9-]+)/i); if (m) return m[1].toLowerCase(); return normQ(v).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48); }
 function openOwnerLogin(slug, name) {
@@ -1590,8 +1606,8 @@ function openReport(p) {
 }
 
 /* ================= INFO SHEET ================= */
-function openSheet() { sheet.classList.add('open'); hideTip(); setTimeout(() => sheet.querySelector('.sheet-in').focus({ preventScroll: true }), 50); }
-function closeSheet() { sheet.classList.remove('open'); }
+function openSheet() { hideTip(); modalFocus.open(sheet); }
+function closeSheet() { modalFocus.close(sheet); }
 $('#infoBtn').onclick = openSheet;
 sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-sheet-close]')) closeSheet(); });
 
@@ -1699,3 +1715,4 @@ setInterval(() => { if (!document.hidden && ui === 'none') refreshAll(); }, 1200
 setTimeout(nextTick, 4400); setInterval(nextTick, 5200);
 if (window.requestIdleCallback) requestIdleCallback(() => offsets(), { timeout: 5000 }); else setTimeout(offsets, 2500);
 })();
+
