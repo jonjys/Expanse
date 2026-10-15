@@ -120,7 +120,29 @@ a{color:inherit;text-decoration:none}
 #searchBtn{display:none}
 #infoBtn .q{display:none}
 .short{display:none}
-@media (max-width:1060px){#mineBtn .long{display:none}#mineBtn .short{display:inline}}
+@media (max-width:1060px){#mineBtn .long{display:none}#mineBtn .short{display:inline}#followBtn .long{display:none}}
+#followBtn{gap:6px}
+#followBtn>span:first-child{color:var(--amber)}
+.fcount{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--lime);color:#071026;font-size:11.5px;font-weight:800}
+.follow-btn[aria-pressed="true"]{border-color:rgba(255,207,74,.6);color:var(--amber)}
+.feed{list-style:none;display:grid;gap:6px;margin-top:14px}
+.feed li button,.feed li a{display:flex;gap:12px;align-items:flex-start;width:100%;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--line);text-align:left;transition:border-color .15s}
+.feed li button:hover,.feed li a:hover{border-color:var(--line2)}
+.feed .ic{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:14px;font-weight:800;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c)}
+.feed .tx{min-width:0;flex:1}
+.feed .tx b{display:block;font-size:14.5px}
+.feed .tx small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+.feed li.new .tx b::after{content:"NEW";margin-left:8px;padding:1px 6px;border-radius:999px;background:var(--lime);color:#071026;font:700 9.5px/1.4 "IBM Plex Mono",monospace;letter-spacing:.08em;vertical-align:2px}
+.fchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.fchips span{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 4px 0 12px;border-radius:999px;border:1px solid var(--line2);font-size:13px;font-weight:600}
+.fchips button{width:24px;height:24px;border-radius:50%;color:var(--muted);font-size:16px;line-height:1}
+.fchips button:hover{color:#fff;background:rgba(255,255,255,.08)}
+.rels{list-style:none;display:grid;gap:6px}
+.rels li a{display:block;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.rels li a:hover{border-color:var(--line2)}
+.rels b{font-size:14px}
+.rels small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.rels p{color:var(--txt2);font-size:12.5px;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @media (max-width:900px){
   .bar{padding:12px 12px;gap:8px}
   .search{display:none;position:absolute;left:12px;right:12px;top:62px;max-width:none;margin:0}
@@ -232,6 +254,8 @@ a{color:inherit;text-decoration:none}
 .pact{display:flex;gap:8px;margin-top:16px}
 .pact .btn{flex:1;min-width:0}
 .pact .btn span{overflow:hidden;text-overflow:ellipsis}
+.ptools{display:flex;gap:8px;margin-top:8px}
+.ptools .chip-btn{height:36px;font-size:13.5px}
 .chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;min-width:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);font-weight:600;font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s}
 .chip-btn:hover{border-color:rgba(255,255,255,.6)}
 .sec{margin-top:18px}
@@ -368,6 +392,7 @@ a{color:inherit;text-decoration:none}
 .card::before{content:"";position:absolute;left:16px;right:16px;top:0;height:2px;border-radius:0 0 4px 4px;background:var(--c);box-shadow:0 0 14px var(--c)}
 .card .top{display:flex;align-items:center;gap:8px;min-width:0}
 .card .top b{font-size:18px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.card .top .fol{flex:none;color:var(--amber);font-size:14px}
 .card .top .ver{flex:none;width:18px;height:18px;border-radius:50%;background:#fff;color:#071026;display:grid;place-items:center;font-size:11px;font-weight:800}
 .card p{color:var(--txt2);font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card .needs .need{height:24px;font-size:12px;padding:0 9px}
@@ -478,6 +503,7 @@ a{color:inherit;text-decoration:none}
     <div class="bar-r">
       <button class="iconbtn" id="searchBtn" aria-label="Search">⌕</button>
       <button class="btn btn-ghost btn-sm" id="infoBtn" aria-label="How it works"><span class="lbl">How it works</span><span aria-hidden="true" class="q">?</span></button>
+      <button class="btn btn-ghost btn-sm" id="followBtn" hidden aria-label="Products you follow"><span aria-hidden="true">★</span><span class="long">Following</span><span class="fcount" id="followCount" hidden></span></button>
       <button class="btn btn-ghost btn-sm" id="mineBtn" hidden><span class="long">My product</span><span class="short">Mine</span></button>
       <button class="btn btn-primary btn-sm" id="addBtn" data-add><span class="long">Add your product</span><span class="short">+ Add</span></button>
     </div>
@@ -646,14 +672,14 @@ a{color:inherit;text-decoration:none}
             <li>An owner key to edit your profile and see profile views and clicks to your site.</li>
             <li>Domain verification with a meta tag or a file on your site.</li>
             <li>Daily checks that each website and demo link still works, shown on the profile with the date.</li>
+            <li>Follow products and get their launches, changes and GitHub releases in one feed — saved in your browser, no account.</li>
+            <li>Release updates from GitHub for products that connect their repo.</li>
             <li>Every new profile is reviewed before it goes live. Anyone can report a broken link or wrong information.</li>
           </ul>
         </div>
         <div class="box plan">
           <h4>Planned <span class="badge mono">Not live yet</span></h4>
           <ul>
-            <li>Favorites and following products, with one combined update.</li>
-            <li>Release updates from GitHub for products that connect their repo.</li>
             <li>AI search that matches what you describe, with a reason for every result.</li>
             <li>Paid placements, with a report of the visits and clicks they delivered.</li>
             <li>Sign-in with email.</li>

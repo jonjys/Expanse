@@ -45,6 +45,12 @@ The same table lives in `ZONES` in `app.js` and in `zone_of()` / `price_per_cell
 Nothing is charged today: listing is free and spots are free to hold. The terms shown on the site for when paid placement
 opens are in the "How it works" sheet in `index.html` (12 months at the founding price, or move to the free outer edge).
 
+## Following and updates
+
+Visitors can follow any product (★ on the profile). The list of followed products is kept in the browser only — no account,
+nothing stored about the visitor. The ★ Following button shows one combined feed from `updates`: launches, domain
+verifications, profile changes (merged per day) and GitHub releases, with a count of what's new since it was last opened.
+
 ## Makers: owner key and verification
 
 - Adding a product returns an **owner key** (shown once, saved in the browser, downloadable). Only its SHA-256 hash is stored.
@@ -54,6 +60,9 @@ opens are in the "How it works" sheet in `index.html` (12 months at the founding
   same-site redirects, size and time limits) and sets `verified_at`. Verification is separate from payment.
 - **Lost key**: "I make this" → "Lost your key?" gives a recovery token to publish on the site plus a secret kept in that browser.
   When the site shows the token, the function issues a new key and the old one stops working.
+- **GitHub releases**: in the owner panel (Verify tab) the maker names a public repo. It counts as connected when the
+  product's own site links to `github.com/<owner>/<repo>`, or the repo contains `expanse-verification.txt` with the verify
+  token. The worker reads the repo's public releases feed every 6 hours; releases show on the profile and in followers' feeds.
 - Text edits go live immediately. A new link or new images send the product back to review; a new domain clears verification.
 
 ## Stats
@@ -90,6 +99,7 @@ listing down from their owner panel, or use *Remove* in the admin page — both 
 - **Link checks** — once a day each product's website and demo link is opened (https only, up to 5 redirects, 10 s).
   Passing checks show on the profile with their date ("Website answers", "Demo works"). Three failed website checks in a
   row add an automatic report to the admin queue.
+- **GitHub releases** — every 6 hours for connected repos, from `github.com/<repo>/releases.atom` (no token needed).
 - **Email** — queued emails in `outbox` go out through Resend from `expanse@nyttolabs.com`. The Resend key is stored in
   Vault as `resend_api_key`; set or replace it from the admin settings. Without a key, emails wait in the outbox.
 
@@ -106,6 +116,8 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `owner_get` / `owner_update` / `owner_stats` / `owner_remove` | Owner panel, all checked against the owner key. |
 | `track(slug, kind)` / `report_product(slug, reason, details)` | Visit counting and reports. |
 | `start_recovery(slug)` | Starts the lost-key flow. |
+| `public_updates(slugs)` / `public_releases(slug)` | The followed-products feed and a product's latest releases. |
+| `owner_set_repo(slug, key, repo)` | Names the GitHub repo to connect (checked by `verify-domain` with `repo: true`). |
 | `referral_count(code)` | "Invite 3 makers → +1 cell" progress. |
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
 | `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, settings, key rotation. Each checks the admin key. |
