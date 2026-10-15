@@ -66,8 +66,13 @@ verifications, profile changes (merged per day) and GitHub releases, with a coun
 - **Domain verification**: the owner publishes `<meta name="expanse-verification" content="TOKEN">` on their home page, or a file
   at `/.well-known/expanse-verification.txt`. The `verify-domain` edge function fetches only the product's own domain (https,
   same-site redirects, size and time limits) and sets `verified_at`. Verification is separate from payment.
+- **Sign in with email**: "I make this" → "Sign in with email" sends a 6-digit code (15 minutes, five tries) to the
+  product's contact email. The right code gives that browser its own device key for every product listed with the address
+  (`owner_keys`, hashed); the owner key keeps working. The answer never reveals whether an address is on file, and requests
+  are rate-limited per address and per visitor. Device keys can be signed out from the owner panel (Key tab). Needs the
+  Resend key in the admin settings; without it the dialog says email sign-in is paused.
 - **Lost key**: "I make this" → "Lost your key?" gives a recovery token to publish on the site plus a secret kept in that browser.
-  When the site shows the token, the function issues a new key and the old one stops working.
+  When the site shows the token, the function issues a new key, the old one stops working and email sign-ins are signed out.
 - **GitHub releases**: in the owner panel (Verify tab) the maker names a public repo. It counts as connected when the
   product's own site links to `github.com/<owner>/<repo>`, or the repo contains `expanse-verification.txt` with the verify
   token. The worker reads the repo's public releases feed every 6 hours; releases show on the profile and in followers' feeds.
@@ -109,7 +114,7 @@ listing down from their owner panel, or use *Remove* in the admin page — both 
   row add an automatic report to the admin queue.
 - **Embeddings** — new or changed live profiles get their AI-search vectors (also right after an admin approves).
 - **GitHub releases** — every 6 hours for connected repos, from `github.com/<repo>/releases.atom` (no token needed).
-- **Email** — queued emails in `outbox` go out through Resend from `expanse@nyttolabs.com`. The Resend key is stored in
+- **Email** — review decisions, sign-in codes and the admin digest. Queued emails in `outbox` go out through Resend from `expanse@nyttolabs.com`. The Resend key is stored in
   Vault as `resend_api_key`; set or replace it from the admin settings. Without a key, emails wait in the outbox.
 
 ## Supabase API
@@ -126,6 +131,8 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `track(slug, kind)` / `report_product(slug, reason, details)` | Visit counting and reports. |
 | `start_recovery(slug)` | Starts the lost-key flow. |
 | `public_updates(slugs)` / `public_releases(slug)` | The followed-products feed and a product's latest releases. |
+| `email_signin_start(email)` / `email_signin_verify(email, code)` | Sign-in with email: sends a code, then returns a device key per product. |
+| `owner_signout(slug, key, scope)` | Signs out this device (`this`) or every other email sign-in (`others`). |
 | `owner_set_repo(slug, key, repo)` | Names the GitHub repo to connect (checked by `verify-domain` with `repo: true`). |
 | `referral_count(code)` | "Invite 3 makers → +1 cell" progress. |
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
