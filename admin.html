@@ -90,6 +90,14 @@ h2.h{font-size:30px;letter-spacing:-.04em;line-height:1}
 .st-approved{background:var(--lime);color:#071026}
 .st-rejected{background:#ff9a9a;color:#071026}
 .st-hidden,.st-removed{background:var(--muted);color:#071026}
+.st-requested,.st-awaiting_payment{background:var(--amber);color:#071026}
+.st-live{background:var(--lime);color:#071026}
+.st-upcoming{background:#5ee1ff;color:#071026}
+.st-ended,.st-expired,.st-rejected-p,.st-cancelled{background:var(--muted);color:#071026}
+.sched{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
+.sched .field{margin-top:12px}
+.rep{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;color:var(--txt2);font-size:14px}
+.rep b{color:#fff}
 .b-ver{background:#fff;color:#071026}
 .b-rep{background:rgba(255,107,107,.18);color:#ffb0b0;border:1px solid rgba(255,107,107,.4)}
 .b-cat{color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
@@ -187,6 +195,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
       <nav class="tabs" role="tablist" id="tabs">
         <button role="tab" data-tab="queue" aria-selected="true">To review<span class="n" id="nQueue" hidden></span></button>
         <button role="tab" data-tab="reports" aria-selected="false">Reports<span class="n" id="nReports" hidden></span></button>
+        <button role="tab" data-tab="placements" aria-selected="false">Placements<span class="n" id="nPlace" hidden></span></button>
         <button role="tab" data-tab="products" aria-selected="false">Products</button>
         <button role="tab" data-tab="overview" aria-selected="false">Overview</button>
         <button role="tab" data-tab="settings" aria-selected="false">Settings</button>

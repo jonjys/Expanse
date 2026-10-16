@@ -7,7 +7,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 
 - `index.html` — markup and CSS. `app.js` — all the behaviour. No build step, no external dependencies.
 - `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and share image in the `<head>`.
-- `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, products, overview, settings).
+- `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
 - `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
 - `supabase/migrations/` — the database schema (already applied to the Supabase project).
 - `supabase/functions/verify-domain/` — the domain and GitHub checks. `supabase/functions/worker/` — background jobs
@@ -78,6 +78,20 @@ verifications, profile changes (merged per day) and GitHub releases, with a coun
   token. The worker reads the repo's public releases feed every 6 hours; releases show on the profile and in followers' feeds.
 - Text edits go live immediately. A new link or new images send the product back to review; a new domain clears verification.
 
+## Sponsored slots
+
+A maker asks for a Sponsored slot under "Manage my product" → Promote (1–8 weeks, preferred start, note). The admin
+schedules it under Placements (start, weeks, total price and an optional payment link such as a Stripe Payment Link);
+the maker gets an email with the dates and the link. The admin marks it paid when the money is in. Nothing is charged
+automatically, and only paid slots in their date range show on the site.
+
+While it runs, the product can appear in **one** card marked "Sponsored" above the search dropdown and the list:
+in search only when it fits (it is among the matches, or shares a category with the top matches, and isn't already
+first); in the list without a search, when it passes the filters. The ranking below never changes. Impressions and
+clicks on the card are counted like the product stats (once per visitor per day, no bots, not the maker). The maker's
+report shows them next to profile views and site clicks during the slot versus the same number of days just before it.
+The weekly price makers see is set in the admin settings (empty = "we confirm the price with you").
+
 ## Stats
 
 `track()` counts profile views, website clicks and demo clicks — once per visitor per product per day — using a hash of IP and
@@ -97,10 +111,12 @@ select public._admin_issue();
   *Approve* puts a product live at once; *Needs changes* sends it back with a note; *Hide* takes a live product off the
   site; *Remove* is for spam (frees the spot and wipes the maker's email and key). The maker gets an email for each decision.
 - **Reports** — from visitors and from the daily link check. Mark them handled when done.
+- **Placements** — Sponsored slot requests: schedule (dates, price, payment link), mark paid, decline or stop. Running
+  slots show their impressions, clicks and before/after numbers.
 - **Products** — everything, filterable by status, with contact email, checks and 30-day stats.
 - **Overview** — live/pending counts, views and clicks over 30 days, most viewed products, background job status.
 - **Settings** — an optional email address for "something is waiting" notifications, the Resend key for sending email,
-  and *Make a new key* to rotate the admin key.
+  the weekly Sponsored slot price makers see, and *Make a new key* to rotate the admin key.
 
 `sponsored` on a product only adds a "Sponsored" label; it never changes search. Deletion requests: the maker can take the
 listing down from their owner panel, or use *Remove* in the admin page — both wipe the contact email and owner key.
@@ -133,9 +149,11 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `public_updates(slugs)` / `public_releases(slug)` | The followed-products feed and a product's latest releases. |
 | `email_signin_start(email)` / `email_signin_verify(email, code)` | Sign-in with email: sends a code, then returns a device key per product. |
 | `owner_signout(slug, key, scope)` | Signs out this device (`this`) or every other email sign-in (`others`). |
+| `owner_placements` / `owner_request_placement` / `owner_cancel_placement` | The Promote tab: Sponsored slot requests and reports. |
+| `public_placements()` / `track_placement(id, kind)` | Running Sponsored slots, and their impressions and clicks. |
 | `owner_set_repo(slug, key, repo)` | Names the GitHub repo to connect (checked by `verify-domain` with `repo: true`). |
 | `referral_count(code)` | "Invite 3 makers → +1 cell" progress. |
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
-| `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, settings, key rotation. Each checks the admin key. |
+| `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, placements, settings, key rotation. Each checks the admin key. |
 
 Functions starting with `_` are internal and not callable through the API; the edge function reaches them over the database connection.
