@@ -1969,6 +1969,36 @@ async function startRecovery(slug, name) {
     el('button', { class: 'linkbtn', style: 'margin-top:6px', text: 'Copy tag', onclick: async () => toast((await copy(meta)) ? 'Tag copied.' : 'Select the tag and copy it.') }),
     el('div', { class: 'c-row' }, btn));
 }
+/* Contact: goes to the admin's email with the sender as reply-to. No public address needed. */
+function openContact(topic) {
+  const email = el('input', { type: 'email', placeholder: 'you@company.com', autocomplete: 'email', spellcheck: 'false' });
+  const msg = el('textarea', { maxlength: '2000', rows: '4', placeholder: 'What can we help with?' });
+  const hp = el('input', { class: 'hp', tabindex: '-1', autocomplete: 'off', 'aria-hidden': 'true', name: 'website' });
+  const topics = [['question', 'A question'], ['data', 'My data'], ['placement', 'Sponsored slot'], ['other', 'Something else']];
+  const send = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Send' });
+  openDlg(el('div', { class: 'mono kick', text: 'Contact' }), el('h2', { class: 'display', text: 'Write to us' }),
+    el('p', { style: 'margin-top:10px', text: 'We read every message and answer by email, usually within a day.' }),
+    el('form', { onsubmit: async e => {
+      e.preventDefault();
+      if (hp.value) { closeDlg(); toast('Sent. We’ll answer by email.'); return; }
+      const t = dlgBody.querySelector('input[name=topic]:checked');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim())) { toast('Enter your email so we can answer.'); return; }
+      if (msg.value.trim().length < 10) { toast('Write a little more so we can help.'); return; }
+      send.disabled = true;
+      try {
+        const r = await rpc('contact_message', { p_email: email.value.trim(), p_message: msg.value, p_topic: t ? t.value : 'question' });
+        if (r && r.ok) { closeDlg(); toast('Sent. We’ll answer by email.', 4000); }
+        else toast('The contact form is paused right now — please try again later.', 5000);
+      } catch (err) { const m = errCode(err); toast(m === 'slow_down' || m === 'busy' ? 'Too many messages right now. Try again in a while.' : m === 'invalid:email' ? 'Enter your email so we can answer.' : "Couldn't send right now — try again."); }
+      finally { send.disabled = false; }
+    } },
+      el('div', { class: 'radios' }, topics.map(([v, l]) => el('label', null, el('input', { type: 'radio', name: 'topic', value: v, checked: v === (topic || 'question') }), l))),
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Your email' }), email),
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Message' }), msg), hp,
+      el('div', { class: 'c-row' }, send)),
+    el('p', { class: 'fine', text: 'Your email is only used to answer you.' }));
+}
+document.querySelectorAll('[data-contact]').forEach(b => b.onclick = () => openContact());
 function openReport(p) {
   const reasons = [['broken_link', 'The link is broken'], ['wrong_info', 'Information is wrong'], ['spam', 'Spam, scam or harmful'], ['other', 'Something else']];
   const txt = el('textarea', { maxlength: '600', rows: '3', placeholder: 'Anything that helps us check (optional)' });

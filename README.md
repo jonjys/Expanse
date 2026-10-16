@@ -7,6 +7,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 
 - `index.html` — markup and CSS. `app.js` — all the behaviour. No build step, no external dependencies.
 - `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and share image in the `<head>`.
+- `api/sitemap.js` — serves `/sitemap.xml` with every live product page. `robots.txt` points to it.
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
 - `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
 - `supabase/migrations/` — the database schema (already applied to the Supabase project).
@@ -141,8 +142,20 @@ listing down from their owner panel, or use *Remove* in the admin page — both 
   row add an automatic report to the admin queue.
 - **Embeddings** — new or changed live profiles get their AI-search vectors (also right after an admin approves).
 - **GitHub releases** — every 6 hours for connected repos, from `github.com/<repo>/releases.atom` (no token needed).
-- **Email** — review decisions, sign-in codes and the admin digest. Queued emails in `outbox` go out through Resend from `expanse@nyttolabs.com`. The Resend key is stored in
+- **Email** — review decisions, sign-in codes, contact messages and the admin digest. Queued emails in `outbox` go out through Resend from `expanse@nyttolabs.com`. The Resend key is stored in
   Vault as `resend_api_key`; set or replace it from the admin settings. Without a key, emails wait in the outbox.
+
+## Email limits, contact and search engines
+
+- **Email quota**: when Resend answers that the plan's quota is used up (the free plan allows 100 emails a day), the
+  remaining emails are held until the next UTC day instead of failing, email sign-in says it's paused (makers can
+  still use their owner key or domain recovery), and the admin settings show it with a *Resume now* button for after
+  an upgrade.
+- **Contact**: "Contact" in the footer and in How it works opens a form (`contact_message`). The message goes to the
+  admin's notification email with the sender as reply-to; 3 an hour per visitor, 30 an hour in all. Without a
+  notification email the form says it's paused.
+- **Search engines**: `robots.txt` (keeps `/admin` out) and `/sitemap.xml` (`api/sitemap.js`: the home page plus every
+  live product page, cached for an hour).
 
 ## Supabase API
 
@@ -162,6 +175,8 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `owner_signout(slug, key, scope)` | Signs out this device (`this`) or every other email sign-in (`others`). |
 | `owner_placements` / `owner_request_placement` / `owner_cancel_placement` | The Promote tab: Sponsored slot requests and reports. |
 | `public_placements()` / `track_placement(id, kind)` | Running Sponsored slots, and their impressions and clicks. |
+| `public_spotlight()` | The 8 Spotlight places in the core. |
+| `contact_message(email, message, topic)` | The contact form. |
 | `owner_set_repo(slug, key, repo)` | Names the GitHub repo to connect (checked by `verify-domain` with `repo: true`). |
 | `referral_count(code)` | "Invite 3 makers → +1 cell" progress. |
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
