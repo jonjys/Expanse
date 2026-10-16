@@ -20,6 +20,10 @@
     {
       "source": "/p/:slug",
       "destination": "/api/p?slug=:slug"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
     }
   ],
   "functions": {

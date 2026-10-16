@@ -4,7 +4,8 @@
 // POST { task: "all" | "review" | "mail" | "embed" | "health" | "releases", wait?: boolean }   header x-worker-secret: <Vault secret "worker_secret">
 //
 // - health:   daily check that each product's website (and demo link) still answers
-// - mail:     sends queued emails (review decisions, sign-in codes, admin digest) through Resend
+// - mail:     sends queued emails (review decisions, sign-in codes, admin digest) through Resend; when the plan's
+//             quota is used up, the rest wait for the next day and email sign-in pauses until then
 // - releases: reads the public releases feed of each connected GitHub repo every 6 hours
 // - embed:    turns new or changed live profiles into embeddings for AI search (gte-small, inside Supabase)
 // - review:   mail + embed, run right after an admin decision
@@ -172,25 +173,30 @@ async function mail() {
   const key = await resend();
   if (!key) return { sent: 0, skipped: "no resend_api_key in Vault" };
   const [{ due }] = await sql`select public._outbox_claim(20) as due`;
-  let sent = 0, failed = 0;
-  for (const m of due as { id: number; to: string; subject: string; body: string }[]) {
+  let sent = 0, failed = 0, held = 0, quota = false;
+  for (const m of due as { id: number; to: string; subject: string; body: string; reply_to: string | null }[]) {
+    // Resend's daily/monthly quota is used up: hold the rest until the next UTC day instead of failing them.
+    if (quota) { await sql`select public._outbox_defer(${m.id})`; held++; continue; }
     let ok = false, error = "";
     try {
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `expanse-outbox-${m.id}` },
-        body: JSON.stringify({ from: FROM, to: [m.to], subject: m.subject, text: m.body, html: toHtml(m.body) }),
+        body: JSON.stringify({ from: FROM, to: [m.to], subject: m.subject, text: m.body, html: toHtml(m.body), ...(m.reply_to ? { reply_to: m.reply_to } : {}) }),
       });
       ok = r.ok;
-      if (!ok) error = `resend ${r.status}: ${(await r.text()).slice(0, 200)}`;
-      else await r.body?.cancel().catch(() => {});
+      if (!ok) {
+        const t = (await r.text()).slice(0, 300);
+        if (r.status === 429 && /quota/i.test(t)) { quota = true; await sql`select public._outbox_defer(${m.id})`; held++; continue; }
+        error = `resend ${r.status}: ${t.slice(0, 200)}`;
+      } else await r.body?.cancel().catch(() => {});
     } catch (e) {
       error = String((e as Error)?.message ?? e).slice(0, 200);
     }
     await sql`select public._outbox_done(${m.id}, ${ok}, ${error})`;
     ok ? sent++ : failed++;
   }
-  return { sent, failed };
+  return quota ? { sent, failed, held, quota: true } : { sent, failed };
 }
 
 /* ---------- entry ---------- */

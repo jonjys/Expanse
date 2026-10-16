@@ -353,6 +353,8 @@ function emailPanel(e) {
     : 'Not connected yet — review emails and sign-in codes wait until a key is added.';
   return el('div', { class: 'panel' }, el('h3', { text: 'Email sending' }),
     el('p', { class: 'sub', text: state }),
+    e.paused_until ? el('div', { class: 'note' }, el('b', { text: 'Daily email limit reached. ' }), `Your Resend plan's quota is used up, so emails wait until ${new Date(e.paused_until).toLocaleString('en', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} and email sign-in is paused (makers can still use their owner key). Upgraded your plan? `,
+      el('button', { class: 'linkbtn', text: 'Resume now', onclick: async ev => { ev.currentTarget.disabled = true; try { await rpc('admin_save_settings', { p: { resume_email: true } }); toast('Resumed. Waiting emails go out within a minute.'); go('settings'); } catch (err) { toast('Couldn’t resume: ' + err.message, true); } } })) : null,
     e.last_error ? el('div', { class: 'note', text: 'Last problem: ' + e.last_error }) : null,
     el('p', { class: 'fine', text: 'Review decisions, sign-in codes and your digest go out from expanse@nyttolabs.com through Resend. Without a key, makers can’t sign in with email. In Resend: API Keys → Create API key → permission “Sending access”, domain nyttolabs.com. Paste it here. It is stored encrypted in Supabase Vault and can’t be shown again.' }),
     el('label', { class: 'field' }, el('span', { class: 'mono', text: e.connected ? 'Replace the Resend API key' : 'Resend API key' }), key),
