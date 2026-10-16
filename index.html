@@ -243,6 +243,18 @@ a{color:inherit;text-decoration:none}
 .b-cat{color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
 .b-ver{color:#071026;background:#fff}
 .b-spon{color:var(--amber);border:1px solid rgba(255,207,74,.5)}
+.b-star{color:#071026;background:var(--amber)}
+.rules{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:8px;font-size:14px;line-height:1.5;color:var(--txt2)}
+.rules li{padding-left:16px;position:relative}
+.rules li::before{content:"★";position:absolute;left:0;top:0;color:var(--amber);font-size:10px;line-height:2.1}
+.rules b{color:#fff}
+.spl{margin-top:16px}
+.spl .mono{display:block;color:var(--muted);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.spl div{display:flex;flex-wrap:wrap;gap:6px}
+.spl button{height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,207,74,.45);font-size:13px;font-weight:600}
+.spl button b{color:var(--amber)}
+.spotreq .req{font-size:14px;font-weight:600;color:var(--txt2);margin-top:4px}
+.spotreq .req.ok{color:var(--lime)}
 .b-ex{color:#120a2c;background:var(--violet)}
 .b-st{color:#071026;background:var(--amber)}
 .b-st.live{background:var(--lime)}
@@ -713,15 +725,18 @@ a{color:inherit;text-decoration:none}
       </div>
       <p class="fine">Nothing in the planned list is switched on. Each one moves over when it actually works.</p>
 
+      <h3>The Spotlight: the middle is earned</h3>
+      <p>The 8 places in the core of the galaxy go to the products people actually use — the most unique profile views and clicks to their site over the last 30 days. To qualify, a product needs a verified domain and a website that answers. Nobody is invited and no place is for sale: the maker's own visits and clicks from Sponsored cards don't count. It updates every hour, and while fewer than 8 products qualify, every one that does gets a place.</p>
+
       <h3>Search is not for sale</h3>
       <p>Results are ranked by how well a product matches your search — what it solves, its name and its description. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. A Sponsored slot is marked <b style="color:var(--amber)">Sponsored</b>, shows in one card above the results only when it fits what you searched for, and never changes the ranking below it.</p>
 
       <h3>Your spot on the map</h3>
-      <p>Every product lives somewhere in the galaxy. The closer to the core, the more people fly past it. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four.</p>
+      <p>Every product lives somewhere in the galaxy. The closer to the core, the more people fly past it. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four. Every spot is free to hold today.</p>
       <table class="ptable">
         <thead><tr><th>Zone</th><th>Founding price</th><th>2×2 example</th></tr></thead>
         <tbody>
-          <tr><td style="--c:#fff"><i></i>Core</td><td>Invite only</td><td>—</td></tr>
+          <tr><td style="--c:var(--amber)"><i></i>Core · the Spotlight</td><td>Earned, never sold</td><td>—</td></tr>
           <tr><td style="--c:var(--lime)"><i></i>Inner ring</td><td>€19 / cell</td><td>€76</td></tr>
           <tr><td style="--c:var(--cyan)"><i></i>Belt</td><td>€9 / cell</td><td>€36</td></tr>
           <tr><td style="--c:var(--violet)"><i></i>Outer rim</td><td>€4 / cell</td><td>€16</td></tr>
@@ -739,6 +754,7 @@ a{color:inherit;text-decoration:none}
       <h3>Questions</h3>
       <div class="faq">
         <details><summary>Is everything on the map real?</summary><p>Squares are real products that passed review. White beacons are held spots whose profile isn't live yet. The faint dust is just the galaxy. Demo mode fills the universe with clearly labelled example products to show what it can become — none of them are real.</p></details>
+        <details><summary>Who gets the middle of the map?</summary><p>The products people use most. The 8 places in the core — the Spotlight — go to live products with a verified domain and a working website, ranked by unique profile views and clicks to their site over the last 30 days. Nobody is invited and you can't buy a place.</p></details>
         <details><summary>Does it cost anything?</summary><p>No. Listing is free and map spots are free to hold. The only paid option is a Sponsored slot, which a maker asks for from their owner panel and pays for only after we've confirmed the dates.</p></details>
         <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and IP addresses are never stored. Known bots are left out, and so are your own visits on days you open your owner panel.</p></details>
         <details><summary>What do you do with my email?</summary><p>We only use it to contact you about your listing. It's stored in the EU (Stockholm), never shown publicly, sold or shared. Take your listing down from the owner panel and the email is wiped.</p></details>

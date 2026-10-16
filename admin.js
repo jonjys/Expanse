@@ -143,11 +143,18 @@ function productCard(p, opts) {
   if (p.status !== 'rejected') acts.push(el('button', { class: 'btn btn-warn btn-sm', text: 'Needs changes…', onclick: () => ask('rejected', 'Send to maker', 'btn-warn') }));
   if (p.status === 'approved') acts.push(el('button', { class: 'btn btn-warn btn-sm', text: 'Hide…', onclick: () => ask('hidden', 'Hide it', 'btn-warn') }));
   acts.push(el('span', { class: 'sp' }));
+  if (p.status === 'approved') acts.push(el('button', { class: 'btn btn-ghost btn-sm', text: p.spotlight_blocked ? 'Allow in Spotlight' : 'Keep out of Spotlight', title: 'The Spotlight is the 8 places in the core, earned by real use', onclick: async e => {
+    const btn = e.currentTarget; btn.disabled = true;
+    try { const r = await rpc('admin_spotlight_block', { p_slug: p.slug, p_blocked: !p.spotlight_blocked }); toast(r.spotlight_blocked ? `${p.name} is kept out of the Spotlight.` : `${p.name} can be in the Spotlight again.`); if (opts && opts.onChange) opts.onChange(r); }
+    catch (err) { toast('Couldn’t save: ' + err.message, true); btn.disabled = false; }
+  } }));
   if (p.status === 'approved') acts.push(el('a', { class: 'btn btn-ghost btn-sm', href: SITE + '/p/' + p.slug, target: '_blank', rel: 'noopener', text: 'Profile ↗' }));
   acts.push(el('button', { class: 'btn btn-bad btn-sm', text: 'Remove…', onclick: () => ask('removed', 'Remove', 'btn-bad') }));
   card.append(...[
     el('div', { class: 'head' }, el('span', { class: 'name', text: p.name }), statusBadge(p.status), el('span', { class: 'badge b-cat', text: cat[0] }),
       p.verified_at ? el('span', { class: 'badge b-ver', text: '✓ Verified ' + day(p.verified_at) }) : null,
+      p.spotlight_rank ? el('span', { class: 'badge b-star', text: '★ Spotlight #' + p.spotlight_rank }) : null,
+      p.spotlight_blocked ? el('span', { class: 'badge b-rep', text: 'Kept out of Spotlight' }) : null,
       p.open_reports ? el('span', { class: 'badge b-rep', text: p.open_reports + ' open report' + (p.open_reports === 1 ? '' : 's') }) : null),
     el('p', { class: 'tag', text: p.tagline }),
     el('div', { class: 'meta' },
@@ -252,7 +259,7 @@ function placementCard(x, weekPrice) {
   if (x.admin_note && x.state !== 'requested') card.append(el('p', { class: 'sub', style: 'margin-top:6px', text: 'Your note: ' + x.admin_note }));
   if (x.report) {
     const r = x.report, pct = (a, b) => b ? ` (${a >= b ? '+' : ''}${Math.round((a - b) / b * 100)}%)` : '';
-    card.append(el('div', { class: 'rep' },
+    card.append(el('div', { class: 'prep' },
       el('span', null, el('b', { text: fmt(r.impressions) }), ' shown'), el('span', null, el('b', { text: fmt(r.clicks) }), r.clicks === 1 ? ' click' : ' clicks'),
       el('span', null, el('b', { text: fmt(r.views) }), ` profile views vs ${fmt(r.before.views)} before${pct(r.views, r.before.views)}`),
       el('span', null, el('b', { text: fmt(r.site_clicks) }), ` site clicks vs ${fmt(r.before.site_clicks)} before${pct(r.site_clicks, r.before.site_clicks)}`),

@@ -43,7 +43,7 @@ Per cell; a 2×2 is four cells and an 8×8 landmark sixty-four.
 
 | Zone       | Radius  | Price          |
 |------------|---------|----------------|
-| Core       | < 14    | invite only    |
+| Core       | < 14    | the Spotlight — earned, never sold |
 | Inner ring | 14–40   | €19 / cell     |
 | Belt       | 40–80   | €9 / cell      |
 | Outer rim  | 80–125  | €4 / cell      |
@@ -52,6 +52,17 @@ Per cell; a 2×2 is four cells and an 8×8 landmark sixty-four.
 The same table lives in `ZONES` in `app.js` and in `zone_of()` / `price_per_cell()` in Supabase — change both together.
 Nothing is charged today: listing is free and spots are free to hold. The terms shown on the site for when paid placement
 opens are in the "How it works" sheet in `index.html` (12 months at the founding price, or move to the free outer edge).
+
+## The Spotlight (the core)
+
+Nobody can pick a spot in the core. Its 8 places (a ring of 4×4 squares, `SPOT_SLOTS` in `app.js`) show the products
+people actually use: live, verified domain, website answered in the last 3 days, not kept out by the admin; ranked by
+unique profile views + 3 × unique clicks to the site or demo over the last 30 days, minus clicks that came from a
+Sponsored card, without the maker's own visits; ties go to the product that went live first. While fewer than 8
+products qualify, every one that does gets a place. `public_spotlight()` returns the picks and recalculates them
+(`_spotlight_refresh()`, stored in `settings.spotlight`) when they are over an hour old, and right after a domain is
+verified. The admin can keep a product out ("Keep out of Spotlight" on its card). A product in the Spotlight still
+has its own spot; the core shows it a second time and links to it.
 
 ## Following and updates
 

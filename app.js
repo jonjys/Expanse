@@ -8,7 +8,7 @@ const SUPA = { url: 'https://gjmkhnrgznorxxaemsmo.supabase.co', key: 'sb_publish
 const FOUNDING_LIMIT = 1000;
 /* Keep in sync with zone_of() and price_per_cell() in Supabase. */
 const ZONES = [
-  { id: 'core',  label: 'Core',       r: 14,       price: 49, color: '#ffffff', invite: true, line: 'Invite only.' },
+  { id: 'core',  label: 'Spotlight',  r: 14,       price: 0,  color: '#ffffff', reserved: true, line: 'Earned by real use, never sold.' },
   { id: 'inner', label: 'Inner ring', r: 40,       price: 19, color: '#c8ff3d', line: 'Close to the core.' },
   { id: 'belt',  label: 'Belt',       r: 80,       price: 9,  color: '#5ee1ff', line: 'Where the universe gets busy.' },
   { id: 'outer', label: 'Outer rim',  r: 125,      price: 4,  color: '#b39cff', line: 'Room to grow out here.' },
@@ -176,6 +176,10 @@ const fadeOf = q => q.last <= 30 ? 1 : q.last <= 90 ? 1 - (q.last - 30) / 60 * .
    product: an approved product · spot: a held spot without a live profile · mine: your own product in review */
 const ITEMS = [], occ = new Map();
 let PRODUCTS = [], BY_SLUG = new Map(), SPOTS = [], OWNED = store.get(OWNED_KEY) || {}, OWNDATA = {}, PLACEMENTS = [];
+/* The Spotlight: 8 places in the core, earned by real use (see public_spotlight). Placed in a ring around the centre. */
+let SPOTLIGHT = { picks: [] };
+const SPOT_SLOTS = Array.from({ length: 8 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI / 4; return { x: Math.round(Math.cos(a) * 8.5 - 2), y: Math.round(Math.sin(a) * 8.5 - 2) }; });
+const spotRank = slug => { const i = SPOTLIGHT.picks.findIndex(x => x.slug === slug); return i < 0 ? 0 : i + 1; };
 /* Followed products live only in this browser: { slugs: { slug: followedAt }, seen: lastOpenedAt } */
 let FOLLOW = (() => { const f = store.get(FOLLOW_KEY); return f && typeof f.slugs === 'object' && f.slugs ? f : { slugs: {}, seen: null }; })(), UPDATES = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
@@ -196,6 +200,11 @@ function rebuildItems() {
     if (o && o.status !== 'approved' && o.status !== 'removed') addItem({ kind: 'mine', o, slug, name: o.name, cat: CATS[o.category] ? o.category : 'other', x: o.x, y: o.y, size: o.size, owned: true });
   }
   for (const s of SPOTS) addItem({ kind: 'spot', x: s.x, y: s.y, size: s.size, name: 'Held spot' });
+  SPOT_SLOTS.forEach((s, i) => {
+    const pick = SPOTLIGHT.picks[i], p = pick && BY_SLUG.get(pick.slug);
+    if (p) addItem({ kind: 'star', p, rank: i + 1, name: p.name, cat: CATS[p.category] ? p.category : 'other', x: s.x, y: s.y, size: 4 });
+    else addItem({ kind: 'open', rank: i + 1, name: 'Open place', x: s.x, y: s.y, size: 4 });
+  });
   if (selSlug) { const it = ITEMS.find(i => i.slug === selSlug); if (it) sel = it; }
   hoverIt = hovSlug ? ITEMS.find(i => i.slug === hovSlug) || null : null;
   zoneFreeCache = null;
@@ -210,7 +219,7 @@ function offsets() {
   OFF = new Int16Array(tmp.length * 2); tmp.forEach((t, k) => { OFF[k * 2] = t[0]; OFF[k * 2 + 1] = t[1]; });
   return OFF;
 }
-function spotOk(x, y, size) { return isFree(x, y, size, size) && !zoneOf(x, y, size).invite && Math.hypot(x + size / 2, y + size / 2) < MAX_R; }
+function spotOk(x, y, size) { return isFree(x, y, size, size) && !zoneOf(x, y, size).reserved && Math.hypot(x + size / 2, y + size / 2) < MAX_R; }
 function nearestFree(cx, cy, size) {
   const o = offsets();
   for (let k = 0; k < o.length; k += 2) { const x = cx + o[k], y = cy + o[k + 1]; if (spotOk(x, y, size)) return { x, y }; }
@@ -278,7 +287,10 @@ async function loadOwned() {
 async function loadPlacements() {
   try { const l = await rpc('public_placements'); PLACEMENTS = Array.isArray(l) ? l.filter(x => x && Number.isInteger(x.id) && isSlug(x.slug)) : []; } catch (e) { PLACEMENTS = []; }
 }
-async function refreshAll() { await Promise.all([loadProducts(), loadSpots(), loadPlacements()]); rebuildItems(); if (ui === 'none' && view === 'list') renderList(); }
+async function loadSpotlight() {
+  try { const s = await rpc('public_spotlight'); if (s && Array.isArray(s.picks)) SPOTLIGHT = { picks: s.picks.filter(x => x && isSlug(x.slug)).slice(0, 8), updated_at: s.updated_at }; } catch (e) {}
+}
+async function refreshAll() { await Promise.all([loadProducts(), loadSpots(), loadPlacements(), loadSpotlight()]); rebuildItems(); if (ui === 'none' && view === 'list') renderList(); }
 function saveOwned() { store.set(OWNED_KEY, OWNED); updateMine(); }
 
 /* ================= CANVAS ================= */
@@ -375,8 +387,8 @@ const STARS = []; for (let i = 0; i < 520; i++) STARS.push([rnd(), rnd(), rnd(),
 const NEB = [[0, 0, 90, '94,225,255', .16], [-70, -50, 80, '255,92,122', .1], [80, 50, 85, '255,207,74', .08], [50, -80, 70, '179,156,255', .11], [-90, 70, 75, '61,255,138', .07], [0, 0, 190, '60,80,200', .1]];
 const PULSES = [], SPARKS = [], PARTS = [], WAVES = [];
 let VIS = [], nextPulse = 0, nextSpark = 0;
-const itemColor = it => it.kind === 'mine' ? '#c8ff3d' : it.kind === 'spot' ? '#ffffff' : CATS[it.cat].color;
-const itemRgb = it => it.kind === 'mine' ? '200,255,61' : it.kind === 'spot' ? '255,255,255' : CATS[it.cat].rgb;
+const itemColor = it => it.kind === 'mine' ? '#c8ff3d' : it.kind === 'spot' ? '#ffffff' : it.kind === 'open' ? '#ffcf4a' : CATS[it.cat].color;
+const itemRgb = it => it.kind === 'mine' ? '200,255,61' : it.kind === 'spot' ? '255,255,255' : it.kind === 'open' ? '255,207,74' : CATS[it.cat].rgb;
 
 function floatLabel(wx, wy, text, col, T) {
   const p = toS(wx, wy);
@@ -479,7 +491,7 @@ function drawItems(T, cp) {
   if (!vis.length) return;
   ctx.globalCompositeOperation = 'lighter';
   for (const it of vis) {
-    if (it.kind === 'spot') continue;
+    if (it.kind === 'spot' || it.kind === 'open') continue;
     const c = toS(it.x + it.w / 2, it.y + it.h / 2), bw = it.w * cp;
     const pu = reduce ? .5 : .5 + .5 * Math.sin(T * .002 + it.idx * 1.3);
     const R = Math.max(bw * 1.15 + 12, (cp < 4 ? 26 : 16) + 5 * it.size) * (1 + .12 * pu);
@@ -487,7 +499,7 @@ function drawItems(T, cp) {
     ctx.drawImage(sprite(itemRgb(it)), c.x - R, c.y - R, 2 * R, 2 * R);
   }
   if (!reduce && cp < 9) for (const it of vis) {
-    if (it.kind !== 'product') continue;
+    if (it.kind !== 'product' && it.kind !== 'star') continue;
     const k = (T * .00032 + hash(it.idx + 3)) % 1, c = toS(it.x + it.w / 2, it.y + it.h / 2);
     ctx.globalAlpha = (1 - k) * .55; ctx.strokeStyle = itemColor(it); ctx.lineWidth = 1.4;
     ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(4, it.w * cp * .6) + k * 34, 0, 6.2832); ctx.stroke();
@@ -500,6 +512,15 @@ function drawItems(T, cp) {
       if (it === hoverIt) { ctx.globalAlpha = 1; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; rrect(ctx, p.x - 3, p.y - 3, bw + 6, bw + 6, 6); ctx.stroke(); }
       continue;
     }
+    if (it.kind === 'open') {
+      if (bw >= 5) {
+        const rr = Math.min(6, cp * .18);
+        ctx.globalAlpha = it === hoverIt ? 1 : .8; ctx.fillStyle = 'rgba(255,207,74,.07)'; rrect(ctx, p.x + 1, p.y + 1, bw - 2, bw - 2, rr); ctx.fill();
+        ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,207,74,.75)'; ctx.lineWidth = it === hoverIt ? 2 : 1.4; ctx.stroke(); ctx.setLineDash([]);
+        if (bw >= 30) { ctx.fillStyle = 'rgba(255,207,74,.85)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '500 ' + Math.min(bw * .4, 30) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillText('+', c.x, c.y + 1); }
+      } else { ctx.globalAlpha = .7; ctx.fillStyle = '#ffcf4a'; ctx.beginPath(); ctx.arc(c.x, c.y, 1.5, 0, 6.2832); ctx.fill(); }
+      ctx.globalAlpha = 1; continue;
+    }
     ctx.globalAlpha = it.kind === 'mine' ? .6 : 1; ctx.fillStyle = col;
     if (bw < 5) {
       ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(2, bw * .5 + 1), 0, 6.2832); ctx.fill();
@@ -507,7 +528,11 @@ function drawItems(T, cp) {
       const gap = Math.min(1.5, cp * .08), rr = Math.min(6, cp * .18);
       rrect(ctx, p.x + gap, p.y + gap, bw - 2 * gap, bw - 2 * gap, rr); ctx.fill();
       if (bw > 16) { ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(p.x + gap + rr, p.y + gap, bw - 2 * gap - 2 * rr, Math.max(1, cp * .07)); }
-      if (it.kind === 'mine') { ctx.globalAlpha = 1; ctx.setLineDash([4, 4]); ctx.strokeStyle = '#c8ff3d'; ctx.lineWidth = 2; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke(); ctx.setLineDash([]); }
+      if (it.kind === 'star') {
+        ctx.globalAlpha = 1; ctx.strokeStyle = '#ffcf4a'; ctx.lineWidth = 2; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke();
+        if (bw >= 18) { const r = Math.max(6, Math.min(cp * .34, 11)), bx = p.x + bw - r - 3, by = p.y + bw - r - 3; ctx.fillStyle = '#ffcf4a'; ctx.beginPath(); ctx.arc(bx, by, r, 0, 6.2832); ctx.fill(); ctx.fillStyle = '#071026'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '800 ' + Math.round(r * 1.1) + 'px "Instrument Sans",system-ui,sans-serif'; ctx.fillText(String(it.rank), bx, by + .5); }
+      }
+      else if (it.kind === 'mine') { ctx.globalAlpha = 1; ctx.setLineDash([4, 4]); ctx.strokeStyle = '#c8ff3d'; ctx.lineWidth = 2; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke(); ctx.setLineDash([]); }
       else if (it.owned) { ctx.globalAlpha = 1; ctx.strokeStyle = '#c8ff3d'; ctx.lineWidth = 2.5; rrect(ctx, p.x - 2, p.y - 2, bw + 4, bw + 4, rr + 2); ctx.stroke(); }
       else if (FOLLOW.slugs[it.slug]) { ctx.globalAlpha = .9; ctx.setLineDash([3, 4]); ctx.strokeStyle = '#ffcf4a'; ctx.lineWidth = 1.6; rrect(ctx, p.x - 3, p.y - 3, bw + 6, bw + 6, rr + 3); ctx.stroke(); ctx.setLineDash([]); }
       ctx.globalAlpha = 1;
@@ -616,9 +641,9 @@ function draw(T) {
   ctx.font = '600 10px "IBM Plex Mono",monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
   for (const zz of ZONES) {
-    const r = (isFinite(zz.r) ? zz.r : WORLD_R + 8) * cp; if (r < 70 || r > Math.max(W, H) * 2.2) continue;
+    const r = (isFinite(zz.r) ? zz.r : WORLD_R + 8) * cp; if (r < (zz.reserved ? 40 : 70) || r > Math.max(W, H) * 2.2) continue;
     const y = c0.y - r; if (y < 70 || y > H - 20 || c0.x < -200 || c0.x > W + 200) continue;
-    const label = zz.invite ? `${zz.label.toUpperCase()} · INVITE ONLY` : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL`;
+    const label = zz.reserved ? 'SPOTLIGHT · EARNED, NOT SOLD' : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL`;
     const tw = ctx.measureText(label).width + 20;
     ctx.globalAlpha = .92; ctx.fillStyle = 'rgba(4,6,22,.88)'; rrect(ctx, c0.x - tw / 2, y - 11, tw, 22, 11); ctx.fill();
     ctx.strokeStyle = zz.color; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.stroke();
@@ -728,6 +753,8 @@ function demoAt(m) {
 function itemTip(it) {
   if (it.kind === 'spot') return ['Held spot', `${zoneOf(it.x, it.y, it.size).label} · profile coming soon`, '#fff'];
   if (it.kind === 'mine') return ['★ ' + it.name, 'Your product · in review', '#c8ff3d'];
+  if (it.kind === 'open') return ['Spotlight · open place', 'Earned by real use, never sold · click to see how', '#ffcf4a'];
+  if (it.kind === 'star') return [`★ Spotlight #${it.rank} · ${it.p.name}`, it.p.tagline, '#ffcf4a'];
   const p = it.p; return [(p.verified_at ? '✓ ' : '') + p.name, p.tagline, CATS[it.cat].color];
 }
 function hover(m) {
@@ -742,13 +769,13 @@ function hover(m) {
     if (d > MAX_R) { hideTip(); return; }
     const z = ZONES.find(zz => d < zz.r);
     cv.classList.add('dive');
-    showTip(m, z.label, z.invite ? 'Invite only · click to dive in' : `Founding price ${eur(z.price)} / cell · click to dive in`, z.color);
+    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `Founding price ${eur(z.price)} / cell · click to dive in`, z.reserved ? '#ffcf4a' : z.color);
     return;
   }
   const q = demoAt(m);
   if (q) { hoverDemo = q; cv.classList.add('pointy'); showTip(m, q.name, 'Example · ' + MODES[q.mode].label + ' · not a real product', '#b39cff'); return; }
   if (ui !== 'none') { hideTip(); return; }
-  if (zoneOf(cx, cy, 1).invite) { showTip(m, 'Core', 'Invite only', '#fff'); return; }
+  if (zoneOf(cx, cy, 1).reserved) { cv.classList.add('pointy'); showTip(m, 'The Spotlight', 'Earned by real use, never sold · click to see how', '#ffcf4a'); return; }
   const f = freeAround(cx, cy, 2);
   if (f) { ghost = f; cv.classList.add('pointy'); showTip(m, `Free spot · ${zoneOf(f.x, f.y, 2).label}`, `Click to put your product here · 2×2 founding price ${eur(priceOf(f.x, f.y, 2))}`, '#c8ff3d'); }
   else hideTip();
@@ -763,7 +790,7 @@ function tap(m) {
   const q = demoAt(m);
   if (q) { openDemo(q); return; }
   if (ui !== 'none') { closeUI(); return; }
-  if (zoneOf(cx, cy, 1).invite) { toast('The core is invite only. Pick a spot just outside it.'); return; }
+  if (zoneOf(cx, cy, 1).reserved) { openSpotlightInfo(); return; }
   const f = freeAround(cx, cy, 2) || nearestFree(cx - 1, cy - 1, 2);
   if (f) startSubmit({ x: f.x, y: f.y }, true);
 }
@@ -971,7 +998,8 @@ function statusBadge(st) {
   return badge('b-st ' + m[1], m[0]);
 }
 function openItem(it) {
-  if (it.kind === 'product') openProduct(it.p);
+  if (it.kind === 'product' || it.kind === 'star') openProduct(it.p);
+  else if (it.kind === 'open') openSpotlightInfo();
   else if (it.kind === 'mine') openManage(it.slug);
   else openSpot(it);
 }
@@ -985,7 +1013,7 @@ function openProduct(p, opts) {
   if ((p.platforms || []).length) facts.push(['Platforms', p.platforms.map(x => PLATFORMS[x] || x).join(', ')]);
   if ((p.integrations || []).length) facts.push(['Works with', p.integrations.join(', ')]);
   fill(popBody,
-    el('div', { class: 'pbadges' }, catBadge(cat), p.verified_at ? badge('b-ver', '✓ Verified domain', null) : null, p.sponsored ? badge('b-spon', 'Sponsored') : null, it && it.owned ? badge('b-st live', 'Yours') : null),
+    el('div', { class: 'pbadges' }, catBadge(cat), spotRank(p.slug) ? badge('b-star', '★ Spotlight #' + spotRank(p.slug)) : null, p.verified_at ? badge('b-ver', '✓ Verified domain', null) : null, p.sponsored ? badge('b-spon', 'Sponsored') : null, it && it.owned ? badge('b-st live', 'Yours') : null),
     el('h2', { class: 'display pname', text: p.name }),
     el('p', { class: 'ptag', text: p.tagline }),
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
@@ -1035,6 +1063,22 @@ function releasesSec(p) {
   return el('div', { class: 'sec' },
     el('h4', { class: 'mono' }, 'Releases · ', el('a', { href: 'https://github.com/' + p.repo, target: '_blank', rel: 'noopener nofollow', style: 'text-transform:none;letter-spacing:.02em;text-decoration:underline', text: 'github.com/' + p.repo })),
     p.release ? box : el('p', { class: 'fine', style: 'margin-top:0', text: 'No releases published on GitHub yet.' }));
+}
+/* What the Spotlight is, who is in it now, and how to get there. */
+function openSpotlightInfo() {
+  const picks = SPOTLIGHT.picks.map(x => BY_SLUG.get(x.slug)).filter(Boolean);
+  const mine = Object.keys(OWNED).find(s => OWNDATA[s] && OWNDATA[s].status === 'approved' && !OWNDATA[s].verified_at);
+  openDlg(el('div', { class: 'mono kick', style: 'color:var(--amber)', text: '★ The Spotlight' }), el('h2', { class: 'display', text: 'The middle is earned, not bought.' }),
+    el('p', { style: 'margin-top:10px', text: 'The 8 places in the core go to the products people actually use. Nobody is invited, and no place is for sale.' }),
+    el('ul', { class: 'rules' },
+      el('li', null, el('b', { text: 'Who can get in: ' }), 'any live product with a verified domain and a website that answers.'),
+      el('li', null, el('b', { text: 'How it ranks: ' }), 'unique profile views plus clicks to the product’s site over the last 30 days. The maker’s own visits and clicks from Sponsored cards don’t count.'),
+      el('li', null, el('b', { text: 'When it changes: ' }), 'every hour. While fewer than 8 products qualify, every product that does gets a place.')),
+    picks.length ? el('div', { class: 'spl' }, el('span', { class: 'mono', text: 'In the Spotlight now' }), el('div', null, picks.map((p, i) => el('button', { type: 'button', onclick: () => { closeDlg(); openProduct(p); } }, el('b', { text: '#' + (i + 1) }), ' ' + p.name))))
+      : el('p', { class: 'fine', text: 'All 8 places are open right now. The first verified products to arrive take them.' }),
+    el('div', { class: 'c-row' },
+      mine ? el('button', { class: 'btn btn-primary', text: 'Verify my domain', onclick: () => { closeDlg(); openManage(mine, 'verify'); } }) : el('button', { class: 'btn btn-primary', text: 'Add your product', onclick: () => { closeDlg(); startSubmit(null); } }),
+      el('button', { class: 'btn btn-ghost btn-sm', text: 'Close', onclick: closeDlg })));
 }
 function openSpot(it) {
   sel = it; const z = zoneOf(it.x, it.y, it.size);
@@ -1503,7 +1547,7 @@ $('#cSubmit').addEventListener('submit', async e => {
       await refreshAll();
       const s = nearestFree(sub.spot.x, sub.spot.y, sub.size); if (s) setSpot(s, true);
       setStep(1); toast('Someone just took that exact spot! We moved you to the nearest free one.', 5000);
-    } else if (m.includes('core_invite_only')) { setStep(1); toast('The core is invite only — pick a spot just outside it.'); }
+    } else if (m.includes('core_invite_only')) { setStep(1); toast('The middle is the Spotlight — it’s earned, not picked. Choose a spot just outside it.', 4500); }
     else if (m.includes('out_of_bounds')) { setStep(1); toast('That spot is outside the universe — pick one closer in.'); }
     else if (m.includes('too_many')) toast('You have sent several products recently. Give it an hour, or wait for the review.', 5000);
     else if (m.includes('busy')) toast('Lots of makers are adding products right now — try again in a minute.', 4500);
@@ -1609,22 +1653,34 @@ function checksBox(o) {
     el('ul', { class: 'signals' }, row('Website', c.site_checked_at, c.site_fails, c.site_status, 'answers'), o.demo_url ? row('Demo', c.demo_checked_at, c.demo_fails, c.demo_status, 'works') : null),
     el('p', { class: 'fine', text: 'Passing checks show on your profile with their date. If your website doesn’t answer three days in a row, we take a look.' }));
 }
+/* Where the owner stands for the Spotlight: in it, or what's still missing. */
+function spotBox(o) {
+  if (o.status !== 'approved') return null;
+  if (o.spotlight_rank) return el('div', { class: 'note ok', style: 'margin-top:14px' }, el('b', { text: `★ You’re in the Spotlight, place ${o.spotlight_rank} of 8.` }), ' Your product shows in the core of the map. Places follow real use over the last 30 days and update every hour.');
+  if (o.spotlight_blocked) return null;
+  const c = o.checks || {}, siteOk = !!o.site_ok_at && !c.site_fails;
+  return el('div', { class: 'sec spotreq' }, el('h4', { class: 'mono', text: '★ Get into the Spotlight' }),
+    el('p', { class: 'c-text', style: 'font-size:13.5px;margin-top:0', text: 'The 8 places in the core go to the most-used products. They’re earned, never sold. To qualify:' }),
+    el('div', { class: 'req ' + (o.verified_at ? 'ok' : '') }, o.verified_at ? '✓ ' : '○ ', 'Verified domain'),
+    el('div', { class: 'req ' + (siteOk ? 'ok' : '') }, siteOk ? '✓ ' : '○ ', 'Website answers (checked daily)'),
+    el('p', { class: 'fine', text: o.verified_at && siteOk ? 'You qualify. Places go to the products with the most views and clicks over the last 30 days, updated every hour.' : 'Then places go to the products with the most views and clicks over the last 30 days. While fewer than 8 qualify, everyone who does gets a place.' }));
+}
 function renderVerify(o) {
   const box = $('#mVerify');
   if (!o.slug) { box.replaceChildren(el('p', { class: 'fine', text: 'Loading…' })); return; }
-  if (o.verified_at) { fill(box, el('div', { class: 'note ok', style: 'margin-top:14px' }, el('b', { text: `✓ ${o.domain} verified on ${dateStr(o.verified_at)}.` }), ' The badge shows on your profile. It proves you control the domain — it is not a rating and it is never sold.'), checksBox(o), repoBox(o)); return; }
+  if (o.verified_at) { fill(box, spotBox(o), el('div', { class: 'note ok', style: 'margin-top:14px' }, el('b', { text: `✓ ${o.domain} verified on ${dateStr(o.verified_at)}.` }), ' The badge shows on your profile. It proves you control the domain — it is not a rating and it is never sold.'), checksBox(o), repoBox(o)); return; }
   const meta = `<meta name="expanse-verification" content="${o.verify_token}">`;
   const btn = el('button', { class: 'btn btn-primary btn-sm', text: 'Check now', onclick: async () => {
     btn.disabled = true; btn.textContent = 'Checking ' + o.domain + '…';
     const r = await fnCall('verify-domain', { slug: mSlug, key: OWNED[mSlug].key });
     btn.disabled = false; btn.textContent = 'Check now';
-    if (r.ok) { toast('Verified! The badge is on your profile.'); o.verified_at = r.verified_at; await refreshAll(); renderManage(); }
+    if (r.ok) { toast('Verified! The badge is on your profile.'); o.verified_at = r.verified_at; await refreshAll(); try { OWNDATA[mSlug] = await rpc('owner_get', { p_slug: mSlug, p_key: OWNED[mSlug].key }); } catch (e) {} renderManage(); }
     else if (r.reason === 'missing') toast(`We reached ${o.domain} but didn't find the code yet. If you just added it, give it a minute.`, 5500);
     else if (r.reason === 'unreachable') toast(`We couldn't reach https://${o.domain}. Check that the site is up and works over https.`, 5500);
     else if (r.reason === 'slow_down') toast('Give it a few seconds between checks.');
     else toast("Couldn't check right now — try again in a moment.");
   } });
-  box.replaceChildren(
+  fill(box, spotBox(o),
     el('p', { class: 'c-text', text: `Prove you control ${o.domain} and your profile gets a verified badge with today's date. Pick one:` }),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'A · Add a meta tag to your home page' }), el('div', { class: 'codeblock', text: meta }), el('button', { class: 'linkbtn', style: 'margin-top:6px', text: 'Copy tag', onclick: async () => toast((await copy(meta)) ? 'Tag copied — paste it inside <head>.' : 'Select the tag and copy it.') })),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'B · Or upload a text file' }), el('div', { class: 'codeblock', text: `https://${o.domain}/.well-known/expanse-verification.txt` }), el('small', { class: 'hint', style: 'display:block;color:var(--muted);font-size:12px;margin-top:6px', text: 'containing only: ' + o.verify_token })),
@@ -2060,7 +2116,7 @@ function endIntro() {
 kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 (async () => {
-  await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements()]);
+  await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight()]);
   rebuildItems(); renderLive(); loadUpdates();
   if (deepSlug) {
     const p = BY_SLUG.get(deepSlug);
