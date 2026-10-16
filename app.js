@@ -175,7 +175,7 @@ const fadeOf = q => q.last <= 30 ? 1 : q.last <= 90 ? 1 - (q.last - 30) / 60 * .
 /* ================= REAL ITEMS ON THE MAP =================
    product: an approved product · spot: a held spot without a live profile · mine: your own product in review */
 const ITEMS = [], occ = new Map();
-let PRODUCTS = [], BY_SLUG = new Map(), SPOTS = [], OWNED = store.get(OWNED_KEY) || {}, OWNDATA = {};
+let PRODUCTS = [], BY_SLUG = new Map(), SPOTS = [], OWNED = store.get(OWNED_KEY) || {}, OWNDATA = {}, PLACEMENTS = [];
 /* Followed products live only in this browser: { slugs: { slug: followedAt }, seen: lastOpenedAt } */
 let FOLLOW = (() => { const f = store.get(FOLLOW_KEY); return f && typeof f.slugs === 'object' && f.slugs ? f : { slugs: {}, seen: null }; })(), UPDATES = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
@@ -275,7 +275,10 @@ async function loadOwned() {
   }));
   store.set(OWNED_KEY, OWNED); updateMine();
 }
-async function refreshAll() { await Promise.all([loadProducts(), loadSpots()]); rebuildItems(); if (ui === 'none' && view === 'list') renderList(); }
+async function loadPlacements() {
+  try { const l = await rpc('public_placements'); PLACEMENTS = Array.isArray(l) ? l.filter(x => x && Number.isInteger(x.id) && isSlug(x.slug)) : []; } catch (e) { PLACEMENTS = []; }
+}
+async function refreshAll() { await Promise.all([loadProducts(), loadSpots(), loadPlacements()]); rebuildItems(); if (ui === 'none' && view === 'list') renderList(); }
 function saveOwned() { store.set(OWNED_KEY, OWNED); updateMine(); }
 
 /* ================= CANVAS ================= */
@@ -1162,6 +1165,30 @@ function understood(qs) {
   for (const i of it.ints) bits.push('works with ' + i);
   return bits;
 }
+/* Sponsored slots: at most one card, above the results and clearly marked. It shows only where it fits — the product
+   is among the matches for the search (and isn't already the top one), or shares a category with the top matches;
+   browsing the list without a search shows any running slot that passes the filters. The results below never change. */
+const SPON_PICK = new Map(), sponSeen = new Set();
+function sponsoredFor(qs, organic, pool) {
+  if (!PLACEMENTS.length) return null;
+  const inPool = new Set((pool || PRODUCTS).map(p => p.slug));
+  const live = PLACEMENTS.filter(x => BY_SLUG.has(x.slug) && inPool.has(x.slug));
+  let cands = live;
+  if (qs) {
+    const first = organic[0] && organic[0].p.slug, hit = new Set(organic.map(r => r.p.slug)), cats = organic.slice(0, 3).map(r => r.p.category);
+    cands = live.filter(x => x.slug !== first && (hit.has(x.slug) || cats.includes(BY_SLUG.get(x.slug).category)));
+  }
+  if (!cands.length) return null;
+  const key = normQ(qs || '') + '|' + cands.map(x => x.id).join(',');
+  let pick = SPON_PICK.get(key);
+  if (!pick) { pick = cands[Math.floor(Math.random() * cands.length)]; SPON_PICK.set(key, pick); }
+  return { id: pick.id, p: BY_SLUG.get(pick.slug) };
+}
+function trackSpon(sp, kind) {
+  if (!sp || OWNED[sp.p.slug] || navigator.webdriver) return;
+  if (kind === 'impression') { if (sponSeen.has(sp.id)) return; sponSeen.add(sp.id); }
+  rpc('track_placement', { p_id: sp.id, p_kind: kind }, { keepalive: true }).catch(() => {});
+}
 const results = $('#results'), qIn = $('#q'), searchEl = $('#search');
 function openSearch() { searchEl.classList.add('open'); qIn.focus(); if (!qIn.value) renderResults(); }
 $('#searchBtn').onclick = () => { searchEl.classList.toggle('open'); if (searchEl.classList.contains('open')) { qIn.focus(); renderResults(); } };
@@ -1179,6 +1206,9 @@ function renderResults() {
   }
   const all = rankAll(v), r = all.slice(0, 6), d = searchDemo(v), kids = [], u = understood(v), anyAi = r.some(x => x.ai);
   if (u.length || anyAi) kids.push(el('div', { class: 'lbl mono' }, anyAi ? el('span', { class: 'ai', text: '✦ AI' }) : null, u.length ? 'Looking for: ' + u.join(' · ') : 'Matched by meaning, not just words'));
+  const sp = sponsoredFor(v, all);
+  if (sp) kids.push(el('button', { type: 'button', class: 'spon', title: 'Paid placement. It doesn’t change the results below.', onclick: () => { trackSpon(sp, 'click'); results.hidden = true; searchEl.classList.remove('open'); openProduct(sp.p); } },
+    el('span', { class: 'sw', style: 'background:' + CATS[sp.p.category].color }), el('span', { class: 'rt' }, el('b', { text: sp.p.name }), el('small', { text: sp.p.tagline })), el('span', { class: 'tagx mono', text: 'Sponsored' })));
   for (const x of r) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p); } },
     el('span', { class: 'sw', style: 'background:' + CATS[x.p.category].color }), el('span', { class: 'rt' }, el('b', { text: x.p.name }), el('small', { text: x.why || x.p.tagline })), x.p.verified_at ? el('span', { class: 'tagx', text: '✓' }) : null));
   for (const q of d) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openDemo(q); } },
@@ -1191,6 +1221,7 @@ function renderResults() {
   if (pendingAi) kids.unshift(el('div', { class: 'none' }, el('span', { class: 'ai mono', text: '✦ AI' }), ' Searching by meaning…'));
   else if (!r.length) kids.unshift(el('div', { class: 'none' }, `No live product solves “${v}” yet. `, el('button', { type: 'button', text: 'Add yours →', onclick: () => { results.hidden = true; startSubmit(null); } })));
   results.replaceChildren(...kids); results.hidden = false;
+  if (sp) trackSpon(sp, 'impression');
 }
 let aiT = 0;
 qIn.addEventListener('input', renderResults);
@@ -1243,10 +1274,17 @@ function card(p, why) {
     why ? el('div', { class: 'why', text: why }) : el('div', { class: 'needs' }, p.needs.slice(0, 3).map(n => el('span', { class: 'need', text: n }))),
     el('div', { class: 'meta' }, el('span', { text: CATS[p.category].label }), el('span', { text: PRICING[p.pricing] }), p.platforms.length ? el('span', { text: p.platforms.slice(0, 3).map(x => PLATFORMS[x]).join(' · ') }) : null, p.sponsored ? el('span', { class: 'spon', text: 'Sponsored' }) : null));
 }
+function sponCard(sp) {
+  const c = card(sp.p, null); c.classList.add('sponsored');
+  c.prepend(el('div', { class: 'spon-h mono' }, 'Sponsored', el('small', { text: ' · paid, doesn’t change the ranking' })));
+  c.addEventListener('click', () => trackSpon(sp, 'click'));
+  return c;
+}
 function renderList() {
-  const base = filtered(); let rows;
+  const base = filtered(); let rows, ranked = [];
   if (listQ) {
-    rows = rankAll(listQ, base).map(r => ({ p: r.p, why: (r.ai ? '✦ ' : '') + (r.why || r.p.tagline) }));
+    ranked = rankAll(listQ, base);
+    rows = ranked.map(r => ({ p: r.p, why: (r.ai ? '✦ ' : '') + (r.why || r.p.tagline) }));
     if (!aiCached(listQ)) { const q = listQ; aiSearch(q).then(res => { if (res && listQ === q && view === 'list') renderList(); }); }
   }
   else rows = base.map(p => ({ p, why: null }));
@@ -1272,7 +1310,9 @@ function renderList() {
       el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), none ? el('button', { class: 'btn btn-ghost btn-sm', text: 'See the demo universe', onclick: () => { setView('map'); $('#demoHero').click(); } }) : null)));
     return;
   }
-  cardsEl.replaceChildren(...rows.map(r => card(r.p, r.why)));
+  const sp = sponsoredFor(listQ, ranked, base);
+  cardsEl.replaceChildren(...(sp ? [sponCard(sp)] : []), ...rows.map(r => card(r.p, r.why)));
+  if (sp) trackSpon(sp, 'impression');
 }
 
 /* ================= PRODUCT FORM (used by "add" and by the owner panel) ================= */
@@ -1538,6 +1578,7 @@ function renderManage() {
   if (mTab === 'edit' && o.slug) mform.set(o);
   if (mTab === 'verify') renderVerify(o);
   if (mTab === 'share') renderShare(o);
+  if (mTab === 'promote') renderPromote(o);
   if (mTab === 'key') renderKey(o);
 }
 $('#mTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; mTab = b.dataset.tab; renderManage(); });
@@ -1652,6 +1693,81 @@ function renderKey(o) {
         ? el('button', { class: 'btn btn-ghost btn-sm', text: 'Sign out on this device', onclick: async () => { try { await rpc('owner_signout', { p_slug: slug, p_key: key, p_scope: 'this' }); } catch (e) {} forget('Signed out on this device. Your listing is unchanged.'); } })
         : el('button', { class: 'btn btn-ghost btn-sm', text: 'Forget on this device', onclick: () => forget('Removed from this browser. Your listing is unchanged.') }),
       el('button', { class: 'btn btn-danger btn-sm', text: 'Take listing down', onclick: () => confirmRemove(o) }))].filter(Boolean));
+}
+/* Promote: ask for a Sponsored slot, pay once it's confirmed, and see what it did. */
+const PSTATE = { requested: 'Requested', awaiting_payment: 'Waiting for payment', expired: 'Not paid in time', upcoming: 'Starts soon', live: 'Running now', ended: 'Ended', rejected: 'Declined', cancelled: 'Withdrawn' };
+const dayFmt = d => { try { return new Date(d + 'T12:00:00Z').toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return d; } };
+async function renderPromote(o) {
+  const box = $('#mPromote'), slug = mSlug;
+  if (o.status !== 'approved') { box.replaceChildren(el('p', { class: 'fine', text: 'Promotion opens when your product is live.' })); return; }
+  box.replaceChildren(el('p', { class: 'fine', text: 'Loading…' }));
+  let d; try { d = await rpc('owner_placements', { p_slug: slug, p_key: OWNED[slug].key }); }
+  catch (e) { box.replaceChildren(el('p', { class: 'fine', text: "Couldn't load this right now." })); return; }
+  if (mTab !== 'promote' || mSlug !== slug) return;
+  const items = d.items || [], open = items.some(x => ['requested', 'awaiting_payment', 'upcoming', 'live'].includes(x.state));
+  const price = d.price_week_eur != null ? Number(d.price_week_eur) : null;
+  box.replaceChildren(...[
+    el('div', { class: 'promo' },
+      el('h4', { text: 'Sponsored slot' }),
+      el('p', { text: 'Your product shows in one card marked “Sponsored” above the results when people search for what it solves, and at the top of the list. It only shows where it fits the search, and it never changes where you rank.' }),
+      el('p', { class: 'fine', text: (price != null ? `${eur(price)} per week. ` : 'We confirm the price with you before you pay. ') + 'Nothing is charged automatically: you pay once we have confirmed the dates. You get a report of how often the card was shown and clicked, and of your views and clicks compared with the days before.' })),
+    open ? null : promoForm(slug, price),
+    ...items.map(x => placementItem(slug, x))].filter(Boolean));
+}
+function promoForm(slug, price) {
+  let weeks = 2;
+  const start = el('input', { type: 'date', min: new Date().toISOString().slice(0, 10), 'aria-label': 'Preferred start' });
+  const note = el('textarea', { maxlength: '400', rows: '2', placeholder: 'Anything we should know (optional)' });
+  const total = el('small', { class: 'hint' });
+  const paint = () => { opts.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.w === weeks))); total.textContent = price != null ? `${weeks} week${weeks === 1 ? '' : 's'} · ${eur(price * weeks)} in total` : ''; };
+  const opts = el('div', { class: 'opts', role: 'group', 'aria-label': 'Length' }, [1, 2, 4, 8].map(w => el('button', { type: 'button', 'data-w': String(w), text: w === 1 ? '1 week' : w + ' weeks', onclick: () => { weeks = w; paint(); } })));
+  const send = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Request a slot' });
+  const form = el('form', { onsubmit: async e => {
+    e.preventDefault(); send.disabled = true;
+    try {
+      await rpc('owner_request_placement', { p_slug: slug, p_key: OWNED[slug].key, p: { weeks, start: start.value || null, note: note.value } });
+      toast('Request sent. We’ll email you to confirm the dates and payment.', 4500);
+      if (mSlug === slug) renderManage();
+    } catch (err) {
+      const m = errCode(err);
+      toast(m === 'busy' ? 'You already have a slot requested or running.' : m === 'invalid:start' ? 'Pick a start date from today and up to six months ahead.' : m === 'not_live' ? 'Promotion opens when your product is live.' : "Couldn't send the request — try again.");
+    } finally { send.disabled = false; }
+  } },
+    el('div', { class: 'field' }, el('span', { class: 'mono', text: 'Length' }), opts, total),
+    el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Preferred start' }), start, el('small', { class: 'hint', text: 'Leave empty for as soon as possible.' })),
+    el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Note' }), note),
+    el('div', { class: 'c-row' }, send));
+  paint();
+  return form;
+}
+function placementItem(slug, x) {
+  const dates = x.start_date ? `${dayFmt(x.start_date)} – ${dayFmt(x.end_date)}` : `${x.weeks} week${x.weeks === 1 ? '' : 's'}, ${x.wish_start ? 'from ' + dayFmt(x.wish_start) : 'as soon as possible'}`;
+  const withdraw = ['requested', 'awaiting_payment'].includes(x.state) ? el('button', { class: 'linkbtn', text: 'Withdraw', onclick: async e => {
+    e.currentTarget.disabled = true;
+    try { await rpc('owner_cancel_placement', { p_slug: slug, p_key: OWNED[slug].key, p_id: x.id }); toast('Withdrawn. Nothing was charged.'); if (mSlug === slug) renderManage(); }
+    catch (err) { toast("Couldn't withdraw it right now."); }
+  } }) : null;
+  return el('div', { class: 'plc' },
+    el('div', { class: 'plc-h' }, el('b', { text: dates }), el('span', { class: 'stp mono ' + x.state, text: PSTATE[x.state] || x.state })),
+    x.price_eur != null && x.start_date ? el('p', { class: 'fine', text: `${x.weeks} week${x.weeks === 1 ? '' : 's'} · ${eur(x.price_eur)}${x.paid_at ? ' · paid' : ''}` }) : null,
+    x.state === 'requested' ? el('p', { class: 'fine', text: 'We’ll email you to confirm the dates and payment.' }) : null,
+    x.state === 'awaiting_payment' ? el('p', { class: 'fine', text: x.pay_url ? 'The slot starts once the payment is confirmed.' : 'Payment details come by email. The slot starts once the payment is confirmed.' }) : null,
+    x.state === 'rejected' && x.admin_note ? el('div', { class: 'note', text: x.admin_note }) : null,
+    x.report ? placementReport(x.report) : null,
+    (x.state === 'awaiting_payment' && x.pay_url) || withdraw ? el('div', { class: 'c-row' },
+      x.state === 'awaiting_payment' && x.pay_url ? el('a', { class: 'btn btn-primary btn-sm', href: x.pay_url, target: '_blank', rel: 'noopener', text: `Pay ${x.price_eur != null ? eur(x.price_eur) : ''} ↗` }) : null, withdraw) : null);
+}
+function placementReport(r) {
+  const ch = (a, b) => { if (!b) return el('td', { text: a ? 'new' : '—' }); const pct = Math.round((a - b) / b * 100); return el('td', { class: pct > 0 ? 'up' : pct < 0 ? 'down' : null, text: (pct > 0 ? '+' : '') + pct + '%' }); };
+  const row = (label, a, b) => el('tr', null, el('td', { text: label }), el('td', { text: fmt(a) }), el('td', { text: fmt(b) }), ch(a, b));
+  return el('div', null,
+    el('div', { class: 'kpis' },
+      el('div', { class: 'kpi' }, el('b', { text: fmt(r.impressions) }), el('small', { text: 'times the card was shown' })),
+      el('div', { class: 'kpi' }, el('b', { text: fmt(r.clicks) }), el('small', { text: r.impressions ? `clicks · ${Math.round(r.clicks / r.impressions * 100)}% of views` : 'clicks on the card' }))),
+    el('table', { class: 'cmp' },
+      el('thead', null, el('tr', null, el('th', { text: '' }), el('th', { text: `During · ${plural(r.days, 'day', 'days')}` }), el('th', { text: 'Before' }), el('th', { text: 'Change' }))),
+      el('tbody', null, row('Profile views', r.views, r.before.views), row('Clicks to your site', r.site_clicks, r.before.site_clicks))),
+    el('p', { class: 'fine', text: `Unique visitors per day; your own visits and known bots aren’t counted. “Before” is the same number of days just before the slot (${r.before.from === r.before.to ? dayFmt(r.before.from) : dayFmt(r.before.from) + ' – ' + dayFmt(r.before.to)}).` }));
 }
 function box_(b, ...kids) { b.replaceChildren(...kids); }
 function confirmRemove(o) {
@@ -1944,7 +2060,7 @@ function endIntro() {
 kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 (async () => {
-  await Promise.all([loadProducts(), loadSpots(), loadOwned()]);
+  await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements()]);
   rebuildItems(); renderLive(); loadUpdates();
   if (deepSlug) {
     const p = BY_SLUG.get(deepSlug);

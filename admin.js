@@ -32,6 +32,8 @@ function el(tag, props, ...kids) {
   for (const c of kids.flat(3)) if (c != null && c !== false) e.append(c.nodeType ? c : String(c));
   return e;
 }
+// replaceChildren would print "null" for an empty slot; this skips them.
+const fill = (node, ...kids) => node.replaceChildren(...kids.flat(3).filter(k => k != null && k !== false));
 const store = {
   get() { try { return sessionStorage.getItem(KEY_STORE) || localStorage.getItem(KEY_STORE) || ''; } catch (e) { return ''; } },
   set(k, remember) { try { sessionStorage.setItem(KEY_STORE, k); if (remember) localStorage.setItem(KEY_STORE, k); } catch (e) {} },
@@ -72,7 +74,7 @@ $('#signOut').onclick = () => signOut(false);
 
 /* ---------- shell ---------- */
 let tab = 'queue';
-const TABS = { queue: renderQueue, reports: renderReports, products: renderProducts, overview: renderOverview, settings: renderSettings };
+const TABS = { queue: renderQueue, reports: renderReports, placements: renderPlacements, products: renderProducts, overview: renderOverview, settings: renderSettings };
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab); });
 $('#refresh').onclick = () => { go(tab); counts(); };
 function go(t) {
@@ -88,7 +90,8 @@ async function counts() {
     const q = (o.counts.pending | 0), r = o.open_reports | 0;
     const nq = $('#nQueue'); nq.textContent = q; nq.hidden = !q;
     const nr = $('#nReports'); nr.textContent = r; nr.hidden = !r;
-    document.title = (q + r ? `(${q + r}) ` : '') + 'Expanse admin';
+    const pl = (o.placements && o.placements.requested) | 0, np = $('#nPlace'); np.textContent = pl; np.hidden = !pl;
+    document.title = (q + r + pl ? `(${q + r + pl}) ` : '') + 'Expanse admin';
     return o;
   } catch (e) { return null; }
 }
@@ -128,7 +131,7 @@ function productCard(p, opts) {
   const ask = (status, label, cls) => {
     const ta = el('textarea', { placeholder: status === 'removed' ? 'Internal note (optional)' : 'Note to the maker — they see this in their owner panel and in the email.', maxlength: '400' });
     const send = el('button', { class: 'btn btn-sm ' + cls, text: label, onclick: () => act(status, ta.value.trim(), send) });
-    decide.replaceChildren(
+    fill(decide,
       el('b', { text: status === 'removed' ? 'Remove for good? The spot is freed and the maker’s email and key are wiped.' : status === 'hidden' ? 'Hide from the site' : 'Send back with changes needed' }),
       PRESETS[status] ? el('div', { class: 'presets' }, PRESETS[status].map(t => el('button', { type: 'button', text: t, onclick: () => { ta.value = t; ta.focus(); } }))) : null,
       ta, el('div', { class: 'row' }, send, el('button', { class: 'btn btn-ghost btn-sm', text: 'Cancel', onclick: () => { decide.hidden = true; } })));
@@ -181,7 +184,7 @@ async function renderQueue(main) {
     if (!pending.length && !other.length) box.replaceChildren(el('div', { class: 'empty' }, el('b', { text: 'Nothing to review.' }), 'New products and reported or broken listings show up here. You can also get an email when something arrives — see Settings.'));
   };
   paint();
-  main.replaceChildren(
+  fill(main,
     el('h2', { class: 'h', text: 'To review' }),
     el('p', { class: 'sub', text: `${pending.length} new product${pending.length === 1 ? '' : 's'} waiting${other.length ? ` · ${other.length} live listing${other.length === 1 ? '' : 's'} reported or not answering` : ''}. Approving puts a product on the map at once and emails the maker.` }),
     box);
@@ -204,12 +207,80 @@ async function renderReports(main) {
         try { await rpc('admin_resolve_report', { p_id: r.id, p_resolved: !r.resolved }); toast(r.resolved ? 'Report reopened.' : 'Marked as handled.'); go('reports'); counts(); }
         catch (err) { toast('Couldn’t save: ' + err.message, true); btn.disabled = false; }
       } })));
-  main.replaceChildren(
+  fill(main,
     el('h2', { class: 'h', text: 'Reports' }),
     el('p', { class: 'sub', text: 'From visitors (“Report a problem” on a profile) and from the daily website check. To hide a reported product, open it under To review.' }),
     open.length ? el('div', { class: 'list' }, open.map(row)) : el('div', { class: 'empty' }, el('b', { text: 'No open reports.' }), 'Nice and quiet.'),
     done.length ? el('h3', { style: 'margin-top:30px;font-size:17px;color:var(--muted)', text: 'Handled in the last 30 days' }) : null,
     done.length ? el('div', { class: 'list' }, done.map(row)) : null);
+}
+
+/* ---------- placements (Sponsored slots) ---------- */
+const PSTATE = { requested: 'Requested', awaiting_payment: 'Waiting for payment', expired: 'Not paid in time', upcoming: 'Paid · starts soon', live: 'Running', ended: 'Ended', rejected: 'Declined', cancelled: 'Withdrawn' };
+const eur = n => '€' + Number(n).toLocaleString('en', { maximumFractionDigits: 2 });
+const isoDay = d => d.toISOString().slice(0, 10);
+async function renderPlacements(main) {
+  const [list, s] = await Promise.all([rpc('admin_placements'), rpc('admin_settings')]);
+  if (tab !== 'placements') return;
+  const open = list.filter(x => ['requested', 'awaiting_payment', 'upcoming', 'live'].includes(x.state)), done = list.filter(x => !open.includes(x));
+  fill(main,
+    el('h2', { class: 'h', text: 'Placements' }),
+    el('p', { class: 'sub', text: 'Sponsored slots makers asked for. Schedule one with dates and a price (and a payment link if you have one, like a Stripe Payment Link) — the maker gets an email. Mark it paid when the money is in: only paid slots show on the site, in one card marked “Sponsored” where it fits the search. It never changes the ranking.' }),
+    open.length ? el('div', { class: 'list' }, open.map(x => placementCard(x, s.placement_price_eur))) : el('div', { class: 'empty' }, el('b', { text: 'No open requests.' }), s.placement_price_eur != null ? `Makers see ${eur(s.placement_price_eur)} per week (Settings).` : 'Makers see “we confirm the price with you”. Set a weekly price under Settings.'),
+    done.length ? el('h3', { style: 'margin-top:30px;font-size:17px;color:var(--muted)', text: 'Earlier' }) : null,
+    done.length ? el('div', { class: 'list' }, done.map(x => placementCard(x, s.placement_price_eur))) : null);
+}
+function placementCard(x, weekPrice) {
+  const cat = CATS[x.category] || CATS.other;
+  const act = async (btn, action, p, ok) => {
+    btn.disabled = true;
+    try { await rpc('admin_placement_action', { p_id: x.id, p_action: action, p: p || {} }); toast(ok); go('placements'); counts(); }
+    catch (err) {
+      const m = err.message;
+      toast(m === 'invalid:start' ? 'Pick a start date from today.' : m === 'invalid:price' ? 'Enter a price (0 or more).' : m === 'invalid:pay_url' ? 'The payment link must be an https:// link.' : m === 'invalid:note' ? 'Write a short note for the maker.' : m === 'invalid:dates' ? 'The dates have passed — schedule it again first.' : 'Couldn’t save: ' + m, true);
+      btn.disabled = false;
+    }
+  };
+  const card = el('article', { class: 'pc', style: '--c:' + cat[1] });
+  const head = el('div', { class: 'head' }, el('a', { class: 'name', href: SITE + '/p/' + x.slug, target: '_blank', rel: 'noopener', text: x.name }), el('span', { class: 'badge st-' + (x.state === 'rejected' ? 'rejected-p' : x.state), text: PSTATE[x.state] || x.state }));
+  const lines = [
+    `Asked for ${x.weeks} week${x.weeks === 1 ? '' : 's'}, ${x.wish_start ? 'from ' + day(x.wish_start) : 'as soon as possible'} · ${ago(x.created_at)} · ${x.contact_email || '—'}`,
+    x.start_date ? `Scheduled ${day(x.start_date)} – ${day(x.end_date)}${x.price_eur != null ? ' · ' + eur(x.price_eur) : ''}${x.paid_at ? ' · paid ' + day(x.paid_at) : ' · not paid'}${x.stopped_at ? ' · stopped ' + day(x.stopped_at) : ''}` : null,
+    x.pay_url ? 'Payment link: ' + x.pay_url : null].filter(Boolean);
+  card.append(head, ...lines.map(t => el('p', { class: 'sub', style: 'margin-top:6px;overflow-wrap:anywhere', text: t })));
+  if (x.owner_note) card.append(el('div', { class: 'note', text: '“' + x.owner_note + '”' }));
+  if (x.admin_note && x.state !== 'requested') card.append(el('p', { class: 'sub', style: 'margin-top:6px', text: 'Your note: ' + x.admin_note }));
+  if (x.report) {
+    const r = x.report, pct = (a, b) => b ? ` (${a >= b ? '+' : ''}${Math.round((a - b) / b * 100)}%)` : '';
+    card.append(el('div', { class: 'rep' },
+      el('span', null, el('b', { text: fmt(r.impressions) }), ' shown'), el('span', null, el('b', { text: fmt(r.clicks) }), r.clicks === 1 ? ' click' : ' clicks'),
+      el('span', null, el('b', { text: fmt(r.views) }), ` profile views vs ${fmt(r.before.views)} before${pct(r.views, r.before.views)}`),
+      el('span', null, el('b', { text: fmt(r.site_clicks) }), ` site clicks vs ${fmt(r.before.site_clicks)} before${pct(r.site_clicks, r.before.site_clicks)}`),
+      el('span', { text: `over ${r.days} day${r.days === 1 ? '' : 's'}` })));
+  }
+  if (['requested', 'awaiting_payment', 'expired'].includes(x.state)) {
+    const today = isoDay(new Date()), wish = x.wish_start && x.wish_start >= today ? x.wish_start : today;
+    const start = el('input', { type: 'date', min: today }); start.value = x.start_date && x.start_date >= today ? x.start_date : wish;
+    const weeks = el('input', { type: 'number', min: '1', max: '12', step: '1' }); weeks.value = x.weeks;
+    const price = el('input', { type: 'number', min: '0', step: '1', placeholder: '€' });
+    price.value = x.price_eur != null ? x.price_eur : weekPrice != null ? Math.round(weekPrice * x.weeks * 100) / 100 : '';
+    const link = el('input', { type: 'url', placeholder: 'https://buy.stripe.com/… (optional)' }); link.value = x.pay_url || '';
+    const note = el('textarea', { placeholder: 'Note for the maker (needed to decline)' });
+    card.append(el('div', { class: 'sched' },
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Start' }), start),
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Weeks' }), weeks),
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Price in total (€)' }), price)),
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Payment link' }), link),
+      el('div', { class: 'decide' }, note),
+      el('div', { class: 'bar' },
+        el('button', { class: 'btn btn-ok btn-sm', text: x.state === 'requested' ? 'Schedule & email maker' : 'Reschedule & email maker', onclick: e => act(e.currentTarget, 'schedule', { start: start.value, weeks: +weeks.value, price_eur: price.value === '' ? null : +price.value, pay_url: link.value.trim(), note: note.value }, 'Scheduled. The maker gets an email.') }),
+        x.state !== 'requested' ? el('button', { class: 'btn btn-primary btn-sm', text: '✓ Mark paid', onclick: e => { if (confirm(`Mark ${x.name}'s slot as paid? It goes live on ${day(x.start_date)}.`)) act(e.currentTarget, 'paid', {}, 'Marked paid. The maker gets a confirmation.'); } }) : null,
+        el('button', { class: 'btn btn-warn btn-sm', text: 'Decline', onclick: e => act(e.currentTarget, 'reject', { note: note.value }, 'Declined. The maker gets an email with your note.') })));
+  }
+  if (['upcoming', 'live'].includes(x.state)) {
+    card.append(el('div', { class: 'bar' }, el('button', { class: 'btn btn-warn btn-sm', text: 'Stop now', onclick: e => { if (confirm(`Stop ${x.name}'s Sponsored slot now? Sort out any refund with the maker yourself.`)) act(e.currentTarget, 'stop', {}, 'Stopped.'); } })));
+  }
+  return card;
 }
 
 let pFilter = 'all', pQuery = '';
@@ -226,7 +297,7 @@ async function renderProducts(main) {
   const search = el('input', { type: 'search', placeholder: 'Search name, domain or email', value: pQuery });
   search.value = pQuery;
   search.addEventListener('input', () => { pQuery = search.value; paint(); });
-  main.replaceChildren(
+  fill(main,
     el('h2', { class: 'h', text: 'Products' }),
     el('div', { class: 'bar' },
       [['all', 'All'], ['approved', 'Live'], ['pending', 'In review'], ['rejected', 'Changes needed'], ['hidden', 'Hidden'], ['removed', 'Removed']].map(([k, l]) =>
@@ -242,7 +313,7 @@ async function renderOverview(main) {
   const c = o.counts, days = o.days || [], max = Math.max(1, ...days.map(d => Math.max(d.view, d.click)));
   const sum = k => days.reduce((a, d) => a + (d[k] || 0), 0);
   const w = o.worker || {};
-  main.replaceChildren(
+  fill(main,
     el('h2', { class: 'h', text: 'Overview' }),
     el('div', { class: 'kpis' },
       el('div', { class: 'kpi' }, el('b', { text: fmt(c.approved) }), el('small', { text: 'products live' })),
@@ -250,7 +321,8 @@ async function renderOverview(main) {
       el('div', { class: 'kpi' + (o.open_reports ? ' warn' : '') }, el('b', { text: fmt(o.open_reports) }), el('small', { text: 'open reports' })),
       el('div', { class: 'kpi' }, el('b', { text: fmt(sum('view')) }), el('small', { text: 'profile views · 30 days' })),
       el('div', { class: 'kpi' }, el('b', { text: fmt(sum('click')) }), el('small', { text: 'clicks to sites · 30 days' })),
-      el('div', { class: 'kpi' }, el('b', { text: fmt(c.verified) }), el('small', { text: 'live with verified domain' }))),
+      el('div', { class: 'kpi' }, el('b', { text: fmt(c.verified) }), el('small', { text: 'live with verified domain' })),
+      el('div', { class: 'kpi' + (o.placements && o.placements.requested ? ' warn' : '') }, el('b', { text: fmt(o.placements ? o.placements.live : 0) }), el('small', { text: `sponsored slots running${o.placements && o.placements.requested ? ` · ${o.placements.requested} requested` : ''}` }))),
     el('div', { class: 'panel' }, el('h3', { text: 'Last 30 days' }),
       el('div', { class: 'chart', role: 'img', 'aria-label': `${sum('view')} profile views and ${sum('click')} clicks in the last 30 days` },
         days.map(d => el('div', { class: 'd', title: `${d.d}: ${d.view} views, ${d.click} clicks` }, el('div', { class: 'v', style: `height:${d.view / max * 100}%` }), el('div', { class: 'c', style: `height:${d.click / max * 100}%` })))),
@@ -285,6 +357,18 @@ function emailPanel(e) {
     } })));
 }
 
+function pricePanel(s) {
+  const price = el('input', { type: 'number', min: '0', step: '1', placeholder: 'e.g. 29' }); price.value = s.placement_price_eur != null ? s.placement_price_eur : '';
+  return el('div', { class: 'panel' }, el('h3', { text: 'Sponsored slot price' }),
+    el('p', { class: 'sub', text: 'The price per week makers see under Promote. Leave empty to show “we confirm the price with you”. You still set the final price on each request.' }),
+    el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Euro per week' }), price),
+    el('div', { class: 'bar' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Save', onclick: async e => {
+      const btn = e.currentTarget; btn.disabled = true;
+      try { const r = await rpc('admin_save_settings', { p: { placement_price_eur: price.value.trim() } }); price.value = r.placement_price_eur != null ? r.placement_price_eur : ''; toast(r.placement_price_eur != null ? `Saved: ${eur(r.placement_price_eur)} per week.` : 'Saved. Makers see “we confirm the price with you”.'); }
+      catch (err) { toast(err.message === 'invalid:placement_price_eur' ? 'Enter a number, or leave it empty.' : 'Couldn’t save: ' + err.message, true); }
+      finally { btn.disabled = false; }
+    } })));
+}
 async function renderSettings(main) {
   const s = await rpc('admin_settings');
   if (tab !== 'settings') return;
@@ -303,6 +387,7 @@ async function renderSettings(main) {
         finally { btn.disabled = false; }
       } }))),
     emailPanel(s.email || {}),
+    pricePanel(s),
     el('div', { class: 'panel' }, el('h3', { text: 'Admin key' }),
       el('p', { class: 'sub', text: `Make a new key and stop the current one from working. Do this if the key may have been seen by someone else. Active keys: ${s.keys}.` }),
       el('div', { class: 'bar' }, el('button', { class: 'btn btn-warn btn-sm', text: 'Make a new key', onclick: async e => {

@@ -109,6 +109,8 @@ a{color:inherit;text-decoration:none}
 .results .rt b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .results .rt small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .results .tagx{flex:none;font-size:9.5px;color:var(--muted);border:1px solid var(--line2);border-radius:999px;padding:2px 7px}
+.results button.spon{background:rgba(255,207,74,.06);box-shadow:inset 0 0 0 1px rgba(255,207,74,.28)}
+.results button.spon .tagx{color:var(--amber);border-color:rgba(255,207,74,.5)}
 .results .all{justify-content:center;color:var(--lime);font-weight:700;font-size:13px}
 .results .none{padding:12px;color:var(--txt2);font-size:13.5px}
 .results .none button{display:inline;width:auto;padding:0;color:var(--lime);font-weight:700}
@@ -361,11 +363,26 @@ a{color:inherit;text-decoration:none}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:1;height:34px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:700;color:var(--txt2);white-space:nowrap}
 .tabs button[aria-selected="true"]{background:#fff;color:#071026}
+@media (max-width:440px){.tabs{gap:2px}.tabs button{padding:0 8px;font-size:12.5px}}
 .tabp{margin-top:6px}
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
 .kpi{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
 .kpi b{display:block;font-size:28px;font-weight:700;letter-spacing:-.04em;line-height:1.1}
 .kpi small{color:var(--muted);font-size:12px}
+.promo h4{font-size:17px;letter-spacing:-.02em}
+.promo>p{margin-top:6px;color:var(--txt2);font-size:14px;line-height:1.5}
+.plc{margin-top:14px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.plc-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.plc-h b{font-size:15.5px}
+.plc .stp{flex:none;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--txt2)}
+.plc .stp.live{border-color:var(--lime);color:var(--lime)}
+.plc .stp.awaiting_payment,.plc .stp.requested,.plc .stp.upcoming{border-color:rgba(255,207,74,.55);color:var(--amber)}
+.plc .c-row{margin-top:10px}
+.cmp{width:100%;margin-top:12px;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+.cmp th:first-child,.cmp td:first-child{text-align:left}
+.cmp th{color:var(--muted);font-weight:600;font-size:11.5px}
+.cmp .up{color:var(--lime)}.cmp .down{color:#ff9a9a}
 .chart{display:flex;align-items:flex-end;gap:2px;height:110px;margin-top:14px;padding:10px 10px 0;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
 .chart .d{flex:1;position:relative;height:100%;display:flex;align-items:flex-end}
 .chart .v{width:100%;border-radius:3px 3px 0 0;background:rgba(94,225,255,.55);min-height:1px}
@@ -393,6 +410,9 @@ a{color:inherit;text-decoration:none}
 .card:hover{border-color:color-mix(in srgb,var(--c) 70%,transparent);transform:translateY(-2px);background:rgba(12,16,46,.9)}
 .card::before{content:"";position:absolute;left:16px;right:16px;top:0;height:2px;border-radius:0 0 4px 4px;background:var(--c);box-shadow:0 0 14px var(--c)}
 .card .top{display:flex;align-items:center;gap:8px;min-width:0}
+.card.sponsored{border-color:rgba(255,207,74,.5);background:linear-gradient(180deg,rgba(255,207,74,.07),rgba(8,11,34,.82) 60%)}
+.card .spon-h{color:var(--amber);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.card .spon-h small{color:var(--muted);letter-spacing:.02em;text-transform:none;font-size:10.5px}
 .card .top b{font-size:18px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .card .top .fol{flex:none;color:var(--amber);font-size:14px}
 .card .top .ver{flex:none;width:18px;height:18px;border-radius:50%;background:#fff;color:#071026;display:grid;place-items:center;font-size:11px;font-weight:800}
@@ -642,6 +662,7 @@ a{color:inherit;text-decoration:none}
       <button role="tab" data-tab="edit" aria-selected="false">Edit</button>
       <button role="tab" data-tab="verify" aria-selected="false">Verify</button>
       <button role="tab" data-tab="share" aria-selected="false">Share</button>
+      <button role="tab" data-tab="promote" aria-selected="false">Promote</button>
       <button role="tab" data-tab="key" aria-selected="false">Key</button>
     </div>
     <div class="tabp" data-panel="stats" id="mStats"></div>
@@ -652,6 +673,7 @@ a{color:inherit;text-decoration:none}
     </div>
     <div class="tabp" data-panel="verify" id="mVerify" hidden></div>
     <div class="tabp" data-panel="share" id="mShare" hidden></div>
+    <div class="tabp" data-panel="promote" id="mPromote" hidden></div>
     <div class="tabp" data-panel="key" id="mKey" hidden></div>
   </aside>
 
@@ -678,19 +700,21 @@ a{color:inherit;text-decoration:none}
             <li>Follow products and get their launches, changes and GitHub releases in one feed — saved in your browser, no account.</li>
             <li>Release updates from GitHub for products that connect their repo.</li>
             <li>Every new profile is reviewed before it goes live. Anyone can report a broken link or wrong information.</li>
+            <li>Sponsored slots that makers ask for: clearly marked, shown only where they fit a search, with a report of the views and clicks they delivered.</li>
           </ul>
         </div>
         <div class="box plan">
           <h4>Planned <span class="badge mono">Not live yet</span></h4>
           <ul>
-            <li>Paid placements, with a report of the visits and clicks they delivered.</li>
+            <li>Paying for map spots at their founding price. Until then, spots are free to hold.</li>
+            <li>Paying by card inside Expanse. Today we confirm a Sponsored slot first and send a payment link.</li>
           </ul>
         </div>
       </div>
       <p class="fine">Nothing in the planned list is switched on. Each one moves over when it actually works.</p>
 
       <h3>Search is not for sale</h3>
-      <p>Results are ranked by how well a product matches your search — what it solves, its name and its description. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. Paid placements, when they open, will be marked <b style="color:var(--amber)">Sponsored</b>.</p>
+      <p>Results are ranked by how well a product matches your search — what it solves, its name and its description. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. A Sponsored slot is marked <b style="color:var(--amber)">Sponsored</b>, shows in one card above the results only when it fits what you searched for, and never changes the ranking below it.</p>
 
       <h3>Your spot on the map</h3>
       <p>Every product lives somewhere in the galaxy. The closer to the core, the more people fly past it. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four.</p>
@@ -707,7 +731,7 @@ a{color:inherit;text-decoration:none}
       <div class="terms">
         <div><b>What a spot gives you</b><p>A fixed position and size in the galaxy, where people exploring the map will see it. It doesn't change search results and doesn't make you verified.</p></div>
         <div><b>What it costs today</b><p>Nothing. Listing a product is free, and spots are free to hold during the founding period. Each spot shows the founding price it will have.</p></div>
-        <div><b>When paid placement opens</b><p>You choose: keep your spot for 12 months at its founding price, or move to the free outer edge. Your profile, search and stats stay either way. You'll see the full terms before anything is charged.</p></div>
+        <div><b>When paid spots open</b><p>You choose: keep your spot for 12 months at its founding price, or move to the free outer edge. Your profile, search and stats stay either way. You'll see the full terms before anything is charged.</p></div>
         <div><b>If your product goes away</b><p>Take it down anytime from your owner panel and the spot is released. If its link stops working and reports are confirmed, we hide the profile until it's fixed.</p></div>
       </div>
       <p class="fine">Founding prices are for the first 1,000 spots.</p>
@@ -715,7 +739,7 @@ a{color:inherit;text-decoration:none}
       <h3>Questions</h3>
       <div class="faq">
         <details><summary>Is everything on the map real?</summary><p>Squares are real products that passed review. White beacons are held spots whose profile isn't live yet. The faint dust is just the galaxy. Demo mode fills the universe with clearly labelled example products to show what it can become — none of them are real.</p></details>
-        <details><summary>Does it cost anything?</summary><p>No. Listing is free and paid placement isn't switched on, so nobody is charged today.</p></details>
+        <details><summary>Does it cost anything?</summary><p>No. Listing is free and map spots are free to hold. The only paid option is a Sponsored slot, which a maker asks for from their owner panel and pays for only after we've confirmed the dates.</p></details>
         <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and IP addresses are never stored. Known bots are left out, and so are your own visits on days you open your owner panel.</p></details>
         <details><summary>What do you do with my email?</summary><p>We only use it to contact you about your listing. It's stored in the EU (Stockholm), never shown publicly, sold or shared. Take your listing down from the owner panel and the email is wiped.</p></details>
         <details><summary>I lost my owner key.</summary><p>Open your product, choose “I make this”, then “Sign in with email” — we send a code to the address you added the product with. No access to that inbox? Choose “Lost your key?” and publish the code we give you on your site: that proves the product is yours and gives you a new key.</p></details>
