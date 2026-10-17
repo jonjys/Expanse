@@ -58,12 +58,28 @@ opens are in the "How it works" sheet in `index.html` (12 months at the founding
 
 Nobody can pick a spot in the core. Its 8 places (a ring of 4×4 squares, `SPOT_SLOTS` in `app.js`) show the products
 people actually use: live, verified domain, website answered in the last 3 days, not kept out by the admin; ranked by
-unique profile views + 3 × unique clicks to the site or demo over the last 30 days, minus clicks that came from a
-Sponsored card, without the maker's own visits; ties go to the product that went live first. While fewer than 8
+popularity (below); ties go to the product that went live first. While fewer than 8
 products qualify, every one that does gets a place. `public_spotlight()` returns the picks and recalculates them
 (`_spotlight_refresh()`, stored in `settings.spotlight`) when they are over an hour old, and right after a domain is
 verified. The admin can keep a product out ("Keep out of Spotlight" on its card). A product in the Spotlight still
 has its own spot; the core shows it a second time and links to it.
+
+## Upvotes and popularity
+
+Anyone can upvote a live product (▲ on the profile), no account. The browser keeps a random voter id
+(`expanse.voter.v1`) and the products it upvoted (`expanse.votes.v1`); the `votes` table stores only a hash of the id,
+so one browser has one vote per product and can take it back (`upvote(slug, voter, on)`). The day's visitor hash (the
+same daily-salted hash as the stats) stops the same network and browser from voting twice for a product on one day by
+clearing its storage, and caps a visitor at 60 votes a day. Makers can't upvote their own product (owner marks). The
+admin can take back every upvote on a product (*Reset upvotes*, `admin_reset_votes`).
+
+Popularity = unique profile views + 3 × unique clicks to the site or demo + 5 × upvotes over the last 30 days, without
+the maker's own visits and votes, minus clicks that came from a Sponsored card. `_spotlight_refresh()` recalculates it
+for every live product (table `popularity`, with `pct` 0–100 relative to the most popular product) at most once an
+hour, and the Spotlight uses the same score. Public products carry `upvotes` (live count) and `pop` (the `pct`).
+Search ranks by how well a product matches first and multiplies by up to 1.35 for popularity, so a popular product can
+pass a slightly closer match but never a much closer one. The list without a search, and "Most popular", sort by `pop`
+then upvotes. While the search dropdown is open, the top matches light up on the map and the best one gets a label.
 
 ## Following and updates
 
@@ -92,17 +108,18 @@ verifications, profile changes (merged per day) and GitHub releases, with a coun
 
 ## Sponsored slots
 
-A maker asks for a Sponsored slot under "Manage my product" → Promote (1–8 weeks, preferred start, note). The admin
-schedules it under Placements (start, weeks, total price and an optional payment link such as a Stripe Payment Link);
+A maker asks to be Sponsored for a year under "Manage my product" → Promote (preferred start, note). The admin
+schedules it under Placements (start, weeks — 52 is a year — total price and an optional payment link such as a Stripe Payment Link);
 the maker gets an email with the dates and the link. The admin marks it paid when the money is in. Nothing is charged
 automatically, and only paid slots in their date range show on the site.
 
-While it runs, the product can appear in **one** card marked "Sponsored" above the search dropdown and the list:
-in search only when it fits (it is among the matches, or shares a category with the top matches, and isn't already
-first); in the list without a search, when it passes the filters. The ranking below never changes. Impressions and
+While it runs, the product can appear in a card marked "Sponsored" above the search dropdown and the list — at most
+**two** such cards, taking turns when more fit: in search only when it fits (a close match — at least 40% of the best match's score — or the same category as the
+best match, and not already first); in the list without a search, when it passes the filters. The ranking below never changes. Impressions and
 clicks on the card are counted like the product stats (once per visitor per day, no bots, not the maker). The maker's
-report shows them next to profile views and site clicks during the slot versus the same number of days just before it.
-The weekly price makers see is set in the admin settings (empty = "we confirm the price with you").
+report shows them next to profile views and site clicks during the slot's first 30 days (or fewer so far) versus the
+same number of days just before it. The yearly price makers see is set in the admin settings (empty = "we confirm the
+price with you"). Placements made before the yearly change keep their old length in `weeks_v1` too.
 
 ## Stats
 
@@ -128,7 +145,7 @@ select public._admin_issue();
 - **Products** — everything, filterable by status, with contact email, checks and 30-day stats.
 - **Overview** — live/pending counts, views and clicks over 30 days, most viewed products, background job status.
 - **Settings** — an optional email address for "something is waiting" notifications, the Resend key for sending email,
-  the weekly Sponsored slot price makers see, and *Make a new key* to rotate the admin key.
+  the yearly Sponsored price makers see, and *Make a new key* to rotate the admin key.
 
 `sponsored` on a product only adds a "Sponsored" label; it never changes search. Deletion requests: the maker can take the
 listing down from their owner panel, or use *Remove* in the admin page — both wipe the contact email and owner key.
@@ -169,6 +186,7 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `submit_product(p)` | Validates and stores a new product (pending), returns the owner key once. |
 | `owner_get` / `owner_update` / `owner_stats` / `owner_remove` | Owner panel, all checked against the owner key. |
 | `track(slug, kind)` / `report_product(slug, reason, details)` | Visit counting and reports. |
+| `upvote(slug, voter, on)` | Upvote a product, or take the upvote back. |
 | `start_recovery(slug)` | Starts the lost-key flow. |
 | `public_updates(slugs)` / `public_releases(slug)` | The followed-products feed and a product's latest releases. |
 | `email_signin_start(email)` / `email_signin_verify(email, code)` | Sign-in with email: sends a code, then returns a device key per product. |

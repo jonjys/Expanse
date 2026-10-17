@@ -17,6 +17,7 @@ const ZONES = [
 const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
 const WORLD_R = 150, CORE_R = 14, CELL = 16, ZMIN = .025, ZMAX = 6, MAX_R = WORLD_R + 25;
 const OWNED_KEY = 'expanse.owned.v1', REF_KEY = 'expanse.ref', RECOVER_KEY = 'expanse.recover.v1', DRAFT_KEY = 'expanse.draft.v1', FOLLOW_KEY = 'expanse.follow.v1';
+const VOTER_KEY = 'expanse.voter.v1', VOTES_KEY = 'expanse.votes.v1';
 
 /* Keep in sync with the category / pricing / platform checks on public.products. */
 const CATS = {
@@ -182,6 +183,9 @@ const SPOT_SLOTS = Array.from({ length: 8 }, (_, k) => { const a = -Math.PI / 2 
 const spotRank = slug => { const i = SPOTLIGHT.picks.findIndex(x => x.slug === slug); return i < 0 ? 0 : i + 1; };
 /* Followed products live only in this browser: { slugs: { slug: followedAt }, seen: lastOpenedAt } */
 let FOLLOW = (() => { const f = store.get(FOLLOW_KEY); return f && typeof f.slugs === 'object' && f.slugs ? f : { slugs: {}, seen: null }; })(), UPDATES = [];
+/* Products this browser upvoted: { slug: 1 }. HL: the current search's top matches, lit up on the map. */
+const VOTED = (() => { const v = store.get(VOTES_KEY); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; })();
+let HL = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
 const priceOf = (x, y, size) => zoneOf(x, y, size).price * size * size;
 const isFree = (x, y, w, h) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (occ.has(K(x + i, y + j))) return false; return true; };
@@ -616,6 +620,15 @@ function draw(T) {
   ctx.globalAlpha = 1;
   drawItems(T, cp);
   for (const it of ITEMS) if (it.kind === 'spot') beacon(it, T, '#ffffff', '255,255,255', .85);
+  if (HL.length && !results.hidden) {   // search: the matches light up in the universe, the best one gets a label
+    let top = null;
+    for (const it of ITEMS) {
+      if ((it.kind !== 'product' && it.kind !== 'star') || !HL.includes(it.slug)) continue;
+      beacon(it, T, itemColor(it), itemRgb(it), 1);
+      if (it.slug === HL[0] && (!top || it.kind === 'product')) top = it;
+    }
+    if (top && ui === 'none') floatLabel(top.x + top.w / 2, top.y, top.name, itemColor(top), T);
+  }
   if (ghost && ui === 'none' && mA > .5) {
     const p = toS(ghost.x, ghost.y), sz = ghost.size * cp;
     ctx.fillStyle = 'rgba(200,255,61,.12)'; rrect(ctx, p.x + 1, p.y + 1, sz - 2, sz - 2, Math.min(5, cp * .18)); ctx.fill();
@@ -1019,7 +1032,7 @@ function openProduct(p, opts) {
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
     imgs,
     el('div', { class: 'pact' }, visit, demoBtn),
-    el('div', { class: 'ptools' }, followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
+    el('div', { class: 'ptools' }, voteBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
@@ -1054,6 +1067,44 @@ function followBtn(p) {
   b.onclick = () => { toggleFollow(p); paint(); };
   paint(); return b;
 }
+/* Upvotes: one per product per browser, no account. The browser keeps a random voter id (the server stores only a
+   hash of it) and which products it upvoted (VOTED). Makers can't upvote their own product. */
+function voterId() {
+  let v = store.get(VOTER_KEY);
+  if (typeof v !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(v)) {
+    const a = new Uint8Array(18); crypto.getRandomValues(a);
+    v = btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    store.set(VOTER_KEY, v);
+  }
+  return v;
+}
+function voteBtn(p) {
+  const b = el('button', { class: 'chip-btn vote-btn', type: 'button' }), mine = !!OWNED[p.slug];
+  const paint = () => {
+    const on = !!VOTED[p.slug], n = p.upvotes || 0;
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', (on ? 'Upvoted · ' : 'Upvote · ') + plural(n, 'upvote', 'upvotes'));
+    b.title = mine ? 'You can’t upvote your own product' : on ? 'Take your upvote back' : 'Upvote ' + p.name;
+    b.replaceChildren(el('span', { 'aria-hidden': 'true', text: '▲' }), el('span', { text: n ? fmt(n) : 'Upvote' }));
+  };
+  b.onclick = async () => {
+    if (mine) { toast('You can’t upvote your own product.'); return; }
+    const on = !VOTED[p.slug], before = p.upvotes || 0;
+    if (on) VOTED[p.slug] = 1; else delete VOTED[p.slug];
+    p.upvotes = Math.max(0, before + (on ? 1 : -1)); b.disabled = true; paint();
+    if (on) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+    try {
+      const r = await rpc('upvote', { p_slug: p.slug, p_voter: voterId(), p_on: on });
+      p.upvotes = r.upvotes; store.set(VOTES_KEY, VOTED);
+    } catch (e) {
+      if (on) delete VOTED[p.slug]; else VOTED[p.slug] = 1;
+      p.upvotes = before;
+      const m = errCode(e);
+      toast(m === 'already' ? 'Someone on this network already upvoted it today.' : m === 'own_product' ? 'You can’t upvote your own product.' : m === 'slow_down' ? 'That’s a lot of upvotes for one day. Try again tomorrow.' : "Couldn't count that upvote right now. Try again.");
+    } finally { b.disabled = false; paint(); }
+  };
+  paint(); return b;
+}
 const relItem = r => el('li', null, el('a', { href: r.url, target: '_blank', rel: 'noopener nofollow' }, el('b', { text: r.title || r.tag }), el('small', { text: (r.title && r.title !== r.tag ? r.tag + ' · ' : '') + dateStr(r.at) }), r.notes ? el('p', { text: r.notes }) : null));
 /* Releases from the product's connected GitHub repo: the latest comes with the product, the rest load when the profile opens. */
 function releasesSec(p) {
@@ -1072,7 +1123,7 @@ function openSpotlightInfo() {
     el('p', { style: 'margin-top:10px', text: 'The 8 places in the core go to the products people actually use. Nobody is invited, and no place is for sale.' }),
     el('ul', { class: 'rules' },
       el('li', null, el('b', { text: 'Who can get in: ' }), 'any live product with a verified domain and a website that answers.'),
-      el('li', null, el('b', { text: 'How it ranks: ' }), 'unique profile views plus clicks to the product’s site over the last 30 days. The maker’s own visits and clicks from Sponsored cards don’t count.'),
+      el('li', null, el('b', { text: 'How it ranks: ' }), 'unique profile views, clicks to the product’s site and upvotes over the last 30 days. The maker’s own visits and votes, and clicks from Sponsored cards, don’t count.'),
       el('li', null, el('b', { text: 'When it changes: ' }), 'every hour. While fewer than 8 products qualify, every product that does gets a place.')),
     picks.length ? el('div', { class: 'spl' }, el('span', { class: 'mono', text: 'In the Spotlight now' }), el('div', null, picks.map((p, i) => el('button', { type: 'button', onclick: () => { closeDlg(); openProduct(p); } }, el('b', { text: '#' + (i + 1) }), ' ' + p.name))))
       : el('p', { class: 'fine', text: 'All 8 places are open right now. The first verified products to arrive take them.' }),
@@ -1176,7 +1227,8 @@ function interpret(qs) {
   return out;
 }
 /* Word matches and meaning matches together. Each result says why it's there; asked-for price, platform or
-   integration lift the products that have it. Placement and sponsorship never play a part. */
+   integration lift the products that have it, and so does popularity (real use and upvotes over the last 30 days):
+   a popular product can pass a slightly closer match, never a much closer one. Placement and sponsorship never play a part. */
 function rankAll(qs, list) {
   const pool = list || PRODUCTS, inPool = new Set(pool.map(p => p.slug));
   const kw = searchProducts(qs, pool), it = interpret(qs), max = Math.max(1, ...kw.map(r => r.s)), m = new Map();
@@ -1198,10 +1250,12 @@ function rankAll(qs, list) {
     if (it.free) { if (['free', 'freemium', 'trial'].includes(e.p.pricing)) why.push(PRICING[e.p.pricing]); else s *= .7; }
     for (const k of it.plat) { if (e.p.platforms.includes(k)) why.push('On ' + PLATFORMS[k]); else s *= .75; }
     for (const i of it.ints) { if (e.p.integrations.some(x => normQ(x) === normQ(i))) why.push('Works with ' + i); else s *= .8; }
+    s *= 1 + .35 * clamp((e.p.pop || 0) / 100, 0, 1);
     out.push({ p: e.p, s, why: [...new Set(why)].slice(0, 3).join(' · '), ai: !e.kw && !!e.sem });
   }
-  return out.sort((a, b) => b.s - a.s || a.p.name.localeCompare(b.p.name));
+  return out.sort((a, b) => b.s - a.s || (b.p.upvotes || 0) - (a.p.upvotes || 0) || a.p.name.localeCompare(b.p.name));
 }
+const byPopular = (a, b) => (b.p.pop || 0) - (a.p.pop || 0) || (b.p.upvotes || 0) - (a.p.upvotes || 0) || a.p.name.localeCompare(b.p.name);
 function understood(qs) {
   const it = interpret(qs), bits = [];
   if (it.free) bits.push('free option');
@@ -1209,24 +1263,25 @@ function understood(qs) {
   for (const i of it.ints) bits.push('works with ' + i);
   return bits;
 }
-/* Sponsored slots: at most one card, above the results and clearly marked. It shows only where it fits — the product
-   is among the matches for the search (and isn't already the top one), or shares a category with the top matches;
-   browsing the list without a search shows any running slot that passes the filters. The results below never change. */
-const SPON_PICK = new Map(), sponSeen = new Set();
+/* Sponsored slots: at most two cards, above the results and each clearly marked. They show only where they fit — the
+   product is a close match for the search (at least 40% of the best match's score, and isn't already the top one), or
+   shares a category with the best match; browsing the list without a search shows running slots that pass the filters. When more slots fit than
+   there is room for, they take turns. The results below never change. */
+const SPON_MAX = 2, SPON_PICK = new Map(), sponSeen = new Set();
 function sponsoredFor(qs, organic, pool) {
-  if (!PLACEMENTS.length) return null;
+  if (!PLACEMENTS.length) return [];
   const inPool = new Set((pool || PRODUCTS).map(p => p.slug));
-  const live = PLACEMENTS.filter(x => BY_SLUG.has(x.slug) && inPool.has(x.slug));
+  const live = [...new Map(PLACEMENTS.filter(x => BY_SLUG.has(x.slug) && inPool.has(x.slug)).map(x => [x.slug, x])).values()];   // one card per product
   let cands = live;
   if (qs) {
-    const first = organic[0] && organic[0].p.slug, hit = new Set(organic.map(r => r.p.slug)), cats = organic.slice(0, 3).map(r => r.p.category);
-    cands = live.filter(x => x.slug !== first && (hit.has(x.slug) || cats.includes(BY_SLUG.get(x.slug).category)));
+    const top = organic[0], first = top && top.p.slug, hit = new Set(organic.filter(r => top && r.s >= top.s * .4).map(r => r.p.slug));
+    cands = live.filter(x => x.slug !== first && (hit.has(x.slug) || (top && BY_SLUG.get(x.slug).category === top.p.category)));
   }
-  if (!cands.length) return null;
+  if (!cands.length) return [];
   const key = normQ(qs || '') + '|' + cands.map(x => x.id).join(',');
-  let pick = SPON_PICK.get(key);
-  if (!pick) { pick = cands[Math.floor(Math.random() * cands.length)]; SPON_PICK.set(key, pick); }
-  return { id: pick.id, p: BY_SLUG.get(pick.slug) };
+  let picks = SPON_PICK.get(key);
+  if (!picks) { picks = cands.map(x => [Math.random(), x]).sort((a, b) => a[0] - b[0]).slice(0, SPON_MAX).map(r => r[1]); SPON_PICK.set(key, picks); }
+  return picks.map(x => ({ id: x.id, p: BY_SLUG.get(x.slug) }));
 }
 function trackSpon(sp, kind) {
   if (!sp || OWNED[sp.p.slug] || navigator.webdriver) return;
@@ -1245,16 +1300,21 @@ function topNeeds(n) {
 function renderResults() {
   const v = qIn.value.trim();
   if (v.length < 2) {
+    HL = [];
     results.replaceChildren(el('div', { class: 'lbl mono', text: PRODUCTS.length ? 'Popular needs' : 'Try a need' }), el('div', { class: 'ideas' }, topNeeds(8).map(n => el('button', { type: 'button', text: n, onclick: () => runSearch(n) }))));
     results.hidden = false; return;
   }
   const all = rankAll(v), r = all.slice(0, 6), d = searchDemo(v), kids = [], u = understood(v), anyAi = r.some(x => x.ai);
+  HL = r.map(x => x.p.slug); kick();
   if (u.length || anyAi) kids.push(el('div', { class: 'lbl mono' }, anyAi ? el('span', { class: 'ai', text: '✦ AI' }) : null, u.length ? 'Looking for: ' + u.join(' · ') : 'Matched by meaning, not just words'));
-  const sp = sponsoredFor(v, all);
-  if (sp) kids.push(el('button', { type: 'button', class: 'spon', title: 'Paid placement. It doesn’t change the results below.', onclick: () => { trackSpon(sp, 'click'); results.hidden = true; searchEl.classList.remove('open'); openProduct(sp.p); } },
+  const sps = sponsoredFor(v, all);
+  for (const sp of sps) kids.push(el('button', { type: 'button', class: 'spon', title: 'Paid placement. It doesn’t change the results below.', onclick: () => { trackSpon(sp, 'click'); results.hidden = true; searchEl.classList.remove('open'); openProduct(sp.p); } },
     el('span', { class: 'sw', style: 'background:' + CATS[sp.p.category].color }), el('span', { class: 'rt' }, el('b', { text: sp.p.name }), el('small', { text: sp.p.tagline })), el('span', { class: 'tagx mono', text: 'Sponsored' })));
-  for (const x of r) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p); } },
-    el('span', { class: 'sw', style: 'background:' + CATS[x.p.category].color }), el('span', { class: 'rt' }, el('b', { text: x.p.name }), el('small', { text: x.why || x.p.tagline })), x.p.verified_at ? el('span', { class: 'tagx', text: '✓' }) : null));
+  for (const x of r) {
+    const marks = [x.p.upvotes ? '▲ ' + fmt(x.p.upvotes) : '', x.p.verified_at ? '✓' : ''].filter(Boolean).join('  ');
+    kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p); } },
+      el('span', { class: 'sw', style: 'background:' + CATS[x.p.category].color }), el('span', { class: 'rt' }, el('b', { text: x.p.name }), el('small', { text: x.why || x.p.tagline })), marks ? el('span', { class: 'tagx', text: marks }) : null));
+  }
   for (const q of d) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openDemo(q); } },
     el('span', { class: 'sw', style: 'background:' + MODES[q.mode].color }), el('span', { class: 'rt' }, el('b', { text: q.name }), el('small', { text: q.tag })), el('span', { class: 'tagx mono', text: 'Example' })));
   if (r.length) kids.push(el('button', { type: 'button', class: 'all', text: `See all ${plural(all.length, 'match', 'matches')} in the list →`, onclick: () => runSearch(v) }));
@@ -1265,7 +1325,7 @@ function renderResults() {
   if (pendingAi) kids.unshift(el('div', { class: 'none' }, el('span', { class: 'ai mono', text: '✦ AI' }), ' Searching by meaning…'));
   else if (!r.length) kids.unshift(el('div', { class: 'none' }, `No live product solves “${v}” yet. `, el('button', { type: 'button', text: 'Add yours →', onclick: () => { results.hidden = true; startSubmit(null); } })));
   results.replaceChildren(...kids); results.hidden = false;
-  if (sp) trackSpon(sp, 'impression');
+  for (const sp of sps) trackSpon(sp, 'impression');
 }
 let aiT = 0;
 qIn.addEventListener('input', renderResults);
@@ -1286,7 +1346,7 @@ function setView(v) {
   view = v; app.classList.toggle('listing', v === 'list'); listEl.setAttribute('aria-hidden', String(v !== 'list'));
   $('#vMap').setAttribute('aria-pressed', String(v === 'map')); $('#vList').setAttribute('aria-pressed', String(v === 'list'));
   if (v === 'list') { if (ui === 'claim' || ui === 'manage') setUI('none'); renderFilters(); renderList(); }
-  else { listQ = ''; }
+  else { listQ = ''; lSort.value = 'pop'; }
   kick();
 }
 $('#vMap').onclick = () => { closeUI(); setView('map'); };
@@ -1313,7 +1373,8 @@ function filtered() {
 }
 function card(p, why) {
   return el('button', { class: 'card', style: '--c:' + CATS[p.category].color, onclick: () => openProduct(p) },
-    el('div', { class: 'top' }, el('b', { text: p.name }), p.verified_at ? el('span', { class: 'ver', title: 'Verified domain', text: '✓' }) : null, isFollowed(p.slug) ? el('span', { class: 'fol', title: 'You follow this', text: '★' }) : null),
+    el('div', { class: 'top' }, el('b', { text: p.name }), p.verified_at ? el('span', { class: 'ver', title: 'Verified domain', text: '✓' }) : null, isFollowed(p.slug) ? el('span', { class: 'fol', title: 'You follow this', text: '★' }) : null,
+      p.upvotes ? el('span', { class: 'votes' + (VOTED[p.slug] ? ' on' : ''), title: plural(p.upvotes, 'upvote', 'upvotes'), text: '▲ ' + fmt(p.upvotes) }) : null),
     el('p', { text: p.tagline }),
     why ? el('div', { class: 'why', text: why }) : el('div', { class: 'needs' }, p.needs.slice(0, 3).map(n => el('span', { class: 'need', text: n }))),
     el('div', { class: 'meta' }, el('span', { text: CATS[p.category].label }), el('span', { text: PRICING[p.pricing] }), p.platforms.length ? el('span', { text: p.platforms.slice(0, 3).map(x => PLATFORMS[x]).join(' · ') }) : null, p.sponsored ? el('span', { class: 'spon', text: 'Sponsored' }) : null));
@@ -1334,12 +1395,13 @@ function renderList() {
   else rows = base.map(p => ({ p, why: null }));
   const sort = lSort.value;
   if (sort === 'new') rows.sort((a, b) => Date.parse(b.p.approved_at || 0) - Date.parse(a.p.approved_at || 0));
-  else if (sort === 'az' || (sort === 'match' && !listQ)) rows.sort((a, b) => a.p.name.localeCompare(b.p.name));
+  else if (sort === 'az') rows.sort((a, b) => a.p.name.localeCompare(b.p.name));
+  else if (sort === 'pop' || !listQ) rows.sort(byPopular);
   const lq = $('#lQuery'); lq.hidden = !listQ;
   if (listQ) {
     const u = understood(listQ), aiAny = rows.some(r => r.why.startsWith('✦'));
     lq.replaceChildren(aiAny ? el('span', { class: 'ai mono', text: '✦ AI' }) : '', `Best matches for “${listQ}”`, u.length ? ` · looking for ${u.join(', ')}` : '',
-      el('button', { type: 'button', text: 'Clear search', onclick: () => { listQ = ''; qIn.value = ''; renderList(); } }));
+      el('button', { type: 'button', text: 'Clear search', onclick: () => { listQ = ''; qIn.value = ''; lSort.value = 'pop'; renderList(); } }));
   }
   $('#lCount').textContent = plural(rows.length, 'product', 'products');
   if (!rows.length && listQ && PRODUCTS.length && AI.has(listQ.replace(/\s+/g, ' ').trim().toLowerCase()) && !aiCached(listQ)) {
@@ -1354,9 +1416,9 @@ function renderList() {
       el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), none ? el('button', { class: 'btn btn-ghost btn-sm', text: 'See the demo universe', onclick: () => { setView('map'); $('#demoHero').click(); } }) : null)));
     return;
   }
-  const sp = sponsoredFor(listQ, ranked, base);
-  cardsEl.replaceChildren(...(sp ? [sponCard(sp)] : []), ...rows.map(r => card(r.p, r.why)));
-  if (sp) trackSpon(sp, 'impression');
+  const sps = sponsoredFor(listQ, ranked, base);
+  cardsEl.replaceChildren(...sps.map(sponCard), ...rows.map(r => card(r.p, r.why)));
+  for (const sp of sps) trackSpon(sp, 'impression');
 }
 
 /* ================= PRODUCT FORM (used by "add" and by the owner panel) ================= */
@@ -1663,7 +1725,7 @@ function spotBox(o) {
     el('p', { class: 'c-text', style: 'font-size:13.5px;margin-top:0', text: 'The 8 places in the core go to the most-used products. They’re earned, never sold. To qualify:' }),
     el('div', { class: 'req ' + (o.verified_at ? 'ok' : '') }, o.verified_at ? '✓ ' : '○ ', 'Verified domain'),
     el('div', { class: 'req ' + (siteOk ? 'ok' : '') }, siteOk ? '✓ ' : '○ ', 'Website answers (checked daily)'),
-    el('p', { class: 'fine', text: o.verified_at && siteOk ? 'You qualify. Places go to the products with the most views and clicks over the last 30 days, updated every hour.' : 'Then places go to the products with the most views and clicks over the last 30 days. While fewer than 8 qualify, everyone who does gets a place.' }));
+    el('p', { class: 'fine', text: o.verified_at && siteOk ? 'You qualify. Places go to the products with the most views, clicks and upvotes over the last 30 days, updated every hour.' : 'Then places go to the products with the most views, clicks and upvotes over the last 30 days. While fewer than 8 qualify, everyone who does gets a place.' }));
 }
 function renderVerify(o) {
   const box = $('#mVerify');
@@ -1761,22 +1823,20 @@ async function renderPromote(o) {
   catch (e) { box.replaceChildren(el('p', { class: 'fine', text: "Couldn't load this right now." })); return; }
   if (mTab !== 'promote' || mSlug !== slug) return;
   const items = d.items || [], open = items.some(x => ['requested', 'awaiting_payment', 'upcoming', 'live'].includes(x.state));
-  const price = d.price_week_eur != null ? Number(d.price_week_eur) : null;
+  const price = d.price_year_eur != null ? Number(d.price_year_eur) : null;
   box.replaceChildren(...[
     el('div', { class: 'promo' },
-      el('h4', { text: 'Sponsored slot' }),
-      el('p', { text: 'Your product shows in one card marked “Sponsored” above the results when people search for what it solves, and at the top of the list. It only shows where it fits the search, and it never changes where you rank.' }),
-      el('p', { class: 'fine', text: (price != null ? `${eur(price)} per week. ` : 'We confirm the price with you before you pay. ') + 'Nothing is charged automatically: you pay once we have confirmed the dates. You get a report of how often the card was shown and clicked, and of your views and clicks compared with the days before.' })),
+      el('h4', { text: 'Sponsored for a year' }),
+      el('p', { text: 'For a whole year, your product can show in a card marked “Sponsored” above the results when people search for what it solves, and at the top of the list. It only shows where it fits the search, and it never changes where you rank.' }),
+      el('p', { class: 'fine', text: (price != null ? `${eur(price)} for the year. ` : 'We confirm the price with you before you pay. ') + 'Nothing is charged automatically: you pay once we have confirmed the dates. You get a report of how often the card was shown and clicked, and of your views and clicks compared with the days before.' })),
     open ? null : promoForm(slug, price),
     ...items.map(x => placementItem(slug, x))].filter(Boolean));
 }
+const weeksLabel = w => w === 52 ? '1 year' : plural(w, 'week', 'weeks');
 function promoForm(slug, price) {
-  let weeks = 2;
+  const weeks = 52;
   const start = el('input', { type: 'date', min: new Date().toISOString().slice(0, 10), 'aria-label': 'Preferred start' });
   const note = el('textarea', { maxlength: '400', rows: '2', placeholder: 'Anything we should know (optional)' });
-  const total = el('small', { class: 'hint' });
-  const paint = () => { opts.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.w === weeks))); total.textContent = price != null ? `${weeks} week${weeks === 1 ? '' : 's'} · ${eur(price * weeks)} in total` : ''; };
-  const opts = el('div', { class: 'opts', role: 'group', 'aria-label': 'Length' }, [1, 2, 4, 8].map(w => el('button', { type: 'button', 'data-w': String(w), text: w === 1 ? '1 week' : w + ' weeks', onclick: () => { weeks = w; paint(); } })));
   const send = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Request a slot' });
   const form = el('form', { onsubmit: async e => {
     e.preventDefault(); send.disabled = true;
@@ -1789,15 +1849,14 @@ function promoForm(slug, price) {
       toast(m === 'busy' ? 'You already have a slot requested or running.' : m === 'invalid:start' ? 'Pick a start date from today and up to six months ahead.' : m === 'not_live' ? 'Promotion opens when your product is live.' : "Couldn't send the request — try again.");
     } finally { send.disabled = false; }
   } },
-    el('div', { class: 'field' }, el('span', { class: 'mono', text: 'Length' }), opts, total),
+    el('div', { class: 'field' }, el('span', { class: 'mono', text: 'Length' }), el('b', { class: 'plen', text: '1 year' + (price != null ? ' · ' + eur(price) : '') })),
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Preferred start' }), start, el('small', { class: 'hint', text: 'Leave empty for as soon as possible.' })),
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Note' }), note),
     el('div', { class: 'c-row' }, send));
-  paint();
   return form;
 }
 function placementItem(slug, x) {
-  const dates = x.start_date ? `${dayFmt(x.start_date)} – ${dayFmt(x.end_date)}` : `${x.weeks} week${x.weeks === 1 ? '' : 's'}, ${x.wish_start ? 'from ' + dayFmt(x.wish_start) : 'as soon as possible'}`;
+  const dates = x.start_date ? `${dayFmt(x.start_date)} – ${dayFmt(x.end_date)}` : `${weeksLabel(x.weeks)}, ${x.wish_start ? 'from ' + dayFmt(x.wish_start) : 'as soon as possible'}`;
   const withdraw = ['requested', 'awaiting_payment'].includes(x.state) ? el('button', { class: 'linkbtn', text: 'Withdraw', onclick: async e => {
     e.currentTarget.disabled = true;
     try { await rpc('owner_cancel_placement', { p_slug: slug, p_key: OWNED[slug].key, p_id: x.id }); toast('Withdrawn. Nothing was charged.'); if (mSlug === slug) renderManage(); }
@@ -1805,7 +1864,7 @@ function placementItem(slug, x) {
   } }) : null;
   return el('div', { class: 'plc' },
     el('div', { class: 'plc-h' }, el('b', { text: dates }), el('span', { class: 'stp mono ' + x.state, text: PSTATE[x.state] || x.state })),
-    x.price_eur != null && x.start_date ? el('p', { class: 'fine', text: `${x.weeks} week${x.weeks === 1 ? '' : 's'} · ${eur(x.price_eur)}${x.paid_at ? ' · paid' : ''}` }) : null,
+    x.price_eur != null && x.start_date ? el('p', { class: 'fine', text: `${weeksLabel(x.weeks)} · ${eur(x.price_eur)}${x.paid_at ? ' · paid' : ''}` }) : null,
     x.state === 'requested' ? el('p', { class: 'fine', text: 'We’ll email you to confirm the dates and payment.' }) : null,
     x.state === 'awaiting_payment' ? el('p', { class: 'fine', text: x.pay_url ? 'The slot starts once the payment is confirmed.' : 'Payment details come by email. The slot starts once the payment is confirmed.' }) : null,
     x.state === 'rejected' && x.admin_note ? el('div', { class: 'note', text: x.admin_note }) : null,
@@ -1821,7 +1880,7 @@ function placementReport(r) {
       el('div', { class: 'kpi' }, el('b', { text: fmt(r.impressions) }), el('small', { text: 'times the card was shown' })),
       el('div', { class: 'kpi' }, el('b', { text: fmt(r.clicks) }), el('small', { text: r.impressions ? `clicks · ${Math.round(r.clicks / r.impressions * 100)}% of views` : 'clicks on the card' }))),
     el('table', { class: 'cmp' },
-      el('thead', null, el('tr', null, el('th', { text: '' }), el('th', { text: `During · ${plural(r.days, 'day', 'days')}` }), el('th', { text: 'Before' }), el('th', { text: 'Change' }))),
+      el('thead', null, el('tr', null, el('th', { text: '' }), el('th', { text: (r.cmp_days && r.cmp_days < r.days ? 'First ' : 'During · ') + plural(r.cmp_days || r.days, 'day', 'days') }), el('th', { text: 'Before' }), el('th', { text: 'Change' }))),
       el('tbody', null, row('Profile views', r.views, r.before.views), row('Clicks to your site', r.site_clicks, r.before.site_clicks))),
     el('p', { class: 'fine', text: `Unique visitors per day; your own visits and known bots aren’t counted. “Before” is the same number of days just before the slot (${r.before.from === r.before.to ? dayFmt(r.before.from) : dayFmt(r.before.from) + ' – ' + dayFmt(r.before.to)}).` }));
 }
