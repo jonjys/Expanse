@@ -162,6 +162,9 @@ for (let y = -CORE_R; y <= CORE_R; y++) for (let x = -CORE_R; x <= CORE_R; x++) 
 }
 const glowOf = q => q.last <= 3 ? 1 : q.last <= 30 ? 1 - (q.last - 3) / 27 * .85 : 0;
 const hash = n => (((n | 0) * 2654435761) >>> 0) / 4294967296;
+/* Ties never go to the oldest, biggest or alphabetically first: their order rotates every day (UTC). */
+const DAY = new Date().toISOString().slice(0, 10);
+const dayRot = slug => { let h = 2166136261; for (const ch of slug + '|' + DAY) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 /* 1 on the centre line of a spiral arm, falling to 0 between arms (same spiral as the generator). */
 function armness(q) {
   const cx = q.x + q.size / 2, cy = q.y + q.size / 2, r = Math.max(CORE_R, Math.hypot(cx, cy));
@@ -1120,10 +1123,11 @@ function openSpotlightInfo() {
   const picks = SPOTLIGHT.picks.map(x => BY_SLUG.get(x.slug)).filter(Boolean);
   const mine = Object.keys(OWNED).find(s => OWNDATA[s] && OWNDATA[s].status === 'approved' && !OWNDATA[s].verified_at);
   openDlg(el('div', { class: 'mono kick', style: 'color:var(--amber)', text: '★ The Spotlight' }), el('h2', { class: 'display', text: 'The middle is earned, not bought.' }),
-    el('p', { style: 'margin-top:10px', text: 'The 8 places in the core go to the products people actually use. Nobody is invited, and no place is for sale.' }),
+    el('p', { style: 'margin-top:10px', text: 'The 8 places in the core go to the products people like most — not the biggest or the best known. Nobody is invited, and no place is for sale.' }),
     el('ul', { class: 'rules' },
       el('li', null, el('b', { text: 'Who can get in: ' }), 'any live product with a verified domain and a website that answers.'),
-      el('li', null, el('b', { text: 'How it ranks: ' }), 'unique profile views, clicks to the product’s site and upvotes over the last 30 days. The maker’s own visits and votes, and clicks from Sponsored cards, don’t count.'),
+      el('li', null, el('b', { text: 'How it ranks: ' }), 'how many of the people who look at a product go on to click through to its site or upvote it, over the last 30 days — not how many visitors it has, so a big audience or a famous name doesn’t buy the middle. New products start at the average, not at zero. The maker’s own visits and votes don’t count.'),
+      el('li', null, el('b', { text: 'Room for newcomers: ' }), '2 of the 8 places always go to the best products that went live in the last 30 days, and ties rotate every day instead of going to whoever came first.'),
       el('li', null, el('b', { text: 'When it changes: ' }), 'every hour. While fewer than 8 products qualify, every product that does gets a place.')),
     picks.length ? el('div', { class: 'spl' }, el('span', { class: 'mono', text: 'In the Spotlight now' }), el('div', null, picks.map((p, i) => el('button', { type: 'button', onclick: () => { closeDlg(); openProduct(p); } }, el('b', { text: '#' + (i + 1) }), ' ' + p.name))))
       : el('p', { class: 'fine', text: 'All 8 places are open right now. The first verified products to arrive take them.' }),
@@ -1227,8 +1231,9 @@ function interpret(qs) {
   return out;
 }
 /* Word matches and meaning matches together. Each result says why it's there; asked-for price, platform or
-   integration lift the products that have it, and so does popularity (real use and upvotes over the last 30 days):
-   a popular product can pass a slightly closer match, never a much closer one. Placement and sponsorship never play a part. */
+   integration lift the products that have it, and so does popularity — the share of visitors who click through or
+   upvote over the last 30 days, not how many visitors a product has, so a big audience doesn't win by size: a
+   well-liked product can pass a slightly closer match, never a much closer one. Placement and sponsorship never play a part. */
 function rankAll(qs, list) {
   const pool = list || PRODUCTS, inPool = new Set(pool.map(p => p.slug));
   const kw = searchProducts(qs, pool), it = interpret(qs), max = Math.max(1, ...kw.map(r => r.s)), m = new Map();
@@ -1253,9 +1258,9 @@ function rankAll(qs, list) {
     s *= 1 + .35 * clamp((e.p.pop || 0) / 100, 0, 1);
     out.push({ p: e.p, s, why: [...new Set(why)].slice(0, 3).join(' · '), ai: !e.kw && !!e.sem });
   }
-  return out.sort((a, b) => b.s - a.s || (b.p.upvotes || 0) - (a.p.upvotes || 0) || a.p.name.localeCompare(b.p.name));
+  return out.sort((a, b) => b.s - a.s || dayRot(a.p.slug) - dayRot(b.p.slug));
 }
-const byPopular = (a, b) => (b.p.pop || 0) - (a.p.pop || 0) || (b.p.upvotes || 0) - (a.p.upvotes || 0) || a.p.name.localeCompare(b.p.name);
+const byPopular = (a, b) => (b.p.pop || 0) - (a.p.pop || 0) || dayRot(a.p.slug) - dayRot(b.p.slug);
 function understood(qs) {
   const it = interpret(qs), bits = [];
   if (it.free) bits.push('free option');
@@ -1725,7 +1730,7 @@ function spotBox(o) {
     el('p', { class: 'c-text', style: 'font-size:13.5px;margin-top:0', text: 'The 8 places in the core go to the most-used products. They’re earned, never sold. To qualify:' }),
     el('div', { class: 'req ' + (o.verified_at ? 'ok' : '') }, o.verified_at ? '✓ ' : '○ ', 'Verified domain'),
     el('div', { class: 'req ' + (siteOk ? 'ok' : '') }, siteOk ? '✓ ' : '○ ', 'Website answers (checked daily)'),
-    el('p', { class: 'fine', text: o.verified_at && siteOk ? 'You qualify. Places go to the products with the most views, clicks and upvotes over the last 30 days, updated every hour.' : 'Then places go to the products with the most views, clicks and upvotes over the last 30 days. While fewer than 8 qualify, everyone who does gets a place.' }));
+    el('p', { class: 'fine', text: o.verified_at && siteOk ? 'You qualify. Places go to the products the largest share of visitors click through to or upvote over the last 30 days, updated every hour. 2 places are kept for products that went live in the last 30 days.' : 'Then places go to the products the largest share of visitors click through to or upvote over the last 30 days — not the ones with the most visitors. 2 places are kept for products that went live in the last 30 days, and while fewer than 8 qualify, everyone who does gets a place.' }));
 }
 function renderVerify(o) {
   const box = $('#mVerify');
