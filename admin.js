@@ -115,7 +115,7 @@ function productCard(p, opts) {
   if ((p.platforms || []).length) facts.push(['Platforms', p.platforms.map(x => PLATFORMS[x] || x).join(', ')]);
   if ((p.integrations || []).length) facts.push(['Works with', p.integrations.join(', ')]);
   facts.push(['Spot', `${p.zone} · ${p.size}×${p.size} at ${p.x},${p.y}`]);
-  if (p.status === 'approved') facts.push(['Last 30 days', `${fmt(p.views_30)} views · ${fmt(p.clicks_30)} clicks`]);
+  if (p.status === 'approved') facts.push(['Last 30 days', `${fmt(p.views_30)} views · ${fmt(p.clicks_30)} clicks · ▲ ${fmt(p.upvotes)} upvotes in all`]);
   const decide = el('div', { class: 'decide', hidden: true });
   const act = async (status, note, btn) => {
     if (btn) btn.disabled = true;
@@ -147,6 +147,12 @@ function productCard(p, opts) {
     const btn = e.currentTarget; btn.disabled = true;
     try { const r = await rpc('admin_spotlight_block', { p_slug: p.slug, p_blocked: !p.spotlight_blocked }); toast(r.spotlight_blocked ? `${p.name} is kept out of the Spotlight.` : `${p.name} can be in the Spotlight again.`); if (opts && opts.onChange) opts.onChange(r); }
     catch (err) { toast('Couldn’t save: ' + err.message, true); btn.disabled = false; }
+  } }));
+  if (p.upvotes) acts.push(el('button', { class: 'btn btn-ghost btn-sm', text: 'Reset upvotes', title: 'Takes back every upvote on this product, for vote rings and the like', onclick: async e => {
+    if (!confirm(`Take back all ${p.upvotes} upvotes on ${p.name}? This can’t be undone.`)) return;
+    const btn = e.currentTarget; btn.disabled = true;
+    try { const r = await rpc('admin_reset_votes', { p_slug: p.slug }); toast(`Upvotes on ${p.name} reset.`); if (opts && opts.onChange) opts.onChange(r); }
+    catch (err) { toast('Couldn’t reset: ' + err.message, true); btn.disabled = false; }
   } }));
   if (p.status === 'approved') acts.push(el('a', { class: 'btn btn-ghost btn-sm', href: SITE + '/p/' + p.slug, target: '_blank', rel: 'noopener', text: 'Profile ↗' }));
   acts.push(el('button', { class: 'btn btn-bad btn-sm', text: 'Remove…', onclick: () => ask('removed', 'Remove', 'btn-bad') }));
@@ -232,12 +238,13 @@ async function renderPlacements(main) {
   const open = list.filter(x => ['requested', 'awaiting_payment', 'upcoming', 'live'].includes(x.state)), done = list.filter(x => !open.includes(x));
   fill(main,
     el('h2', { class: 'h', text: 'Placements' }),
-    el('p', { class: 'sub', text: 'Sponsored slots makers asked for. Schedule one with dates and a price (and a payment link if you have one, like a Stripe Payment Link) — the maker gets an email. Mark it paid when the money is in: only paid slots show on the site, in one card marked “Sponsored” where it fits the search. It never changes the ranking.' }),
-    open.length ? el('div', { class: 'list' }, open.map(x => placementCard(x, s.placement_price_eur))) : el('div', { class: 'empty' }, el('b', { text: 'No open requests.' }), s.placement_price_eur != null ? `Makers see ${eur(s.placement_price_eur)} per week (Settings).` : 'Makers see “we confirm the price with you”. Set a weekly price under Settings.'),
+    el('p', { class: 'sub', text: 'Sponsored slots makers asked for. Schedule one with dates and a price (and a payment link if you have one, like a Stripe Payment Link) — the maker gets an email. Mark it paid when the money is in: only paid slots show on the site, in at most two cards marked “Sponsored” where they fit the search. They never change the ranking. A year is 52 weeks.' }),
+    open.length ? el('div', { class: 'list' }, open.map(x => placementCard(x, s.placement_price_eur))) : el('div', { class: 'empty' }, el('b', { text: 'No open requests.' }), s.placement_price_eur != null ? `Makers see ${eur(s.placement_price_eur)} for a year (Settings).` : 'Makers see “we confirm the price with you”. Set a yearly price under Settings.'),
     done.length ? el('h3', { style: 'margin-top:30px;font-size:17px;color:var(--muted)', text: 'Earlier' }) : null,
     done.length ? el('div', { class: 'list' }, done.map(x => placementCard(x, s.placement_price_eur))) : null);
 }
-function placementCard(x, weekPrice) {
+const weeksLabel = w => w === 52 ? '1 year' : w + (w === 1 ? ' week' : ' weeks');
+function placementCard(x, yearPrice) {
   const cat = CATS[x.category] || CATS.other;
   const act = async (btn, action, p, ok) => {
     btn.disabled = true;
@@ -251,7 +258,7 @@ function placementCard(x, weekPrice) {
   const card = el('article', { class: 'pc', style: '--c:' + cat[1] });
   const head = el('div', { class: 'head' }, el('a', { class: 'name', href: SITE + '/p/' + x.slug, target: '_blank', rel: 'noopener', text: x.name }), el('span', { class: 'badge st-' + (x.state === 'rejected' ? 'rejected-p' : x.state), text: PSTATE[x.state] || x.state }));
   const lines = [
-    `Asked for ${x.weeks} week${x.weeks === 1 ? '' : 's'}, ${x.wish_start ? 'from ' + day(x.wish_start) : 'as soon as possible'} · ${ago(x.created_at)} · ${x.contact_email || '—'}`,
+    `Asked for ${weeksLabel(x.weeks)}, ${x.wish_start ? 'from ' + day(x.wish_start) : 'as soon as possible'} · ${ago(x.created_at)} · ${x.contact_email || '—'}`,
     x.start_date ? `Scheduled ${day(x.start_date)} – ${day(x.end_date)}${x.price_eur != null ? ' · ' + eur(x.price_eur) : ''}${x.paid_at ? ' · paid ' + day(x.paid_at) : ' · not paid'}${x.stopped_at ? ' · stopped ' + day(x.stopped_at) : ''}` : null,
     x.pay_url ? 'Payment link: ' + x.pay_url : null].filter(Boolean);
   card.append(head, ...lines.map(t => el('p', { class: 'sub', style: 'margin-top:6px;overflow-wrap:anywhere', text: t })));
@@ -263,19 +270,19 @@ function placementCard(x, weekPrice) {
       el('span', null, el('b', { text: fmt(r.impressions) }), ' shown'), el('span', null, el('b', { text: fmt(r.clicks) }), r.clicks === 1 ? ' click' : ' clicks'),
       el('span', null, el('b', { text: fmt(r.views) }), ` profile views vs ${fmt(r.before.views)} before${pct(r.views, r.before.views)}`),
       el('span', null, el('b', { text: fmt(r.site_clicks) }), ` site clicks vs ${fmt(r.before.site_clicks)} before${pct(r.site_clicks, r.before.site_clicks)}`),
-      el('span', { text: `over ${r.days} day${r.days === 1 ? '' : 's'}` })));
+      el('span', { text: r.cmp_days && r.cmp_days < r.days ? `shown/clicked over ${r.days} days · views and site clicks: first ${r.cmp_days} days` : `over ${r.days} day${r.days === 1 ? '' : 's'}` })));
   }
   if (['requested', 'awaiting_payment', 'expired'].includes(x.state)) {
     const today = isoDay(new Date()), wish = x.wish_start && x.wish_start >= today ? x.wish_start : today;
     const start = el('input', { type: 'date', min: today }); start.value = x.start_date && x.start_date >= today ? x.start_date : wish;
-    const weeks = el('input', { type: 'number', min: '1', max: '12', step: '1' }); weeks.value = x.weeks;
+    const weeks = el('input', { type: 'number', min: '1', max: '52', step: '1', title: '52 weeks = a year' }); weeks.value = x.weeks;
     const price = el('input', { type: 'number', min: '0', step: '1', placeholder: '€' });
-    price.value = x.price_eur != null ? x.price_eur : weekPrice != null ? Math.round(weekPrice * x.weeks * 100) / 100 : '';
+    price.value = x.price_eur != null ? x.price_eur : yearPrice != null ? Math.round(yearPrice * Math.min(x.weeks, 52) / 52 * 100) / 100 : '';
     const link = el('input', { type: 'url', placeholder: 'https://buy.stripe.com/… (optional)' }); link.value = x.pay_url || '';
     const note = el('textarea', { placeholder: 'Note for the maker (needed to decline)' });
     card.append(el('div', { class: 'sched' },
       el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Start' }), start),
-      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Weeks' }), weeks),
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Weeks (52 = a year)' }), weeks),
       el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Price in total (€)' }), price)),
       el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Payment link' }), link),
       el('div', { class: 'decide' }, note),
@@ -367,13 +374,13 @@ function emailPanel(e) {
 }
 
 function pricePanel(s) {
-  const price = el('input', { type: 'number', min: '0', step: '1', placeholder: 'e.g. 29' }); price.value = s.placement_price_eur != null ? s.placement_price_eur : '';
+  const price = el('input', { type: 'number', min: '0', step: '1', placeholder: 'e.g. 19' }); price.value = s.placement_price_eur != null ? s.placement_price_eur : '';
   return el('div', { class: 'panel' }, el('h3', { text: 'Sponsored slot price' }),
-    el('p', { class: 'sub', text: 'The price per week makers see under Promote. Leave empty to show “we confirm the price with you”. You still set the final price on each request.' }),
-    el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Euro per week' }), price),
+    el('p', { class: 'sub', text: 'The price for a year that makers see under Promote. Leave empty to show “we confirm the price with you”. You still set the final price on each request.' }),
+    el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Euro per year' }), price),
     el('div', { class: 'bar' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Save', onclick: async e => {
       const btn = e.currentTarget; btn.disabled = true;
-      try { const r = await rpc('admin_save_settings', { p: { placement_price_eur: price.value.trim() } }); price.value = r.placement_price_eur != null ? r.placement_price_eur : ''; toast(r.placement_price_eur != null ? `Saved: ${eur(r.placement_price_eur)} per week.` : 'Saved. Makers see “we confirm the price with you”.'); }
+      try { const r = await rpc('admin_save_settings', { p: { placement_price_eur: price.value.trim() } }); price.value = r.placement_price_eur != null ? r.placement_price_eur : ''; toast(r.placement_price_eur != null ? `Saved: ${eur(r.placement_price_eur)} per year.` : 'Saved. Makers see “we confirm the price with you”.'); }
       catch (err) { toast(err.message === 'invalid:placement_price_eur' ? 'Enter a number, or leave it empty.' : 'Couldn’t save: ' + err.message, true); }
       finally { btn.disabled = false; }
     } })));

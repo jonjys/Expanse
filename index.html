@@ -129,6 +129,11 @@ a{color:inherit;text-decoration:none}
 #followBtn>span:first-child{color:var(--amber)}
 .fcount{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--lime);color:#071026;font-size:11.5px;font-weight:800}
 .follow-btn[aria-pressed="true"]{border-color:rgba(255,207,74,.6);color:var(--amber)}
+.vote-btn{font-variant-numeric:tabular-nums}
+.vote-btn[aria-pressed="true"]{border-color:rgba(200,255,61,.65);color:var(--lime);background:rgba(200,255,61,.08)}
+.vote-btn.pop span:first-child{display:inline-block;animation:vpop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes vpop{0%{transform:translateY(0) scale(1)}40%{transform:translateY(-5px) scale(1.45)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.vote-btn.pop span:first-child{animation:none}}
 .feed{list-style:none;display:grid;gap:6px;margin-top:14px}
 .feed li button,.feed li a{display:flex;gap:12px;align-items:flex-start;width:100%;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--line);text-align:left;transition:border-color .15s}
 .feed li button:hover,.feed li a:hover{border-color:var(--line2)}
@@ -427,6 +432,9 @@ a{color:inherit;text-decoration:none}
 .card .spon-h small{color:var(--muted);letter-spacing:.02em;text-transform:none;font-size:10.5px}
 .card .top b{font-size:18px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .card .top .fol{flex:none;color:var(--amber);font-size:14px}
+.card .top .votes{flex:none;margin-left:auto;font:600 12px "IBM Plex Mono",monospace;color:var(--muted);font-variant-numeric:tabular-nums}
+.card .top .votes.on{color:var(--lime)}
+.plen{display:block;font-size:15px;margin-top:2px}
 .card .top .ver{flex:none;width:18px;height:18px;border-radius:50%;background:#fff;color:#071026;display:grid;place-items:center;font-size:11px;font-weight:800}
 .card p{color:var(--txt2);font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card .needs .need{height:24px;font-size:12px;padding:0 9px}
@@ -585,7 +593,7 @@ a{color:inherit;text-decoration:none}
         <h2 class="display">Products</h2><span class="count mono" id="lCount"></span><span class="sp"></span>
         <button class="btn btn-ghost btn-xs fbtn" id="fToggle">Filters</button>
         <label class="sr" for="lSort">Sort</label>
-        <select id="lSort"><option value="match">Best match</option><option value="new">Newest</option><option value="az">A–Z</option></select>
+        <select id="lSort"><option value="match">Best match</option><option value="pop" selected>Most popular</option><option value="new">Newest</option><option value="az">A–Z</option></select>
       </div>
       <p class="lquery" id="lQuery" hidden></p>
       <div class="cards scroll" id="cards"></div>
@@ -704,7 +712,8 @@ a{color:inherit;text-decoration:none}
           <ul>
             <li>Product profiles: what it solves, who it's for, price, platforms, integrations, images, demo and link.</li>
             <li>Search by need, with filters for category, price, platform and integrations.</li>
-            <li>AI search that matches what you describe in your own words, with a reason for every result.</li>
+            <li>AI search that matches what you describe in your own words, with a reason for every result — and the matches light up in the galaxy.</li>
+            <li>Upvotes: one per product per browser, no account. They lift a product in search and count towards the Spotlight.</li>
             <li>A list view next to the galaxy, and a page with a share link for every product.</li>
             <li>An owner key to edit your profile and see profile views and clicks to your site — or sign in with your email and a one-time code.</li>
             <li>Domain verification with a meta tag or a file on your site.</li>
@@ -712,7 +721,7 @@ a{color:inherit;text-decoration:none}
             <li>Follow products and get their launches, changes and GitHub releases in one feed — saved in your browser, no account.</li>
             <li>Release updates from GitHub for products that connect their repo.</li>
             <li>Every new profile is reviewed before it goes live. Anyone can report a broken link or wrong information.</li>
-            <li>Sponsored slots that makers ask for: clearly marked, shown only where they fit a search, with a report of the views and clicks they delivered.</li>
+            <li>Sponsored for a year, which makers ask for: clearly marked, at most two cards, shown only where they fit a search, with a report of the views and clicks they delivered.</li>
           </ul>
         </div>
         <div class="box plan">
@@ -720,16 +729,17 @@ a{color:inherit;text-decoration:none}
           <ul>
             <li>Paying for map spots at their founding price. Until then, spots are free to hold.</li>
             <li>Paying by card inside Expanse. Today we confirm a Sponsored slot first and send a payment link.</li>
+            <li>Selling your spot to another maker, once spots are paid.</li>
           </ul>
         </div>
       </div>
       <p class="fine">Nothing in the planned list is switched on. Each one moves over when it actually works.</p>
 
       <h3>The Spotlight: the middle is earned</h3>
-      <p>The 8 places in the core of the galaxy go to the products people actually use — the most unique profile views and clicks to their site over the last 30 days. To qualify, a product needs a verified domain and a website that answers. Nobody is invited and no place is for sale: the maker's own visits and clicks from Sponsored cards don't count. It updates every hour, and while fewer than 8 products qualify, every one that does gets a place.</p>
+      <p>The 8 places in the core of the galaxy go to the products people actually use and like — the most unique profile views, clicks to their site and upvotes over the last 30 days. To qualify, a product needs a verified domain and a website that answers. Nobody is invited and no place is for sale: the maker's own visits and votes, and clicks from Sponsored cards, don't count. It updates every hour, and while fewer than 8 products qualify, every one that does gets a place.</p>
 
       <h3>Search is not for sale</h3>
-      <p>Results are ranked by how well a product matches your search — what it solves, its name and its description. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. A Sponsored slot is marked <b style="color:var(--amber)">Sponsored</b>, shows in one card above the results only when it fits what you searched for, and never changes the ranking below it.</p>
+      <p>Results are ranked by how well a product matches your search — what it solves, its name and its description — and then by popularity: real use and upvotes over the last 30 days. A popular product can pass a slightly closer match, never a much closer one. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. Sponsored products are marked <b style="color:var(--amber)">Sponsored</b>, show in at most two cards above the results only when they fit what you searched for, and never change the ranking below them.</p>
 
       <h3>Your spot on the map</h3>
       <p>Every product lives somewhere in the galaxy. The closer to the core, the more people fly past it. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four. Every spot is free to hold today.</p>
@@ -754,9 +764,9 @@ a{color:inherit;text-decoration:none}
       <h3>Questions</h3>
       <div class="faq">
         <details><summary>Is everything on the map real?</summary><p>Squares are real products that passed review. White beacons are held spots whose profile isn't live yet. The faint dust is just the galaxy. Demo mode fills the universe with clearly labelled example products to show what it can become — none of them are real.</p></details>
-        <details><summary>Who gets the middle of the map?</summary><p>The products people use most. The 8 places in the core — the Spotlight — go to live products with a verified domain and a working website, ranked by unique profile views and clicks to their site over the last 30 days. Nobody is invited and you can't buy a place.</p></details>
-        <details><summary>Does it cost anything?</summary><p>No. Listing is free and map spots are free to hold. The only paid option is a Sponsored slot, which a maker asks for from their owner panel and pays for only after we've confirmed the dates.</p></details>
-        <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and IP addresses are never stored. Known bots are left out, and so are your own visits on days you open your owner panel.</p></details>
+        <details><summary>Who gets the middle of the map?</summary><p>The products people use most. The 8 places in the core — the Spotlight — go to live products with a verified domain and a working website, ranked by unique profile views, clicks to their site and upvotes over the last 30 days. Nobody is invited and you can't buy a place.</p></details>
+        <details><summary>Does it cost anything?</summary><p>No. Listing is free and map spots are free to hold. The only paid option is being Sponsored for a year, which a maker asks for from their owner panel and pays for only after we've confirmed the dates.</p></details>
+        <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and IP addresses are never stored. Known bots are left out, and so are your own visits on days you open your owner panel. Upvotes work without an account too: your browser keeps a random ID and we store only a scrambled version of it, so each browser has one vote per product.</p></details>
         <details><summary>What do you do with my email?</summary><p>We only use it to contact you about your listing. It's stored in the EU (Stockholm), never shown publicly, sold or shared. Take your listing down from the owner panel and the email is wiped.</p></details>
         <details><summary>I lost my owner key.</summary><p>Open your product, choose “I make this”, then “Sign in with email” — we send a code to the address you added the product with. No access to that inbox? Choose “Lost your key?” and publish the code we give you on your site: that proves the product is yours and gives you a new key.</p></details>
         <details><summary>What gets turned down in review?</summary><p>Spam, scams, anything illegal or adult, and profiles that don't match the product they link to. If yours is turned down, you'll see why in your owner panel, and you can edit it and send it again.</p></details>
@@ -764,7 +774,7 @@ a{color:inherit;text-decoration:none}
       <h3>Privacy and rules</h3>
       <div class="terms">
         <div><b>Who runs Expanse</b><p>Expanse is a Nytto Labs project from Sweden. Questions, a data request or anything else: use the contact form below and we answer by email.</p></div>
-        <div><b>What we store</b><p>Product profiles (public), the maker's email (private, only for messages about the listing and sign-in codes), anonymous daily visit counts without cookies or IP addresses, and reports. The products you follow and your owner key stay in your own browser.</p></div>
+        <div><b>What we store</b><p>Product profiles (public), the maker's email (private, only for messages about the listing and sign-in codes), anonymous daily visit counts without cookies or IP addresses, upvotes (linked only to a scrambled random ID from your browser), and reports. The products you follow, your upvotes and your owner key stay in your own browser.</p></div>
         <div><b>Who helps us run it</b><p>Supabase stores the data in the EU (Stockholm), Vercel serves the site and Resend sends the emails. Nothing is sold, and there are no ad trackers.</p></div>
         <div><b>The rules</b><p>Listings are for real software and tools, added by the people who make or represent them. Spam, scams, illegal or adult content and profiles that don't match their product are turned down or removed. You can edit or take down your listing anytime, and taking it down wipes your email.</p></div>
       </div>
