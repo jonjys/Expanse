@@ -58,7 +58,8 @@ opens are in the "How it works" sheet in `index.html` (12 months at the founding
 
 Nobody can pick a spot in the core. Its 8 places (a ring of 4×4 squares, `SPOT_SLOTS` in `app.js`) show the products
 people actually use: live, verified domain, website answered in the last 3 days, not kept out by the admin; ranked by
-popularity (below); ties go to the product that went live first. While fewer than 8
+popularity (below). 2 of the 8 places are kept for the best products that went live in the last 30 days, and ties
+rotate every day (`md5(id || date)`), so neither size nor being early keeps a product there. While fewer than 8
 products qualify, every one that does gets a place. `public_spotlight()` returns the picks and recalculates them
 (`_spotlight_refresh()`, stored in `settings.spotlight`) when they are over an hour old, and right after a domain is
 verified. The admin can keep a product out ("Keep out of Spotlight" on its card). A product in the Spotlight still
@@ -73,13 +74,16 @@ same daily-salted hash as the stats) stops the same network and browser from vot
 clearing its storage, and caps a visitor at 60 votes a day. Makers can't upvote their own product (owner marks). The
 admin can take back every upvote on a product (*Reset upvotes*, `admin_reset_votes`).
 
-Popularity = unique profile views + 3 × unique clicks to the site or demo + 5 × upvotes over the last 30 days, without
-the maker's own visits and votes, minus clicks that came from a Sponsored card. `_spotlight_refresh()` recalculates it
-for every live product (table `popularity`, with `pct` 0–100 relative to the most popular product) at most once an
-hour, and the Spotlight uses the same score. Public products carry `upvotes` (live count) and `pop` (the `pct`).
-Search ranks by how well a product matches first and multiplies by up to 1.35 for popularity, so a popular product can
-pass a slightly closer match but never a much closer one. The list without a search, and "Most popular", sort by `pop`
-then upvotes. While the search dropdown is open, the top matches light up on the map and the best one gets a label.
+Popularity is a share, not a volume, so a big audience or a famous name doesn't win by size: (unique clicks to the
+site or demo + 2 × upvotes, each capped at the number of views) ÷ unique profile views over the last 30 days, without
+the maker's own visits and votes, smoothed towards the average of all products with 20 virtual views. A new product
+starts at the average instead of at zero, a few lucky clicks don't shoot a product to the top, and bought exposure
+(more views) doesn't raise it. `_spotlight_refresh()` recalculates it for every live product (table `popularity`, with
+`pct` 0–100 relative to the best-liked product) at most once an hour, and the Spotlight uses the same score. Public
+products carry `upvotes` (live count) and `pop` (the `pct`). Search ranks by how well a product matches first and
+multiplies by up to 1.35 for popularity, so a well-liked product can pass a slightly closer match but never a much
+closer one. The list without a search, and "Most liked", sort by `pop`. Ties everywhere rotate every day (`dayRot`
+in `app.js`) instead of going to the oldest, biggest or alphabetically first product. While the search dropdown is open, the top matches light up on the map and the best one gets a label.
 
 ## Following and updates
 
