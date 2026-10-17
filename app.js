@@ -620,14 +620,13 @@ function draw(T) {
   ctx.globalAlpha = 1;
   drawItems(T, cp);
   for (const it of ITEMS) if (it.kind === 'spot') beacon(it, T, '#ffffff', '255,255,255', .85);
+  let hlTop = null;
   if (HL.length && !results.hidden) {   // search: the matches light up in the universe, the best one gets a label
-    let top = null;
     for (const it of ITEMS) {
       if ((it.kind !== 'product' && it.kind !== 'star') || !HL.includes(it.slug)) continue;
       beacon(it, T, itemColor(it), itemRgb(it), 1);
-      if (it.slug === HL[0] && (!top || it.kind === 'product')) top = it;
+      if (it.slug === HL[0] && (!hlTop || it.kind === 'product')) hlTop = it;
     }
-    if (top && ui === 'none') floatLabel(top.x + top.w / 2, top.y, top.name, itemColor(top), T);
   }
   if (ghost && ui === 'none' && mA > .5) {
     const p = toS(ghost.x, ghost.y), sz = ghost.size * cp;
@@ -663,6 +662,7 @@ function draw(T) {
     ctx.globalAlpha = 1; ctx.fillStyle = zz.color; ctx.fillText(label, c0.x + 1, y + .5);
   }
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  if (hlTop && ui === 'none') floatLabel(hlTop.x + hlTop.w / 2, hlTop.y, '⌕ ' + hlTop.name, itemColor(hlTop), T);   // above the zone labels
   for (let i = WAVES.length - 1; i >= 0; i--) {
     const w = WAVES[i], k = (T - w.t) / 1200; if (k < 0) continue; if (k > 1) { WAVES.splice(i, 1); continue; }
     const p = toS(w.x, w.y); ctx.globalAlpha = 1 - k; ctx.strokeStyle = w.col; ctx.lineWidth = 3 * (1 - k) + .5;
