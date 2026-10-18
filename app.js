@@ -67,6 +67,15 @@ function el(tag, props, ...kids) {
 const app = $('#app');
 const timeAgo = iso => { const s = (Date.now() - Date.parse(iso)) / 1000; if (!(s >= 60)) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; };
 const dateStr = iso => { try { return new Date(iso).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } };
+function discoveryUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:') return value;
+    if (!url.searchParams.has('utm_source')) url.searchParams.set('utm_source', 'expanse');
+    if (!url.searchParams.has('utm_medium')) url.searchParams.set('utm_medium', 'referral');
+    return url.href;
+  } catch (e) { return value; }
+}
 const isSlug = s => typeof s === 'string' && /^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$/.test(s);
 
 /* ================= DEMO UNIVERSE =================
@@ -1022,7 +1031,7 @@ function openItem(it) {
 function openProduct(p, opts) {
   const it = ITEMS.find(i => i.slug === p.slug); sel = it || null;
   const cat = CATS[p.category] ? p.category : 'other', z = zoneOf(p.x, p.y, p.size);
-  const visit = el('a', { class: 'btn btn-primary btn-sm', href: p.url, target: '_blank', rel: 'noopener nofollow ugc', title: p.url, onclick: () => track(p.slug, 'visit') }, el('span', { text: 'Visit website' }), ' ↗');
+  const visit = el('a', { class: 'btn btn-primary btn-sm', href: discoveryUrl(p.url), target: '_blank', rel: 'noopener nofollow ugc', title: p.url, onclick: () => track(p.slug, 'visit') }, el('span', { text: 'Visit website' }), ' ↗');
   const demoBtn = p.demo_url ? el('a', { class: 'btn btn-ghost btn-sm', href: p.demo_url, target: '_blank', rel: 'noopener nofollow ugc', onclick: () => track(p.slug, 'demo') }, 'Try demo ↗') : null;
   const imgs = (p.images || []).length ? el('div', { class: 'imgs' }, p.images.map(src => el('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', decoding: 'async', onerror: e => e.target.remove() }))) : null;
   const facts = [['For', p.audience], ['Price', PRICING[p.pricing] + (p.price_text ? ' · ' + p.price_text : '')]];
@@ -1563,7 +1572,10 @@ function describe() {
   $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells free`;
   $('#cTitle').textContent = z.line;
   $('#cPrice').textContent = eur(z.price * sub.size * sub.size);
-  claimEl.querySelectorAll('[data-s]').forEach(b => { const sz = +b.dataset.s; b.querySelector('small').textContent = eur(zoneOf(s.x, s.y, sz).price * sz * sz) + (sz === 8 ? ' · landmark' : ''); });
+  claimEl.querySelectorAll('[data-s]').forEach(b => {
+    const sz = +b.dataset.s, candidate = nearestFree(Math.round(s.x + sub.size / 2 - sz / 2), Math.round(s.y + sub.size / 2 - sz / 2), sz);
+    b.querySelector('small').textContent = candidate ? eur(zoneOf(candidate.x, candidate.y, sz).price * sz * sz) + (sz === 8 ? ' · landmark' : '') : 'Unavailable';
+  });
   $('#cMoveHint').textContent = (coarse ? 'Tap' : 'Click') + ' anywhere on the map to move your spot.';
 }
 function centerOnSpot(quick) { const s = sub.spot; if (!s) return; flyTo(s.x + sub.size / 2, s.y + sub.size / 2, clamp(Math.max(cam.z, (isMobile() ? 26 : 34) / CELL / Math.max(1, sub.size / 2)), ZMIN, ZMAX), quick ? 550 : 1300, easeInOut); }
