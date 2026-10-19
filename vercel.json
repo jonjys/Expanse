@@ -13,6 +13,8 @@
     }
   ],
   "rewrites": [
+    {"source": "/add", "destination": "/index.html"},
+    {"source": "/browse", "destination": "/api/browse"},
     {
       "source": "/admin",
       "destination": "/admin.html"
@@ -29,9 +31,13 @@
   "functions": {
     "api/p.js": {
       "includeFiles": "index.html"
+    },
+    "api/browse.js": {
+      "includeFiles": "index.html"
     }
   },
   "headers": [
+    {"source": "/add", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
     {
       "source": "/(.*)",
       "headers": [

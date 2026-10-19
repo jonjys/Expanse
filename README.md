@@ -7,6 +7,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 
 - `index.html` — markup and CSS. `app.js` — all the behaviour. No build step or runtime dependencies. The regression suite uses jsdom as a development dependency.
 - `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and share image in the `<head>`.
+- `api/browse.js` + `lib/public-pages.js` — crawlable `/browse`, visible initial product content, and honest 404/503 responses. `/add` opens registration directly.
 - `api/sitemap.js` — serves `/sitemap.xml` with every live product page. `robots.txt` points to it.
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
 - `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
@@ -201,7 +202,7 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `public_spotlight()` | The 8 Spotlight places in the core. |
 | `contact_message(email, message, topic)` | The contact form. |
 | `owner_set_repo(slug, key, repo)` | Names the GitHub repo to connect (checked by `verify-domain` with `repo: true`). |
-| `referral_count(code)` | "Invite 3 makers → +1 cell" progress. |
+| `referral_count(code)` | Legacy referral count; no unfulfilled cell reward is promoted. |
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
 | `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, placements, settings, key rotation. Each checks the admin key. |
 
@@ -256,3 +257,7 @@ npm test
 access, review gating, unpaid asynchronous payments, successful activation, repeat events, duplicate checkouts,
 refunds and free fallback. Do not commit test sales or fixture products. Local tests use synthetic webhook signatures;
 a real customer payment is not claimed as verified until Stripe has actually processed one.
+
+## Launch preparation
+
+See [the launch plan](docs/launch/LAUNCH.md), [unpublished copy](docs/launch/COPY.md) and [manual measurement sheet](docs/launch/MEASUREMENT.csv). The site being deployed does not mean a marketing campaign was launched. Real payment completion, inbox delivery, Google indexing and channel conversion must not be claimed without evidence.

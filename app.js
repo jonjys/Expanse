@@ -1,5 +1,8 @@
 (() => {
 'use strict';
+// Keep useful error pages and their URL intact instead of booting the galaxy over them.
+if (document.querySelector('#serverContent[data-state="error"]')) return;
+document.querySelector('#app')?.removeAttribute('hidden');
 
 /* ================= CONFIG ================= */
 /* Supabase project "expanse" (Stockholm). The publishable key is public by design: tables are
@@ -295,8 +298,9 @@ function prepProduct(p) {
 async function loadProducts() {
   try {
     const list = await rpc('public_products');
-    if (Array.isArray(list)) { PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); }
+    if (Array.isArray(list)) { PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); return true; }
   } catch (e) {}
+  return false;
 }
 async function loadSpots() {
   try { const s = await rpc('public_spots'); if (Array.isArray(s)) SPOTS = s.filter(v => v && Number.isInteger(v.x) && Number.isInteger(v.y) && [1, 2, 4, 8].includes(v.size) && Math.hypot(v.x + v.size / 2, v.y + v.size / 2) < MAX_R); } catch (e) {}
@@ -1375,7 +1379,7 @@ function setView(v) {
 }
 $('#vMap').onclick = () => { closeUI(); setView('map'); };
 $('#vList').onclick = () => { if (ui === 'pop') closeUI(); setView('list'); };
-document.querySelectorAll('[data-list]').forEach(b => b.onclick = () => setView('list'));
+document.querySelectorAll('[data-list]').forEach(b => b.onclick = e => { e.preventDefault(); setView('list'); });
 $('#fToggle').onclick = () => listEl.classList.toggle('showf');
 lSort.onchange = renderList;
 function optBtn(label, on, color, click) { return el('button', { type: 'button', 'aria-pressed': String(!!on), style: color ? '--c:' + color : null, onclick: click }, color ? el('i') : null, label); }
@@ -1916,13 +1920,12 @@ function repoBox(o) {
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Repository' }), inp), status, el('div', { class: 'c-row' }, btn));
 }
 function renderShare(o) {
-  const box = $('#mShare'), live = o.status === 'approved', url = productUrl(mSlug), n = Math.max(0, o.referrals | 0);
+  const box = $('#mShare'), live = o.status === 'approved', url = productUrl(mSlug);
   box.replaceChildren(
     el('p', { class: 'c-text', text: live ? 'Your product page:' : 'Your page goes live after review. This will be its link:' }),
     el('div', { class: 'codeblock', text: url }),
     el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: live ? 'Share link ↗' : 'Copy link', onclick: () => shareUrl(url, o.name + ' on Expanse', `${o.name} — ${o.tagline}`, 'Link copied.') }), el('button', { class: 'btn btn-ghost btn-sm', text: 'Share card', onclick: () => shareCard(mSlug) })),
-    el('div', { class: 'refs' }, el('b', { text: 'Invite 3 makers → +1 free cell.' }), el('div', { class: 'dots' }, [0, 1, 2].map(i => el('i', { class: i < n ? 'on' : '' }))),
-      el('small', { text: n >= 3 ? 'Done — your extra cell is waiting for when placement opens.' : `${n} of 3 makers have added a product after opening your page.` })));
+    el('p', { class: 'fine', text: 'Share your page wherever it helps people understand your product. Every maker follows the same listing, pricing and ranking rules.' }));
 }
 function renderKey(o) {
   const slug = mSlug, own = OWNED[slug], key = own.key, viaEmail = own.via === 'email', code = el('code', { text: '•'.repeat(24) });
@@ -2346,7 +2349,7 @@ function endIntro() {
 kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 (async () => {
-  await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight(), loadCommerce()]);
+  const [productsLoaded] = await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight(), loadCommerce()]);
   rebuildItems(); renderLive(); loadUpdates();
   if (new URLSearchParams(location.search).get('payment') === 'return') {
     const pending = store.get('expanse.checkout.v1');
@@ -2356,9 +2359,16 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
   }
   if (deepSlug) {
     const p = BY_SLUG.get(deepSlug);
-    if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true, source: 'shared' }); }
+    if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true, source: 'shared' }); $('#serverContent')?.remove(); }
     else if (OWNED[deepSlug]) openManage(deepSlug);
-    else { setPath('/'); toast('That product isn’t live yet — it may still be in review.', 4500); }
+    else if (!$('#serverContent')) { setPath('/'); toast('That product isn’t live yet — it may still be in review.', 4500); }
+  } else if (location.pathname === '/add') {
+    startSubmit();
+  } else if (location.pathname === '/browse') {
+    if (!productsLoaded && $('#serverContent')) return;
+    const query = new URLSearchParams(location.search).get('q')?.trim().slice(0,160);
+    if (query) runSearch(query); else setView('list');
+    $('#serverContent')?.remove();
   } else if (deepSpot) {
     app.classList.add('explore'); explored = true; cam.x = deepSpot.x + 1; cam.y = deepSpot.y + 1; cam.z = 2.4;
     toast('A friend invited you — put your product right next to theirs.', 4500);

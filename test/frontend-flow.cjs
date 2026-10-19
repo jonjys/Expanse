@@ -4,8 +4,8 @@ const root=require('node:path').join(__dirname,'..')+'/';
 const calls=[],errors=[];
 const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message)});
 const product={slug:'fixture',name:'Real Fixture',tagline:'Solve a real user problem',description:'',audience:'',category:'other',needs:[],pricing:'unspecified',price_text:'',platforms:[],integrations:[],url:'https://example.com',demo_url:'',images:[],domain:'example.com',x:130,y:10,size:1,zone:'edge',status:'approved'};
-function boot(blockStorage=false){
- const dom=new JSDOM(fs.readFileSync(root+'index.html','utf8'),{url:'https://expanse.nyttolabs.com/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
+function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.readFileSync(root+'index.html','utf8')){
+ const dom=new JSDOM(html,{url,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
  const w=dom.window;w.matchMedia=()=>({matches:true,addEventListener(){}});w.requestAnimationFrame=fn=>0;w.cancelAnimationFrame=()=>{};
  w.HTMLElement.prototype.scrollIntoView=()=>{};
  const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
@@ -36,5 +36,9 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  assert.equal(d.querySelector('#cStep6').hidden,false);const submit=calls.find(x=>x.method==='submit_product');assert.equal(submit.body.p.size,1);assert.equal(submit.body.p.pricing,'unspecified');assert.deepEqual(submit.body.p.needs,[]);assert.equal(submit.body.p.description,'');
  assert.equal(errors.length,0,errors.join('\n'));dom.window.close();
  const blocked=boot(true);await tick();assert.equal(errors.length,0,errors.join('\n'));blocked.window.close();
+ const add=boot(false,'https://expanse.nyttolabs.com/add?utm_source=threads');await tick();assert.equal(add.window.document.querySelector('#cStep2').hidden,false);assert.ok(add.window.document.querySelector('#claim').classList.contains('open'));add.window.close();
+ const browse=boot(false,'https://expanse.nyttolabs.com/browse?q=Fixture');await tick();assert.equal(browse.window.document.querySelector('#list').getAttribute('aria-hidden'),'false');assert.match(browse.window.document.querySelector('#cards').textContent,/Real Fixture/);browse.window.close();
+ const rendered=require('../api/p').withProduct(fs.readFileSync(root+'index.html','utf8'),product,'https://expanse.nyttolabs.com/p/fixture');
+ const profile=boot(false,'https://expanse.nyttolabs.com/p/fixture',rendered);await tick();assert.equal(profile.window.document.querySelector('#serverContent'),null,'app replaces initial profile after load');assert.equal(errors.length,0,errors.join('\n'));profile.window.close();
  console.log('DOM flow passed: optional profile, free default, all zone/size totals, free reset, submission, blocked storage boot.');
 })().catch(e=>{console.error(e);process.exit(1)});

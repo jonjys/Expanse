@@ -25,7 +25,7 @@ async function products() {
 
 module.exports = async (req, res) => {
   const list = (await products()).filter(p => p && /^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$/.test(p.slug || ''));
-  const urls = [`  <url><loc>${SITE}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`]
+  const urls = [`  <url><loc>${SITE}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`, `  <url><loc>${SITE}/browse</loc></url>`]
     .concat(list.map(p => {
       const mod = day(p.updated_at || p.approved_at);
       return `  <url><loc>${esc(SITE + '/p/' + p.slug)}</loc>${mod ? `<lastmod>${mod}</lastmod>` : ''}<changefreq>weekly</changefreq></url>`;
@@ -35,3 +35,4 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
   res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
 };
+
