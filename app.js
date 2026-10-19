@@ -1126,7 +1126,7 @@ function voteBtn(p) {
     if (on) { b.classList.remove('voted-pulse'); void b.offsetWidth; b.classList.add('voted-pulse'); }
     try {
       const r = await rpc('upvote', { p_slug: p.slug, p_voter: voterId(), p_on: on });
-      p.upvotes = r.upvotes; store.set(VOTES_KEY, VOTED);
+      p.upvotes = r.upvotes; persistPersonal(VOTES_KEY, VOTED);
     } catch (e) {
       if (on) delete VOTED[p.slug]; else VOTED[p.slug] = 1;
       p.upvotes = before;
@@ -2225,7 +2225,9 @@ const isSaved = slug => SAVED.some(p => p.slug === slug);
 const activityCount = key => ACTIVITY.reduce((n,p) => n + Math.max(0, Math.min(1000000,Number(p[key]) || 0)),0);
 function persistPersonal(key, value) {
   store.set(key,value);
-  if (!store.get(key)) toast('This browser blocked saving. Your collection will last only until this page closes.',5500);
+  const persisted = JSON.stringify(store.get(key)) === JSON.stringify(value);
+  if (!persisted) toast('This browser blocked saving. Your collection will last only until this page closes.',5500);
+  return persisted;
 }
 function rememberActivity(slug, kind) {
   if (!isSlug(slug) || !['view','visit','demo'].includes(kind)) return;
@@ -2244,7 +2246,7 @@ function saveBtn(p) {
     const i=SAVED.findIndex(x=>x.slug===p.slug);
     if(i>=0)SAVED.splice(i,1);
     else {if(SAVED.length>=200){toast('Your saved collection holds up to 200 products. Remove one to add another.');return;}SAVED.unshift({slug:p.slug,name:p.name,tagline:p.tagline,at:new Date().toISOString()});}
-    persistPersonal(SAVED_KEY,SAVED);paint();toast(isSaved(p.slug)?'Saved to My space. Saving never changes rankings.':'Removed from saved products.');
+    const persisted=persistPersonal(SAVED_KEY,SAVED);paint();if(persisted)toast(isSaved(p.slug)?'Saved to My space. Saving never changes rankings.':'Removed from saved products.');
   };paint();return b;
 }
 function spaceItem(slug, fallback, tab) {
@@ -2297,7 +2299,7 @@ function openMySpace(tab='saved',focusTab=false) {
 
 /* ================= FOLLOWING: saved in this browser, one combined feed of updates ================= */
 const isFollowed = slug => !!FOLLOW.slugs[slug];
-function saveFollow() { store.set(FOLLOW_KEY, FOLLOW); renderFollowBtn(); }
+function saveFollow() { persistPersonal(FOLLOW_KEY, FOLLOW); renderFollowBtn(); }
 function toggleFollow(p) {
   const now = new Date().toISOString();
   if (isFollowed(p.slug)) { delete FOLLOW.slugs[p.slug]; toast(`Stopped following ${p.name}.`); }
