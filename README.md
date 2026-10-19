@@ -7,6 +7,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 
 - `index.html` — markup and CSS. `app.js` — all the behaviour. No build step or runtime dependencies. The regression suite uses jsdom as a development dependency.
 - `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and share image in the `<head>`.
+- `api/browse.js` + `lib/public-pages.js` — crawlable `/browse`, visible initial product content, and honest 404/503 responses. `/add` opens registration directly.
 - `api/sitemap.js` — serves `/sitemap.xml` with every live product page. `robots.txt` points to it.
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
 - `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
@@ -201,7 +202,7 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `public_spotlight()` | The 8 Spotlight places in the core. |
 | `contact_message(email, message, topic)` | The contact form. |
 | `owner_set_repo(slug, key, repo)` | Names the GitHub repo to connect (checked by `verify-domain` with `repo: true`). |
-| `referral_count(code)` | "Invite 3 makers → +1 cell" progress. |
+| `referral_count(code)` | Legacy referral count; no unfulfilled cell reward is promoted. |
 | `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
 | `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, placements, settings, key rotation. Each checks the admin key. |
 
@@ -256,3 +257,17 @@ npm test
 access, review gating, unpaid asynchronous payments, successful activation, repeat events, duplicate checkouts,
 refunds and free fallback. Do not commit test sales or fixture products. Local tests use synthetic webhook signatures;
 a real customer payment is not claimed as verified until Stripe has actually processed one.
+
+## Launch preparation
+
+See [the launch plan](docs/launch/LAUNCH.md), [unpublished copy](docs/launch/COPY.md) and [manual measurement sheet](docs/launch/MEASUREMENT.csv). The site being deployed does not mean a marketing campaign was launched. Real payment completion, inbox delivery, Google indexing and channel conversion must not be claimed without evidence.
+
+## Personal space and map consistency
+
+`/me` opens **My space**: saved tools, followed products and their update feed, successful upvotes, local profile-open / outbound-click history, and the products this browser owns. Save does not vote or follow. Collections and personal activity are private to the browser, capped at 200 saves and 100 recent products; there is no account sync or public member profile. Maker statistics still use the owner-key RPCs and show other visitors separately. History can be cleared without removing owner keys or saved tools.
+
+Map hover previews offer a 2×2 block, and clicking keeps that same size, position and euro total through registration. The chosen size is also shown in the map label. Each product uses one square (1×1, 2×2, 4×4 or 8×8); several genuinely different products from one company are allowed. Duplicate listings of one product are disallowed in review. Existing purchases are not repriced, expanded or merged by this UI change.
+
+The intro no longer shrinks the galaxy to a dot or blocks initial controls. Zooming out is bounded relative to the whole-galaxy view. Upvote feedback uses its own `voted-pulse` class instead of accidentally applying the product panel's `.pop` layout to a button. Profile actions wrap when they need more room.
+
+Regression coverage includes save/follow/vote separation, successful vote persistence, local click history, My space after reload, saved-item removal, and preserving the map preview's 2×2 €76 Inner-ring quote when entering registration.

@@ -1,77 +1,21 @@
-// Serves /p/<slug> (rewritten here by vercel.json): the normal single-page app, with the product's
-// own title, description and share image in the <head> so links unfurl nicely and search engines
-// see the product. Anything unexpected falls back to the unchanged page; the app then shows the
-// product itself, or "not live yet".
-const fs = require('fs');
-const path = require('path');
-
-const SUPA = 'https://gjmkhnrgznorxxaemsmo.supabase.co';
-const KEY = 'sb_publishable_b1uzRroOaHTGp9oXOhHjtQ_J-A-IUCZ'; // public by design, same as in app.js
-const SITE = 'https://expanse.nyttolabs.com';
-
-let HTML = null;
-function page() {
-  if (HTML) return HTML;
-  for (const p of [path.join(process.cwd(), 'index.html'), path.join(__dirname, '..', 'index.html')]) {
-    try { HTML = fs.readFileSync(p, 'utf8'); return HTML; } catch (e) { /* try the next location */ }
-  }
-  return null;
-}
-
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const setMeta = (html, attr, name, value) =>
-  html.replace(new RegExp(`(<meta ${attr}="${name}" content=")[^"]*(")`), (m, a, b) => a + esc(value) + b);
-
-async function product(slug) {
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 2500);
-  try {
-    const r = await fetch(SUPA + '/rest/v1/rpc/public_product', {
-      method: 'POST',
-      headers: { apikey: KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_slug: slug }),
-      signal: ctl.signal,
-    });
-    return r.ok ? await r.json() : null;
-  } catch (e) {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
+'use strict';
+const {SITE,isSlug,esc,https,page,rpc,metadata,content,send,failure} = require('../lib/public-pages');
 function withProduct(html, p, url) {
-  const title = `${p.name} — ${p.tagline} · Expanse`;
-  const desc = (`${p.tagline}. Solves: ${(p.needs || []).join(', ')}. ${p.description || ''}`).replace(/\s+/g, ' ').slice(0, 220);
-  html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`);
-  html = setMeta(html, 'name', 'description', desc);
-  html = setMeta(html, 'property', 'og:title', title);
-  html = setMeta(html, 'property', 'og:description', desc);
-  html = setMeta(html, 'property', 'og:url', url);
-  const img = (p.images || []).find(i => /^https:\/\//.test(i));
-  if (img) {
-    html = setMeta(html, 'property', 'og:image', img);
-    html = html.replace(/\s*<meta property="og:image:(width|height)" content="\d+">/g, '');
-  }
-  return html.replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${esc(url)}">`);
+  const description = [p.tagline, (p.needs || []).length ? `Solves: ${p.needs.join(', ')}` : '', p.description].filter(Boolean).join('. ').replace(/\s+/g,' ').slice(0,220);
+  html = metadata(html,{title:`${p.name} — ${p.tagline} · Expanse`,description,url,image:(p.images || []).find(https)});
+  const website = https(p.url), demo = https(p.demo_url);
+  const needs = (p.needs || []).length ? `<h2>What it solves</h2><ul>${p.needs.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '';
+  const pricing = {free:'Free',freemium:'Free plan',trial:'Free trial',paid:'Paid'}[p.pricing];
+  return content(html,'product',`<p class="mono">A real product on Expanse${p.verified_at ? ' · Verified domain' : ''}</p><h1>${esc(p.name)}</h1><p>${esc(p.tagline)}</p>${p.description ? `<p>${esc(p.description)}</p>` : ''}${needs}${p.audience ? `<p>For: ${esc(p.audience)}</p>` : ''}${pricing ? `<p>${pricing}${p.price_text ? ' · '+esc(p.price_text) : ''}</p>` : ''}<div class="server-links">${website ? `<a href="${esc(website)}" target="_blank" rel="noopener nofollow ugc">Visit website ↗</a>` : ''}${demo ? `<a href="${esc(demo)}" target="_blank" rel="noopener nofollow ugc">Try demo ↗</a>` : ''}<a href="/?p=${esc(p.slug)}">Open in the galaxy</a></div><p class="server-note">Verified means domain ownership, not a quality guarantee. Map payments never buy search ranking or Spotlight.</p>`);
 }
-
-module.exports = async (req, res) => {
-  const slug = String((req.query && req.query.slug) || '').toLowerCase();
-  let html = page();
-  if (!html) {
-    res.statusCode = 302;
-    res.setHeader('Location', '/');
-    return res.end();
-  }
-  if (/^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$/.test(slug)) {
-    const p = await product(slug);
-    if (p && p.name) html = withProduct(html, p, `${SITE}/p/${slug}`);
-  }
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400');
-  res.end(html);
+module.exports = async (req,res) => {
+  const slug = String(req.query?.slug || '').toLowerCase();
+  const url = `${SITE}/p/${encodeURIComponent(slug)}`;
+  if (!isSlug(slug)) return failure(res,404,url);
+  try {
+    const p = await rpc('public_product',{p_slug:slug});
+    if (!p?.name) return failure(res,404,url);
+    return send(res,withProduct(page(),p,url));
+  } catch { return failure(res,503,url); }
 };
-
 module.exports.withProduct = withProduct;

@@ -1,5 +1,8 @@
 (() => {
 'use strict';
+// Keep useful error pages and their URL intact instead of booting the galaxy over them.
+if (document.querySelector('#serverContent[data-state="error"]')) return;
+document.querySelector('#app')?.removeAttribute('hidden');
 
 /* ================= CONFIG ================= */
 /* Supabase project "expanse" (Stockholm). The publishable key is public by design: tables are
@@ -18,6 +21,7 @@ const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
 const WORLD_R = 150, CORE_R = 14, CELL = 16, ZMIN = .025, ZMAX = 6, MAX_R = WORLD_R + 25;
 const OWNED_KEY = 'expanse.owned.v1', REF_KEY = 'expanse.ref', RECOVER_KEY = 'expanse.recover.v1', DRAFT_KEY = 'expanse.draft.v1', FOLLOW_KEY = 'expanse.follow.v1';
 const VOTER_KEY = 'expanse.voter.v1', VOTES_KEY = 'expanse.votes.v1';
+const SAVED_KEY = 'expanse.saved.v1', ACTIVITY_KEY = 'expanse.activity.v1';
 
 /* Keep in sync with the category / pricing / platform checks on public.products. */
 const CATS = {
@@ -197,6 +201,8 @@ const spotRank = slug => { const i = SPOTLIGHT.picks.findIndex(x => x.slug === s
 let FOLLOW = (() => { const f = store.get(FOLLOW_KEY); return f && typeof f.slugs === 'object' && f.slugs ? f : { slugs: {}, seen: null }; })(), UPDATES = [];
 /* Products this browser upvoted: { slug: 1 }. HL: the current search's top matches, lit up on the map. */
 const VOTED = (() => { const v = store.get(VOTES_KEY); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; })();
+const SAVED = (() => { const v = store.get(SAVED_KEY); return Array.isArray(v) ? v.filter(x => x && isSlug(x.slug)).slice(0,200) : []; })();
+const ACTIVITY = (() => { const v = store.get(ACTIVITY_KEY); return Array.isArray(v) ? v.filter(x => x && isSlug(x.slug)).slice(0,100) : []; })();
 let HL = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
 const priceOf = (x, y, size) => zoneOf(x, y, size).price * size * size;
@@ -276,6 +282,7 @@ async function fnCall(name, body) {
 const errCode = e => String((e && e.message) || '');
 const tracked = new Set();
 function track(slug, kind, source) {
+  rememberActivity(slug, kind); // Private activity never changes public ranking or maker statistics.
   if (source && slug && !OWNED[slug] && !navigator.webdriver) rpc('track_discovery', { p_slug: slug, p_kind: kind, p_source: source }, { keepalive: true }).catch(() => {});
   if (!slug || OWNED[slug] || navigator.webdriver) return;
   const k = slug + ':' + kind; if (kind === 'view' && tracked.has(k)) return; tracked.add(k);
@@ -295,8 +302,9 @@ function prepProduct(p) {
 async function loadProducts() {
   try {
     const list = await rpc('public_products');
-    if (Array.isArray(list)) { PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); }
+    if (Array.isArray(list)) { PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); return true; }
   } catch (e) {}
+  return false;
 }
 async function loadSpots() {
   try { const s = await rpc('public_spots'); if (Array.isArray(s)) SPOTS = s.filter(v => v && Number.isInteger(v.x) && Number.isInteger(v.y) && [1, 2, 4, 8].includes(v.size) && Math.hypot(v.x + v.size / 2, v.y + v.size / 2) < MAX_R); } catch (e) {}
@@ -335,6 +343,7 @@ function home() {
   const span = 2 * WORLD_R * CELL;
   return isMobile() ? { x: 0, y: 0, z: W * 1.18 / span } : { x: 0, y: 0, z: Math.min(H * .98, W * .62) / span };
 }
+const minZoom = () => Math.max(ZMIN, home().z * .65);
 function resize() {
   W = innerWidth; H = innerHeight; DPR = Math.min(2, devicePixelRatio || 1);
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
@@ -667,7 +676,7 @@ function draw(T) {
     rrect(ctx, vx + 1, vy + 1, vs - 2, vs - 2, Math.min(5, vs * .18));
     if (named) { ctx.fillStyle = col; ctx.fill(); }
     else { ctx.fillStyle = `rgba(${rgb},${.18 + .16 * pu})`; ctx.fill(); ctx.setLineDash([4, 4]); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
-    floatLabel(c.x + s / 2, c.y, named ? sub.name : sub.plan === 'free' ? 'YOUR FREE SPOT · €0' : `YOUR SPOT · ${eur(priceOf(c.x, c.y, s))} / 12 MONTHS`, col, T);
+    floatLabel(c.x + s / 2, c.y, sub.plan === 'free' ? `${named ? sub.name : 'YOUR FREE SPOT'} · 1×1 · €0` : `${named ? sub.name : 'YOUR SPOT'} · ${s}×${s} · ${eur(priceOf(c.x, c.y, s))} / 12 MONTHS`, col, T);
   }
   for (const it of ITEMS) if (it.owned && !(ui === 'claim' && sub.step < 6)) floatLabel(it.x + it.w / 2, it.y, '★ ' + it.name + (it.kind === 'mine' ? ' · in review' : ''), '#c8ff3d', T);
   if (sel && sel.kind === 'product' && !sel.owned && ui === 'pop') floatLabel(sel.x + sel.w / 2, sel.y, sel.name, itemColor(sel), T);
@@ -721,7 +730,7 @@ function centerOn(q, z) { flyTo(q.x + q.w / 2, q.y + q.h / 2, z || clamp(Math.ma
 function zoomBy(f, sx, sy) {
   fly = null; vel.x = vel.y = 0; hideTip(); ghost = null;
   const base = zAnim ? zAnim.target : cam.z;
-  zAnim = { target: clamp(base * f, ZMIN, ZMAX), sx, sy }; markExplore(); kick();
+  zAnim = { target: clamp(base * f, minZoom(), ZMAX), sx, sy }; markExplore(); kick();
 }
 function goHome() { const h = home(); flyTo(h.x, h.y, h.z, 1400, easeInOut); explored = false; app.classList.remove('explore'); }
 function markExplore() { if (!explored && !introRunning) { explored = true; app.classList.add('explore'); } }
@@ -803,7 +812,7 @@ function hover(m) {
     if (d > MAX_R) { hideTip(); return; }
     const z = ZONES.find(zz => d < zz.r);
     cv.classList.add('dive');
-    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `Founding price ${eur(z.price)} / cell · click to dive in`, z.reserved ? '#ffcf4a' : z.color);
+    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `${eur(z.price)} per cell / 12 months · click to zoom in`, z.reserved ? '#ffcf4a' : z.color);
     return;
   }
   const q = demoAt(m);
@@ -811,7 +820,7 @@ function hover(m) {
   if (ui !== 'none') { hideTip(); return; }
   if (zoneOf(cx, cy, 1).reserved) { cv.classList.add('pointy'); showTip(m, 'The Spotlight', 'Earned by real use, never sold · click to see how', '#ffcf4a'); return; }
   const f = freeAround(cx, cy, 2);
-  if (f) { ghost = f; cv.classList.add('pointy'); showTip(m, `Free spot · ${zoneOf(f.x, f.y, 2).label}`, `Click to put your product here · 2×2 founding price ${eur(priceOf(f.x, f.y, 2))}`, '#c8ff3d'); }
+  if (f) { ghost = f; cv.classList.add('pointy'); showTip(m, `Available · ${zoneOf(f.x, f.y, 2).label} · 2×2`, `${eur(priceOf(f.x, f.y, 2))} total / 12 months · click to choose this spot`, '#c8ff3d'); }
   else hideTip();
 }
 function tap(m) {
@@ -845,7 +854,7 @@ cv.addEventListener('pointermove', e => {
   if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, m);
   if (pinch && ptrs.size >= 2) {
     const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    cam.z = clamp(pinch.z * d / pinch.d, ZMIN, ZMAX);
+    cam.z = clamp(pinch.z * d / pinch.d, minZoom(), ZMAX);
     cam.x = pinch.w.x - (mid.x - fp.x) / (CELL * cam.z); cam.y = pinch.w.y - (mid.y - fp.y) / (CELL * cam.z); markExplore(); kick(); return;
   }
   if (drag) {
@@ -1054,7 +1063,7 @@ function openProduct(p, opts) {
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
     imgs,
     el('div', { class: 'pact' }, visit, demoBtn),
-    el('div', { class: 'ptools' }, voteBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
+    el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
@@ -1114,10 +1123,10 @@ function voteBtn(p) {
     const on = !VOTED[p.slug], before = p.upvotes || 0;
     if (on) VOTED[p.slug] = 1; else delete VOTED[p.slug];
     p.upvotes = Math.max(0, before + (on ? 1 : -1)); b.disabled = true; paint();
-    if (on) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+    if (on) { b.classList.remove('voted-pulse'); void b.offsetWidth; b.classList.add('voted-pulse'); }
     try {
       const r = await rpc('upvote', { p_slug: p.slug, p_voter: voterId(), p_on: on });
-      p.upvotes = r.upvotes; store.set(VOTES_KEY, VOTED);
+      p.upvotes = r.upvotes; persistPersonal(VOTES_KEY, VOTED);
     } catch (e) {
       if (on) delete VOTED[p.slug]; else VOTED[p.slug] = 1;
       p.upvotes = before;
@@ -1375,7 +1384,7 @@ function setView(v) {
 }
 $('#vMap').onclick = () => { closeUI(); setView('map'); };
 $('#vList').onclick = () => { if (ui === 'pop') closeUI(); setView('list'); };
-document.querySelectorAll('[data-list]').forEach(b => b.onclick = () => setView('list'));
+document.querySelectorAll('[data-list]').forEach(b => b.onclick = e => { e.preventDefault(); setView('list'); });
 $('#fToggle').onclick = () => listEl.classList.toggle('showf');
 lSort.onchange = renderList;
 function optBtn(label, on, color, click) { return el('button', { type: 'button', 'aria-pressed': String(!!on), style: color ? '--c:' + color : null, onclick: click }, color ? el('i') : null, label); }
@@ -1485,7 +1494,7 @@ function makeForm() {
   f.images = { w: el('label', { class: 'field', 'data-f': 'images' }, el('span', { class: 'mono' }, 'Images ', el('em', { text: 'optional · screenshots work best' })), imgs, el('small', { class: 'hint', text: 'Links to images already online (https). We show them as they are.' })), i: imgs };
   const groups = {
     basics: [
-      input('name', 'Product name', { maxlength: '40', placeholder: 'e.g. Kvitto' }),
+      input('name', 'Product name', { maxlength: '40', placeholder: 'Your product’s name' }),
       input('url', 'Website', { type: 'url', inputmode: 'url', maxlength: '300', placeholder: 'yourproduct.com' }, 'Where people go when they click Visit. Must work over https.'),
       input('tagline', 'One line: what it does', { maxlength: '90', placeholder: 'e.g. Invoices for freelancers in two clicks' }),
       opts('category', 'Category', Object.entries(CATS).map(([k, c]) => [k, c.label]), false, Object.fromEntries(Object.entries(CATS).map(([k, c]) => [k, c.color])))
@@ -1601,7 +1610,8 @@ function startSubmit(spot, fromMap) {
     sub.zone = sub.plan === 'paid' && d && ['inner','belt','outer','edge'].includes(d.zone) ? d.zone : 'edge';
     sub.name = d ? d.name || '' : ''; sub.cat = d ? d.category || 'other' : 'other';
   }
-  if (spot) { sub.plan = 'paid'; sub.zone = zoneOf(spot.x, spot.y, sub.size).id; }
+  // Map previews offer a 2×2 block: keep that exact size when entering the product-first form.
+  if (spot) { sub.plan = 'paid'; sub.size = [1,2,4,8].includes(spot.size) ? spot.size : 2; sub.zone = zoneOf(spot.x, spot.y, sub.size).id; }
   openPanel(claimEl, 'claim'); markExplore();
   const candidate = spot || zoneSpot(sub.zone, sub.size);
   if (candidate) { sub.spot = { x: candidate.x, y: candidate.y }; describe(); }
@@ -1842,7 +1852,7 @@ async function renderStats(o) {
       days.map(d => el('div', { class: 'd', title: `${d.d}: ${d.view} views, ${d.visit + d.demo} clicks` }, el('div', { class: 'v', style: `height:${(d.view || 0) / max * 100}%` }), el('div', { class: 'c', style: `height:${((d.visit || 0) + (d.demo || 0)) / max * 100}%` })))),
     el('div', { class: 'chart-legend' }, el('span', null, el('i', { style: 'background:rgba(94,225,255,.55)' }), 'Profile views'), el('span', null, el('i', { style: 'background:var(--lime)' }), 'Clicks')),
     el('p', { class: 'fine', text: 'Unique visitors per day. Counted without cookies; your own visits on days you open this panel and known bots are left out, as far as we can tell.' }));
-  const labels={map:'Map exploration',search:'Search',list:'Product list',shared:'Shared product link',sponsored:'Sponsored card',home:'Home page'};
+  const labels={map:'Map exploration',search:'Search',list:'Product list',shared:'Direct / saved product links',sponsored:'Sponsored card',home:'Home page'};
   box.append(el('div',{class:'source-stats'},el('h4',{class:'mono',text:'Where discovery happens · 30 days'}),sources.length?sources.map(row=>el('div',{class:'source-row'},el('span',{text:labels[row.source]||row.source}),el('b',{text:`${fmt(row.views)} views · ${fmt(Number(row.visits)+Number(row.demos))} clicks`}))):el('p',{class:'fine',text:'No attributed visits yet. New visits will show here as people discover your product.'}),el('p',{class:'fine',text:'One visitor can use several sources. These counts started with this update; older visits have no recorded source.'})));
 }
 function checksBox(o) {
@@ -1916,13 +1926,12 @@ function repoBox(o) {
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Repository' }), inp), status, el('div', { class: 'c-row' }, btn));
 }
 function renderShare(o) {
-  const box = $('#mShare'), live = o.status === 'approved', url = productUrl(mSlug), n = Math.max(0, o.referrals | 0);
+  const box = $('#mShare'), live = o.status === 'approved', url = productUrl(mSlug);
   box.replaceChildren(
     el('p', { class: 'c-text', text: live ? 'Your product page:' : 'Your page goes live after review. This will be its link:' }),
     el('div', { class: 'codeblock', text: url }),
     el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: live ? 'Share link ↗' : 'Copy link', onclick: () => shareUrl(url, o.name + ' on Expanse', `${o.name} — ${o.tagline}`, 'Link copied.') }), el('button', { class: 'btn btn-ghost btn-sm', text: 'Share card', onclick: () => shareCard(mSlug) })),
-    el('div', { class: 'refs' }, el('b', { text: 'Invite 3 makers → +1 free cell.' }), el('div', { class: 'dots' }, [0, 1, 2].map(i => el('i', { class: i < n ? 'on' : '' }))),
-      el('small', { text: n >= 3 ? 'Done — your extra cell is waiting for when placement opens.' : `${n} of 3 makers have added a product after opening your page.` })));
+    el('p', { class: 'fine', text: 'Share your page wherever it helps people understand your product. Every maker follows the same listing, pricing and ranking rules.' }));
 }
 function renderKey(o) {
   const slug = mSlug, own = OWNED[slug], key = own.key, viaEmail = own.via === 'email', code = el('code', { text: '•'.repeat(24) });
@@ -2050,7 +2059,7 @@ $('#eSave').onclick = async () => {
 };
 
 /* ================= DIALOGS: owner key, recovery, report ================= */
-function openDlg(...kids) { fill(dlgBody, ...kids); dlg.classList.add('open'); hideTip(); setTimeout(() => { const f = dlgBody.querySelector('input,textarea,button'); (f || dlg.querySelector('.sheet-in')).focus({ preventScroll: true }); }, 60); }
+function openDlg(...kids) { dlg.classList.remove('my-space'); fill(dlgBody, ...kids); dlg.classList.add('open'); hideTip(); setTimeout(() => { const f = dlgBody.querySelector('[role=tab][aria-selected=true]') || dlgBody.querySelector('input,textarea,button'); (f || dlg.querySelector('.sheet-in')).focus({ preventScroll: true }); }, 60); }
 function closeDlg() { dlg.classList.remove('open'); }
 dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[data-dlg-close]')) closeDlg(); });
 function slugFrom(v) { v = String(v || '').trim(); const m = v.match(/\/p\/([a-z0-9-]+)/i); if (m) return m[1].toLowerCase(); return normQ(v).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48); }
@@ -2211,9 +2220,86 @@ function openReport(p) {
     el('p', { class: 'fine', text: 'Reports are anonymous. We check them by hand.' }));
 }
 
+/* ================= MY SPACE: private, local collections and activity ================= */
+const isSaved = slug => SAVED.some(p => p.slug === slug);
+const activityCount = key => ACTIVITY.reduce((n,p) => n + Math.max(0, Math.min(1000000,Number(p[key]) || 0)),0);
+function persistPersonal(key, value) {
+  store.set(key,value);
+  const persisted = JSON.stringify(store.get(key)) === JSON.stringify(value);
+  if (!persisted) toast('This browser blocked saving. Your collection will last only until this page closes.',5500);
+  return persisted;
+}
+function rememberActivity(slug, kind) {
+  if (!isSlug(slug) || !['view','visit','demo'].includes(kind)) return;
+  const p = BY_SLUG.get(slug); if (!p) return;
+  let row = ACTIVITY.find(x => x.slug === slug);
+  if (!row) { row = {slug,name:p.name,tagline:p.tagline,views:0,clicks:0}; ACTIVITY.unshift(row); }
+  row.name=p.name; row.tagline=p.tagline; row.at=new Date().toISOString();
+  const key = kind === 'view' ? 'views' : 'clicks'; row[key] = Math.min(1000000,Math.max(0,Number(row[key]) || 0)+1);
+  ACTIVITY.sort((a,b)=>String(b.at).localeCompare(String(a.at))); ACTIVITY.splice(100);
+  persistPersonal(ACTIVITY_KEY,ACTIVITY);
+}
+function saveBtn(p) {
+  const b=el('button',{class:'chip-btn save-btn',type:'button'});
+  const paint=()=>{const on=isSaved(p.slug);b.setAttribute('aria-pressed',String(on));b.setAttribute('aria-label',(on?'Unsave ':'Save ')+p.name);b.replaceChildren(el('span',{'aria-hidden':'true',text:on?'◆':'◇'}),on?'Saved':'Save');};
+  b.onclick=()=>{
+    const i=SAVED.findIndex(x=>x.slug===p.slug);
+    if(i>=0)SAVED.splice(i,1);
+    else {if(SAVED.length>=200){toast('Your saved collection holds up to 200 products. Remove one to add another.');return;}SAVED.unshift({slug:p.slug,name:p.name,tagline:p.tagline,at:new Date().toISOString()});}
+    const persisted=persistPersonal(SAVED_KEY,SAVED);paint();if(persisted)toast(isSaved(p.slug)?'Saved to My space. Saving never changes rankings.':'Removed from saved products.');
+  };paint();return b;
+}
+function spaceItem(slug, fallback, tab) {
+  const p=BY_SLUG.get(slug), local=ACTIVITY.find(x=>x.slug===slug), title=p?.name || fallback?.name || OWNED[slug]?.name || slug;
+  const info=el('div',{class:'space-info'},el('b',{text:title}),el('p',{text:p?.tagline || fallback?.tagline || 'This profile is not currently public.'}));
+  if(tab==='history' && local)info.append(el('p',{text:`${fmt(local.views)} profile opens · ${fmt(local.clicks)} website/demo clicks from this browser`}),el('p',{text:local.at?`Last opened ${timeAgo(local.at)}`:''}));
+  if(tab==='owned')info.append(el('p',{class:'space-owner-stat',text:'Loading your 30-day product statistics…'}));
+  const actions=el('div',{class:'space-actions'});
+  if(tab==='owned')actions.append(el('button',{class:'chip-btn',text:'Manage & stats',onclick:()=>{closeDlg();openManage(slug,'stats');}}));
+  else if(p)actions.append(el('button',{class:'chip-btn',text:'Open',onclick:()=>{closeDlg();openProduct(p,{source:'shared'});}}));
+  if(tab==='saved')actions.append(el('button',{class:'linkbtn','aria-label':'Remove saved '+title,text:'Remove',onclick:()=>{const i=SAVED.findIndex(x=>x.slug===slug);if(i>=0)SAVED.splice(i,1);persistPersonal(SAVED_KEY,SAVED);openMySpace('saved');}}));
+  if(tab==='following')actions.append(el('button',{class:'linkbtn','aria-label':'Unfollow '+title,text:'Unfollow',onclick:()=>{if(p)toggleFollow(p);else{delete FOLLOW.slugs[slug];saveFollow();loadUpdates();}openMySpace('following');}}));
+  const row=el('article',{class:'space-item','data-slug':slug},info,actions);
+  if(tab==='owned'){
+    rpc('owner_stats',{p_slug:slug,p_key:OWNED[slug].key}).then(s=>{
+      if(!row.isConnected)return;
+      const days=s.days||[],sum=key=>days.reduce((n,d)=>n+(Number(d[key])||0),0), own=OWNDATA[slug]||p;
+      const votes=own && Number.isFinite(Number(own.upvotes)) ? ` · ${fmt(own.upvotes)} total upvotes` : '';
+      row.querySelector('.space-owner-stat').textContent=`30 days: ${fmt(sum('view'))} profile views · ${fmt(sum('visit')+sum('demo'))} website/demo clicks${votes}`;
+    }).catch(()=>{if(row.isConnected)row.querySelector('.space-owner-stat').textContent='Statistics unavailable. Open Manage & stats to try again.';});
+  }
+  return row;
+}
+function openMySpace(tab='saved',focusTab=false) {
+  if(!['saved','following','upvoted','history','owned'].includes(tab))tab='saved';
+  closeSheet();closeUI();
+  const counter=(n,label)=>el('div',null,el('b',{text:fmt(n)}),el('small',{text:label}));
+  const tabs=el('div',{class:'space-tabs',role:'tablist','aria-label':'My space collections'});
+  const choices=[['saved','Saved',SAVED.length],['following','Following',Object.keys(FOLLOW.slugs).filter(isSlug).length],['upvoted','Upvoted',Object.keys(VOTED).filter(isSlug).length],['history','History',ACTIVITY.length],['owned','My products',Object.keys(OWNED).filter(isSlug).length]];
+  for(const [id,label,count]of choices){
+    const button=el('button',{type:'button',class:'chip-btn',role:'tab',id:'space-tab-'+id,'data-space-tab':id,'aria-controls':'space-content','aria-selected':String(tab===id),tabindex:tab===id?'0':'-1',text:`${label} (${count})`,onclick:()=>openMySpace(id,true)});
+    button.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();let i=choices.findIndex(x=>x[0]===id);i=e.key==='Home'?0:e.key==='End'?choices.length-1:(i+(e.key==='ArrowRight'?1:-1)+choices.length)%choices.length;openMySpace(choices[i][0],true);});tabs.append(button);
+  }
+  const panel=el('section',{id:'space-content',role:'tabpanel','aria-labelledby':'space-tab-'+tab});
+  let entries=[];
+  if(tab==='saved')entries=SAVED.map(p=>[p.slug,p]);
+  if(tab==='following')entries=Object.keys(FOLLOW.slugs).filter(isSlug).map(s=>[s]);
+  if(tab==='upvoted')entries=Object.keys(VOTED).filter(isSlug).map(s=>[s]);
+  if(tab==='history')entries=ACTIVITY.map(p=>[p.slug,p]);
+  if(tab==='owned')entries=Object.keys(OWNED).filter(isSlug).slice(0,20).map(s=>[s]);
+  const empty={saved:'Save a product with ◇ Save to keep it here. Saving is private and does not affect rankings.',following:'Follow a product to keep up with its launches and releases.',upvoted:'Your successful upvotes from this browser will appear here. Saving and following do not cast a vote.',history:'The profiles you open and website/demo links you click will appear here.',owned:'Your own products and their statistics appear here when this browser has an owner key. Sign in with your email or owner key.'};
+  if(entries.length)panel.append(el('div',{class:'space-list'},entries.map(([s,p])=>spaceItem(s,p,tab))));else panel.append(el('p',{class:'fine',text:empty[tab]}));
+  if(tab==='following')panel.prepend(el('button',{class:'btn btn-ghost btn-sm',text:'Open updates feed',onclick:openFollowing}));
+  if(tab==='owned'&&!entries.length)panel.append(el('button',{class:'btn btn-ghost btn-sm',text:'Sign in to my product',onclick:()=>openOwnerLogin()}));
+  if(tab==='history'&&entries.length)panel.append(el('button',{class:'linkbtn',style:'margin-top:16px',text:'Clear local activity history',onclick:()=>{ACTIVITY.splice(0);store.del(ACTIVITY_KEY);openMySpace('history');}}));
+  openDlg(el('div',{class:'mono kick',text:'Your private collection'}),el('h2',{class:'display',text:'My space'}),el('p',{class:'fine',text:'Save tools you want to return to. Follow releases. Keep your votes and activity in one place.'}),el('div',{class:'space-kpis'},counter(SAVED.length,'saved apps'),counter(Object.keys(FOLLOW.slugs).filter(isSlug).length,'following'),counter(Object.keys(VOTED).filter(isSlug).length,'your upvotes'),counter(activityCount('clicks'),'your website/demo clicks')),tabs,panel,el('p',{class:'fine',style:'margin-top:20px',text:'Saved apps, follows, votes and activity belong to this browser. They are not a public profile and do not sync across devices. Activity totals cover your latest 100 products. Maker statistics come from Expanse and count other visitors separately.'}));
+  dlg.classList.add('my-space');
+  if(focusTab)$('#space-tab-'+tab)?.focus({preventScroll:true});
+}
+
 /* ================= FOLLOWING: saved in this browser, one combined feed of updates ================= */
 const isFollowed = slug => !!FOLLOW.slugs[slug];
-function saveFollow() { store.set(FOLLOW_KEY, FOLLOW); renderFollowBtn(); }
+function saveFollow() { persistPersonal(FOLLOW_KEY, FOLLOW); renderFollowBtn(); }
 function toggleFollow(p) {
   const now = new Date().toISOString();
   if (isFollowed(p.slug)) { delete FOLLOW.slugs[p.slug]; toast(`Stopped following ${p.name}.`); }
@@ -2230,8 +2316,8 @@ async function loadUpdates() {
 const isNewUpdate = u => !!FOLLOW.seen && Date.parse(u.at) > Math.max(Date.parse(FOLLOW.seen) || 0, Date.parse(FOLLOW.slugs[u.slug]) || 0);
 function renderFollowBtn() {
   const n = Object.keys(FOLLOW.slugs).length, k = UPDATES.filter(isNewUpdate).length, c = $('#followCount');
-  $('#followBtn').hidden = !n; c.hidden = !k; c.textContent = k;
-  $('#followBtn').setAttribute('aria-label', 'Products you follow' + (k ? ` · ${k} new update${k === 1 ? '' : 's'}` : ''));
+  $('#followBtn').hidden = false; c.hidden = !k; c.textContent = k;
+  $('#followBtn').setAttribute('aria-label', 'My space' + (k ? ` · ${k} new update${k === 1 ? '' : 's'}` : ''));
 }
 const KIND = { launched: ['★', '#c8ff3d', 'Launched'], verified: ['✓', '#ffffff', 'Verified'], updated: ['✎', '#5ee1ff', 'Profile updated'], release: ['↑', '#b39cff', 'GitHub release'] };
 function openFollowing() {
@@ -2245,11 +2331,11 @@ function openFollowing() {
       ? el('a', { href: u.url, target: '_blank', rel: 'noopener nofollow' }, inner)
       : el('button', { type: 'button', onclick: () => { const p = BY_SLUG.get(u.slug); if (p) { closeDlg(); openProduct(p); } } }, inner));
   })) : el('p', { class: 'fine', text: 'Nothing new in the last 90 days. Launches, verifications, profile changes and GitHub releases show up here.' });
-  openDlg(el('div', { class: 'mono kick', text: '★ Following' }), el('h2', { class: 'display', text: 'Your updates' }), chips, list,
+  openDlg(el('div', { class: 'mono kick', text: '★ Following' }), el('h2', { class: 'display', text: 'Your updates' }), el('button',{class:'linkbtn',text:'← Back to My space',onclick:()=>openMySpace('following')}), chips, list,
     el('p', { class: 'fine', text: 'Saved in this browser only — no account needed. Follow more from any product page.' }));
   FOLLOW.seen = new Date(Math.max(Date.now(), ...UPDATES.map(u => Date.parse(u.at) || 0))).toISOString(); saveFollow();
 }
-$('#followBtn').onclick = openFollowing;
+$('#followBtn').onclick = () => openMySpace();
 
 /* ================= INFO SHEET ================= */
 function openSheet() { sheet.classList.add('open'); hideTip(); setTimeout(() => sheet.querySelector('.sheet-in').focus({ preventScroll: true }), 50); }
@@ -2332,21 +2418,12 @@ function endIntro() {
 {
   const h = home();
   cam.x = h.x; cam.y = h.y; cam.z = h.z;
-  if (deepSlug || deepSpot || reduce || store.get('expanse.intro.seen')) { introEl.classList.add('out'); app.classList.add('ready'); }
-  else {
-    introRunning = true; cam.z = h.z * .07;
-    setTimeout(() => { if (introRunning) introEl.classList.add('out'); }, 1500);
-    setTimeout(() => { if (!introRunning) return; flyTo(h.x, h.y, h.z, 4200, easeInOut); if (fly) fly.intro = true; }, 900);
-    setTimeout(() => { endIntro(); }, 1200);
-    try { store.set('expanse.intro.seen', true); } catch (e) {}
-    document.addEventListener('keydown', e => { if (introRunning && ['Escape', 'Enter', ' '].includes(e.key)) { e.preventDefault(); endIntro(); } });
-    introEl.addEventListener('pointerdown', endIntro);
-  }
+  introEl.classList.add('out'); app.classList.add('ready');
 }
 kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 (async () => {
-  await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight(), loadCommerce()]);
+  const [productsLoaded] = await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight(), loadCommerce()]);
   rebuildItems(); renderLive(); loadUpdates();
   if (new URLSearchParams(location.search).get('payment') === 'return') {
     const pending = store.get('expanse.checkout.v1');
@@ -2356,9 +2433,18 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
   }
   if (deepSlug) {
     const p = BY_SLUG.get(deepSlug);
-    if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true, source: 'shared' }); }
+    if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true, source: 'shared' }); $('#serverContent')?.remove(); }
     else if (OWNED[deepSlug]) openManage(deepSlug);
-    else { setPath('/'); toast('That product isn’t live yet — it may still be in review.', 4500); }
+    else if (!$('#serverContent')) { setPath('/'); toast('That product isn’t live yet — it may still be in review.', 4500); }
+  } else if (location.pathname === '/add') {
+    startSubmit();
+  } else if (location.pathname === '/me') {
+    openMySpace();
+  } else if (location.pathname === '/browse') {
+    if (!productsLoaded && $('#serverContent')) return;
+    const query = new URLSearchParams(location.search).get('q')?.trim().slice(0,160);
+    if (query) runSearch(query); else setView('list');
+    $('#serverContent')?.remove();
   } else if (deepSpot) {
     app.classList.add('explore'); explored = true; cam.x = deepSpot.x + 1; cam.y = deepSpot.y + 1; cam.z = 2.4;
     toast('A friend invited you — put your product right next to theirs.', 4500);
