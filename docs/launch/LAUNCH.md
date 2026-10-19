@@ -27,6 +27,14 @@ Makers: **A searchable home for your product. Free to list. Optional map placeme
 | Kanalspårning | Kampanjlänkar förberedda nedan. **UTM-parametrarna är etiketter, inte en färdig analysintegration.** Dagens produktstatistik skiljer map/search/list/shared/home, inte X från Threads. |
 | Support och villkor | Kontakt fungerar enligt konfiguration. Tydlig offentlig återbetalningshantering och fullständiga säljaruppgifter behöver granskas före betald kampanj. Ingen juridisk bedömning gjord. |
 
+## Kontroll av denna förhandsversion
+
+PR #21: https://github.com/jonjys/Expanse/pull/21
+Commit: adcbf5f4488f8d8c1d7012ab076bd41fc1f7c48c
+Vercel-preview byggd READY. Webbläsarkontroll visar fungerande /browse?q=Vercel, direkt produktlänk och /add med kampanjparametrar. Okänd produkt ger HTTP 404, noindex och en synlig felsida utan att ändra adressen till startsidan. 14 Node-tester och DOM-flöden går igenom.
+
+Den publicerade DeployDoctor-profilen innehöll en gammal gräns om tre gratisskanningar. Detta har korrigerats i katalogen efter kontroll av produktens aktuella hemsida: första publika skanningen per dag gratis, $2 ger 24 timmars obegränsade skanningar. Expanse säljer fortfarande sina egna kartplatser i EUR; USD-beloppet beskriver den externa produktens eget pris.
+
 ## Etapp 0: färdigställ före annonsering av betalda platser
 
 1. Kontrollera nya /browse, /add, produktlänk och okänd produktlänk på den publicerade releasen.
