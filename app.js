@@ -32,7 +32,7 @@ const CATS = {
   health:       { label: 'Health & wellbeing', color: '#ff7ad9', rgb: '255,122,217' },
   other:        { label: 'Other',              color: '#c3caf0', rgb: '195,202,240' }
 };
-const PRICING = { free: 'Free', freemium: 'Free plan', trial: 'Free trial', paid: 'Paid' };
+const PRICING = { unspecified: 'Not specified', free: 'Free', freemium: 'Free plan', trial: 'Free trial', paid: 'Paid' };
 const PLATFORMS = { web: 'Web', ios: 'iOS', android: 'Android', macos: 'macOS', windows: 'Windows', linux: 'Linux', api: 'API', extension: 'Browser extension' };
 const NEED_IDEAS = ['send invoices', 'track time', 'book meetings', 'manage projects', 'take notes', 'write content', 'design graphics', 'build a website', 'sell online', 'collect payments', 'manage customers', 'send newsletters', 'schedule social posts', 'analyze data', 'automate workflows', 'support customers', 'hire people', 'learn something new', 'monitor uptime', 'share files'];
 
@@ -249,7 +249,14 @@ function freeAround(cx, cy, size) {
 let ZONE_CAP = null, zoneFreeCache = null;
 function zoneFree(id) {
   if (!ZONE_CAP) { ZONE_CAP = {}; for (let y = -MAX_R; y < MAX_R; y++) for (let x = -MAX_R; x < MAX_R; x++) { if (Math.hypot(x + .5, y + .5) >= MAX_R) continue; const z = zoneOf(x, y, 1).id; ZONE_CAP[z] = (ZONE_CAP[z] || 0) + 1; } }
-  if (!zoneFreeCache) { zoneFreeCache = Object.assign({}, ZONE_CAP); for (const it of ITEMS) { const z = zoneOf(it.x, it.y, it.size).id; zoneFreeCache[z] -= it.size * it.size; } }
+  if (!zoneFreeCache) {
+    zoneFreeCache = Object.assign({}, ZONE_CAP);
+    for (const [key, item] of occ) {
+      if (item.kind === 'star' || item.kind === 'open') continue;
+      const [x,y] = key.split(',').map(Number);
+      if (Math.hypot(x + .5, y + .5) < MAX_R) { const z = zoneOf(x,y,1).id; zoneFreeCache[z]--; }
+    }
+  }
   return { free: Math.max(0, zoneFreeCache[id] || 0), cap: ZONE_CAP[id] || 0 };
 }
 
@@ -268,12 +275,14 @@ async function fnCall(name, body) {
 }
 const errCode = e => String((e && e.message) || '');
 const tracked = new Set();
-function track(slug, kind) {
+function track(slug, kind, source) {
+  if (source && slug && !OWNED[slug] && !navigator.webdriver) rpc('track_discovery', { p_slug: slug, p_kind: kind, p_source: source }, { keepalive: true }).catch(() => {});
   if (!slug || OWNED[slug] || navigator.webdriver) return;
   const k = slug + ':' + kind; if (kind === 'view' && tracked.has(k)) return; tracked.add(k);
   rpc('track', { p_slug: slug, p_kind: kind }, { keepalive: true }).catch(() => {});
 }
-let STATS = null;
+let STATS = null, COMMERCE = { enabled: false };
+async function loadCommerce() { try { COMMERCE = await rpc('public_commerce'); } catch (e) { COMMERCE = { enabled: false }; } }
 async function loadStats() { try { STATS = await rpc('founding_stats'); } catch (e) { STATS = null; } renderLive(); }
 function prepProduct(p) {
   const words = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').split(/[^a-z0-9+#.]+/).filter(Boolean).map(stem);
@@ -808,7 +817,7 @@ function hover(m) {
 function tap(m) {
   const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
   if (introRunning) return;
-  if (ui === 'claim' && sub.step === 1) { const s = nearestFree(cx - (sub.size >> 1), cy - (sub.size >> 1), sub.size); if (s) setSpot(s, true); return; }
+  if (ui === 'claim' && sub.step === 1) { if (sub.plan === 'free') { toast('Your free place is on the Edge. Choose a map spot to pick another zone.'); return; } const s = nearestFree(cx - (sub.size >> 1), cy - (sub.size >> 1), sub.size); if (s) setSpot(s, true); return; }
   const it = itemAt(m);
   if (it) { openItem(it); return; }
   if (cp < 4.5) { markExplore(); flyTo(w.x, w.y, clamp(18 / CELL, ZMIN, ZMAX), 1300, easeInOut); return; }
@@ -1031,10 +1040,11 @@ function openItem(it) {
 function openProduct(p, opts) {
   const it = ITEMS.find(i => i.slug === p.slug); sel = it || null;
   const cat = CATS[p.category] ? p.category : 'other', z = zoneOf(p.x, p.y, p.size);
-  const visit = el('a', { class: 'btn btn-primary btn-sm', href: discoveryUrl(p.url), target: '_blank', rel: 'noopener nofollow ugc', title: p.url, onclick: () => track(p.slug, 'visit') }, el('span', { text: 'Visit website' }), ' ↗');
-  const demoBtn = p.demo_url ? el('a', { class: 'btn btn-ghost btn-sm', href: p.demo_url, target: '_blank', rel: 'noopener nofollow ugc', onclick: () => track(p.slug, 'demo') }, 'Try demo ↗') : null;
+  const source = opts && opts.source || (view === 'list' ? (listQ ? 'search' : 'list') : 'map');
+  const visit = el('a', { class: 'btn btn-primary btn-sm', href: discoveryUrl(p.url), target: '_blank', rel: 'noopener nofollow ugc', title: p.url, onclick: () => track(p.slug, 'visit', source) }, el('span', { text: 'Visit website' }), ' ↗');
+  const demoBtn = p.demo_url ? el('a', { class: 'btn btn-ghost btn-sm', href: p.demo_url, target: '_blank', rel: 'noopener nofollow ugc', onclick: () => track(p.slug, 'demo', source) }, 'Try demo ↗') : null;
   const imgs = (p.images || []).length ? el('div', { class: 'imgs' }, p.images.map(src => el('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', decoding: 'async', onerror: e => e.target.remove() }))) : null;
-  const facts = [['For', p.audience], ['Price', PRICING[p.pricing] + (p.price_text ? ' · ' + p.price_text : '')]];
+  const facts = [['For', p.audience], ['Price', p.pricing === 'unspecified' ? '' : PRICING[p.pricing] + (p.price_text ? ' · ' + p.price_text : '')]].filter(f => f[1]);
   if ((p.platforms || []).length) facts.push(['Platforms', p.platforms.map(x => PLATFORMS[x] || x).join(', ')]);
   if ((p.integrations || []).length) facts.push(['Works with', p.integrations.join(', ')]);
   fill(popBody,
@@ -1059,7 +1069,7 @@ function openProduct(p, opts) {
   popBody.dataset.slug = p.slug;
   openPanel(pop, 'pop');
   setPath('/p/' + p.slug);
-  track(p.slug, 'view');
+  track(p.slug, 'view', source);
   if (it && view === 'map' && !(opts && opts.noFly)) { centerOn(it); markExplore(); }
 }
 /* Checked facts about a product, each with its date. None of them can be bought. */
@@ -1322,11 +1332,11 @@ function renderResults() {
   HL = r.map(x => x.p.slug); kick();
   if (u.length || anyAi) kids.push(el('div', { class: 'lbl mono' }, anyAi ? el('span', { class: 'ai', text: '✦ AI' }) : null, u.length ? 'Looking for: ' + u.join(' · ') : 'Matched by meaning, not just words'));
   const sps = sponsoredFor(v, all);
-  for (const sp of sps) kids.push(el('button', { type: 'button', class: 'spon', title: 'Paid placement. It doesn’t change the results below.', onclick: () => { trackSpon(sp, 'click'); results.hidden = true; searchEl.classList.remove('open'); openProduct(sp.p); } },
+  for (const sp of sps) kids.push(el('button', { type: 'button', class: 'spon', title: 'Paid placement. It doesn’t change the results below.', onclick: () => { trackSpon(sp, 'click'); results.hidden = true; searchEl.classList.remove('open'); openProduct(sp.p, { source: 'sponsored' }); } },
     el('span', { class: 'sw', style: 'background:' + CATS[sp.p.category].color }), el('span', { class: 'rt' }, el('b', { text: sp.p.name }), el('small', { text: sp.p.tagline })), el('span', { class: 'tagx mono', text: 'Sponsored' })));
   for (const x of r) {
     const marks = [x.p.upvotes ? '▲ ' + fmt(x.p.upvotes) : '', x.p.verified_at ? '✓' : ''].filter(Boolean).join('  ');
-    kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p); } },
+    kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p, { source: 'search' }); } },
       el('span', { class: 'sw', style: 'background:' + CATS[x.p.category].color }), el('span', { class: 'rt' }, el('b', { text: x.p.name }), el('small', { text: x.why || x.p.tagline })), marks ? el('span', { class: 'tagx', text: marks }) : null));
   }
   for (const q of d) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openDemo(q); } },
@@ -1385,8 +1395,8 @@ function filtered() {
     && (!F.plat.size || [...F.plat].every(x => p.platforms.includes(x)))
     && (!F.int.size || [...F.int].every(x => p.integrations.some(i => i.toLowerCase() === x))));
 }
-function card(p, why) {
-  return el('button', { class: 'card', style: '--c:' + CATS[p.category].color, onclick: () => openProduct(p) },
+function card(p, why, source) {
+  return el('button', { class: 'card', style: '--c:' + CATS[p.category].color, onclick: () => openProduct(p, source ? { source } : undefined) },
     el('div', { class: 'top' }, el('b', { text: p.name }), p.verified_at ? el('span', { class: 'ver', title: 'Verified domain', text: '✓' }) : null, isFollowed(p.slug) ? el('span', { class: 'fol', title: 'You follow this', text: '★' }) : null,
       p.upvotes ? el('span', { class: 'votes' + (VOTED[p.slug] ? ' on' : ''), title: plural(p.upvotes, 'upvote', 'upvotes'), text: '▲ ' + fmt(p.upvotes) }) : null),
     el('p', { text: p.tagline }),
@@ -1394,7 +1404,7 @@ function card(p, why) {
     el('div', { class: 'meta' }, el('span', { text: CATS[p.category].label }), el('span', { text: PRICING[p.pricing] }), p.platforms.length ? el('span', { text: p.platforms.slice(0, 3).map(x => PLATFORMS[x]).join(' · ') }) : null, p.sponsored ? el('span', { class: 'spon', text: 'Sponsored' }) : null));
 }
 function sponCard(sp) {
-  const c = card(sp.p, null); c.classList.add('sponsored');
+  const c = card(sp.p, null, 'sponsored'); c.classList.add('sponsored');
   c.prepend(el('div', { class: 'spon-h mono' }, 'Sponsored', el('small', { text: ' · paid, doesn’t change the ranking' })));
   c.addEventListener('click', () => trackSpon(sp, 'click'));
   return c;
@@ -1426,7 +1436,7 @@ function renderList() {
     const none = !PRODUCTS.length;
     cardsEl.replaceChildren(el('div', { class: 'empty' },
       el('h3', { text: none ? 'The universe is wide open.' : listQ ? `Nothing solves “${listQ}” yet.` : 'No products match these filters.' }),
-      el('p', { text: none ? 'No products are live yet. The first ones get the best spots, closest to the core.' : 'Know a product that does? Its maker can add it in a couple of minutes.' }),
+      el('p', { text: none ? 'No products are live yet. Every maker can add a free profile under the same review rules.' : 'Know a product that does? Its maker can add it in a couple of minutes.' }),
       el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), none ? el('button', { class: 'btn btn-ghost btn-sm', text: 'See the demo universe', onclick: () => { setView('map'); $('#demoHero').click(); } }) : null)));
     return;
   }
@@ -1444,7 +1454,7 @@ function normUrl(v) {
 }
 const urlOk = v => /^https:\/\/(?!(?:[^\/?#]*@))[a-z0-9.-]+\.[a-z]{2,24}(:\d{2,5})?([\/?#]\S*)?$/i.test(v) && v.length <= 300;
 function makeForm() {
-  const f = {}, data = { category: '', pricing: '', needs: [], platforms: [], integrations: [] };
+  const f = {}, data = { category: 'other', pricing: 'unspecified', needs: [], platforms: [], integrations: [] };
   const input = (name, label, attrs, hint) => { const i = el('input', Object.assign({ autocomplete: 'off', spellcheck: 'false' }, attrs)); const w = el('label', { class: 'field', 'data-f': name }, el('span', { class: 'mono' }, label), i, hint ? el('small', { class: 'hint', text: hint }) : null); f[name] = { w, i }; return w; };
   const opts = (name, label, entries, multi, colors) => {
     const box = el('div', { class: 'opts', role: 'group', 'aria-label': label });
@@ -1470,7 +1480,7 @@ function makeForm() {
   const counter = el('em', { text: '0 / 1200' });
   const desc = el('textarea', { maxlength: '1200', rows: '6', placeholder: 'What it does, how it works and what makes it different. Plain text, line breaks are fine.' });
   desc.addEventListener('input', () => { counter.textContent = desc.value.length + ' / 1200'; });
-  f.description = { w: el('label', { class: 'field', 'data-f': 'description' }, el('span', { class: 'mono' }, 'Description', counter), desc), i: desc };
+  f.description = { w: el('label', { class: 'field', 'data-f': 'description' }, el('span', { class: 'mono' }, 'Description · optional', counter), desc), i: desc };
   const imgs = el('textarea', { rows: '3', placeholder: 'https://… one image link per line, up to 4', spellcheck: 'false', style: 'min-height:84px' });
   f.images = { w: el('label', { class: 'field', 'data-f': 'images' }, el('span', { class: 'mono' }, 'Images ', el('em', { text: 'optional · screenshots work best' })), imgs, el('small', { class: 'hint', text: 'Links to images already online (https). We show them as they are.' })), i: imgs };
   const groups = {
@@ -1481,8 +1491,8 @@ function makeForm() {
       opts('category', 'Category', Object.entries(CATS).map(([k, c]) => [k, c.label]), false, Object.fromEntries(Object.entries(CATS).map(([k, c]) => [k, c.color])))
     ],
     fit: [
-      tags('needs', 'Problems it solves', 'Type a need and press Enter, e.g. send invoices', 6, 60, () => NEED_IDEAS, true),
-      input('audience', 'Who it’s for', { maxlength: '140', placeholder: 'e.g. Freelancers and small agencies in the EU' }),
+      tags('needs', 'Problems it solves · optional', 'Type a need and press Enter, e.g. send invoices', 6, 60, () => NEED_IDEAS, true),
+      input('audience', 'Who it’s for · optional', { maxlength: '140', placeholder: 'e.g. Freelancers and small agencies in the EU' }),
       opts('pricing', 'Price', Object.entries(PRICING), false),
       input('price_text', 'Price details · optional', { maxlength: '60', placeholder: 'e.g. From €9 / month' }),
       opts('platforms', 'Platforms · optional', Object.entries(PLATFORMS), true),
@@ -1507,7 +1517,7 @@ function makeForm() {
     d = d || {};
     for (const k of ['name', 'url', 'tagline', 'audience', 'price_text', 'demo_url', 'description']) f[k].i.value = d[k] || '';
     f.images.i.value = (d.images || []).join('\n');
-    data.category = CATS[d.category] ? d.category : ''; data.pricing = PRICING[d.pricing] ? d.pricing : '';
+    data.category = CATS[d.category] ? d.category : 'other'; data.pricing = PRICING[d.pricing] ? d.pricing : 'unspecified';
     data.needs = (d.needs || []).slice(0, 6); data.platforms = (d.platforms || []).filter(x => PLATFORMS[x]); data.integrations = (d.integrations || []).slice(0, 12);
     f.category.paint(); f.pricing.paint(); f.platforms.paint(); f.needs.paint(); f.integrations.paint();
     counter.textContent = f.description.i.value.length + ' / 1200';
@@ -1518,10 +1528,10 @@ function makeForm() {
     url: d => urlOk(d.url) || 'That website link doesn’t look right — it needs to work over https.',
     tagline: d => d.tagline.length >= 8 || 'Write one line about what it does (at least 8 characters).',
     category: d => !!d.category || 'Pick a category.',
-    needs: d => d.needs.length >= 1 || 'Add at least one problem it solves — that’s how people find it.',
-    audience: d => d.audience.length >= 3 || 'Who is it for?',
+    needs: d => d.needs.length <= 6 || 'Use up to six problems.',
+    audience: d => !d.audience || d.audience.length >= 3 || 'Use at least three characters, or leave this blank.',
     pricing: d => !!d.pricing || 'Pick a price option.',
-    description: d => d.description.length >= 30 || 'Describe it in at least 30 characters.',
+    description: d => !d.description || d.description.length >= 30 || 'Use at least 30 characters, or leave this blank.',
     demo_url: d => !d.demo_url || urlOk(d.demo_url) || 'The demo link needs to work over https.',
     images: d => (d.images.length <= 4 && d.images.every(urlOk)) || 'Use up to 4 image links that start with https://.'
   };
@@ -1540,63 +1550,123 @@ function makeForm() {
 }
 
 /* ================= ADD YOUR PRODUCT ================= */
-const sub = { step: 0, spot: null, size: 2, name: '', cat: '', result: null };
+const sub = { step: 0, spot: null, size: 1, plan: 'free', zone: 'edge', name: '', cat: '', result: null };
 const wiz = makeForm();
-$('#fBasics').append(...wiz.groups.basics); $('#fFit').append(...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
+$('#fBasics').append(...wiz.groups.basics.slice(0, 3)); $('#fFit').append(wiz.groups.basics[3], ...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
 let draftT = 0;
-wiz.onChange(() => { const d = wiz.get(); sub.name = d.name; sub.cat = d.category; kick(); clearTimeout(draftT); draftT = setTimeout(() => store.set(DRAFT_KEY, Object.assign(d, { size: sub.size })), 400); });
-const STEP_OF = { basics: 2, fit: 3, story: 4 };
+wiz.onChange(() => { const d = wiz.get(); sub.name = d.name; sub.cat = d.category; kick(); clearTimeout(draftT); draftT = setTimeout(() => store.set(DRAFT_KEY, Object.assign(d, { size: sub.size, plan: sub.plan, zone: sub.zone })), 400); });
+const STEP_OF = { basics: 2, fit: 2, story: 2 };
+const FLOW = [2, 1, 5, 6];
 function setStep(n) {
   const prev = sub.step; sub.step = n;
-  for (let i = 1; i <= 6; i++) $('#cStep' + i).hidden = i !== n;
-  claimEl.querySelectorAll('.steps i').forEach((e, i) => e.classList.toggle('on', i < n));
+  for (const i of FLOW) $('#cStep' + i).hidden = i !== n;
+  claimEl.querySelectorAll('.steps i').forEach((e, i) => e.classList.toggle('on', i <= FLOW.indexOf(n)));
   claimEl.querySelector('.steps').hidden = n === 6;
-  claimEl.querySelectorAll('[data-s]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.s === sub.size)));
   if (n === 5) renderSummary();
-  claimEl.scrollTop = 0;
-  if (n === 1 && prev > 1 && sub.spot) centerOnSpot(true);
-  kick();
+  if (n === 1 && sub.spot) { describe(); if (prev !== 1) centerOnSpot(true); }
+  claimEl.scrollTop = 0; kick();
+}
+function placementSpotOk(x,y,size) {
+  if (!sub.moving) return spotOk(x,y,size);
+  if (zoneOf(x,y,size).reserved || Math.hypot(x+size/2,y+size/2)>=MAX_R) return false;
+  for(let i=0;i<size;i++)for(let j=0;j<size;j++){const occupant=occ.get(K(x+i,y+j));if(occupant&&occupant.slug!==sub.moving)return false;}
+  return true;
+}
+function zoneSpot(id, size, preferred) {
+  if (preferred && placementSpotOk(preferred.x, preferred.y, size) && zoneOf(preferred.x, preferred.y, size).id === id) return preferred;
+  const radii = { inner: 26, belt: 58, outer: 100, edge: 140 }, r = radii[id] || 140;
+  // Stay in the requested zone even if a neighbouring zone has a closer empty cell.
+  for (let ring = 0; ring <= 32; ring += 2) for (const radius of ring ? [r + ring, r - ring] : [r]) {
+    if (radius < CORE_R || radius >= MAX_R) continue;
+    for (let k = 0; k < 180; k++) { const angle = -Math.PI / 2 + k * Math.PI / 90;
+      const x = Math.round(Math.cos(angle) * radius - size / 2), y = Math.round(Math.sin(angle) * radius - size / 2);
+      if (zoneOf(x, y, size).id === id && placementSpotOk(x, y, size)) return { x, y };
+    }
+  }
+  return null;
+}
+function chooseZone(id, size) {
+  const next = zoneSpot(id, size || sub.size, sub.zone === id ? sub.spot : null);
+  if (!next) { toast('No free spot of this size in this zone. Try a smaller size or another zone.'); return false; }
+  sub.zone = id; sub.size = size || sub.size; setSpot(next, true); return true;
 }
 function startSubmit(spot, fromMap) {
+  sub.moving = null; $('#cNext1').textContent = 'Review your listing →';
   if (demo) setDemo(false);
   closeSheet(); closeDlg(); sel = null; if (view === 'list') setView('map');
-  if (sub.step === 6 || !sub.step) { sub.result = null; const d = store.get(DRAFT_KEY); wiz.set(d); sub.size = d && [1, 2, 4, 8].includes(d.size) ? d.size : 2; sub.name = d ? d.name || '' : ''; sub.cat = d ? d.category || '' : ''; }
+  if (sub.step === 6 || !sub.step) {
+    sub.result = null; const d = store.get(DRAFT_KEY); wiz.set(d);
+    sub.plan = d && d.plan === 'paid' ? 'paid' : 'free';
+    sub.size = sub.plan === 'paid' && d && [1, 2, 4, 8].includes(d.size) ? d.size : 1;
+    sub.zone = sub.plan === 'paid' && d && ['inner','belt','outer','edge'].includes(d.zone) ? d.zone : 'edge';
+    sub.name = d ? d.name || '' : ''; sub.cat = d ? d.category || 'other' : 'other';
+  }
+  if (spot) { sub.plan = 'paid'; sub.zone = zoneOf(spot.x, spot.y, sub.size).id; }
   openPanel(claimEl, 'claim'); markExplore();
-  setStep(1);
-  const s = spot || nearestFree(-(sub.size >> 1), -(sub.size >> 1), sub.size);
-  if (s) setSpot(s, !!fromMap);
+  const candidate = spot || zoneSpot(sub.zone, sub.size);
+  if (candidate) { sub.spot = { x: candidate.x, y: candidate.y }; describe(); }
+  setStep(2);
+  if (!coarse) requestAnimationFrame(() => wiz.groups.basics[0].querySelector('input').focus({ preventScroll: true }));
 }
 function describe() {
-  const s = sub.spot, z = zoneOf(s.x, s.y, sub.size), zf = zoneFree(z.id);
-  const zb = $('#cZone'); zb.textContent = z.label; zb.style.background = z.color;
-  $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells free`;
-  $('#cTitle').textContent = z.line;
-  $('#cPrice').textContent = eur(z.price * sub.size * sub.size);
+  if (!sub.spot) return;
+  const z = zoneOf(sub.spot.x, sub.spot.y, sub.size), zf = zoneFree(z.id);
+  sub.zone = z.id;
+  $('#cZone').textContent = z.label; $('#cZone').style.background = z.color;
+  $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells unoccupied`;
+  $('#cPrice').textContent = sub.plan === 'free' ? '€0' : eur(z.price * sub.size * sub.size);
+  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${sub.size * sub.size} cells × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
+  $('#cPaidOptions').hidden = sub.plan === 'free';
+  $('#cPlans').querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.plan === sub.plan)));
+  $('#cZoneValue').textContent = 'Every zone includes your own page, website link and stats. Map position changes where you appear while exploring; it never buys search ranking or Spotlight. No traffic or sales are guaranteed.';
+  $('#cZones').replaceChildren(...ZONES.filter(z => !z.reserved).slice().reverse().map(item => {
+    const f = zoneFree(item.id);
+    return el('button', { type: 'button', class: 'zone-option', style: '--zc:' + item.color, 'aria-pressed': String(item.id === sub.zone), onclick: () => chooseZone(item.id) },
+      el('b', { text: item.label }), el('strong', { text: eur(item.price) + ' / cell' }),
+      el('small', { text: `${fmt(f.free)} of ${fmt(f.cap)} cells unoccupied · ${item.line}` }));
+  }));
   claimEl.querySelectorAll('[data-s]').forEach(b => {
-    const sz = +b.dataset.s, candidate = nearestFree(Math.round(s.x + sub.size / 2 - sz / 2), Math.round(s.y + sub.size / 2 - sz / 2), sz);
-    b.querySelector('small').textContent = candidate ? eur(zoneOf(candidate.x, candidate.y, sz).price * sz * sz) + (sz === 8 ? ' · landmark' : '') : 'Unavailable';
+    const sz = +b.dataset.s, candidate = zoneSpot(sub.zone, sz);
+    b.disabled = !candidate; b.setAttribute('aria-pressed', String(sz === sub.size));
+    b.querySelector('small').textContent = candidate ? eur(z.price * sz * sz) : 'Unavailable';
   });
-  $('#cMoveHint').textContent = (coarse ? 'Tap' : 'Click') + ' anywhere on the map to move your spot.';
+  $('#cMoveHint').textContent = sub.plan === 'free' ? 'Your free 1×1 place is on the Edge. You can explore paid placement after review.' : (coarse ? 'Tap' : 'Click') + ' the map to move your spot. Held during review and for 7 days after approval. Pay then to keep it for 12 months.';
 }
 function centerOnSpot(quick) { const s = sub.spot; if (!s) return; flyTo(s.x + sub.size / 2, s.y + sub.size / 2, clamp(Math.max(cam.z, (isMobile() ? 26 : 34) / CELL / Math.max(1, sub.size / 2)), ZMIN, ZMAX), quick ? 550 : 1300, easeInOut); }
 function setSpot(s, quick) { sub.spot = { x: s.x, y: s.y }; describe(); centerOnSpot(quick); }
-$('#cSizes').addEventListener('click', e => {
-  const b = e.target.closest('[data-s]'); if (!b) return; const sz = +b.dataset.s; if (sz === sub.size) return;
-  const c = sub.spot || { x: 0, y: 0 }, old = sub.size; sub.size = sz;
-  const s = nearestFree(Math.round(c.x + old / 2 - sz / 2), Math.round(c.y + old / 2 - sz / 2), sz);
-  if (s) setSpot(s, true); setStep(1);
+$('#cPlans').addEventListener('click', e => {
+  const b = e.target.closest('[data-plan]'); if (!b) return;
+  const plan = b.dataset.plan;
+  if (plan === 'free') { if (!chooseZone('edge', 1)) return; }
+  sub.plan = plan; describe();
 });
-$('#cCore').onclick = () => { const s = nearestFree(-(sub.size >> 1), -(sub.size >> 1), sub.size); if (s) setSpot(s, false); };
-$('#cNext1').onclick = () => { if (!sub.spot || !spotOk(sub.spot.x, sub.spot.y, sub.size)) { const s = nearestFree(sub.spot ? sub.spot.x : 0, sub.spot ? sub.spot.y : 0, sub.size); if (s) setSpot(s, true); } setStep(2); if (!coarse) setTimeout(() => wiz.groups.basics[0].querySelector('input').focus({ preventScroll: true }), 220); };
-$('#cNext2').onclick = () => { if (!wiz.check(['basics'])) setStep(3); };
-$('#cNext3').onclick = () => { if (!wiz.check(['fit'])) setStep(4); };
-$('#cNext4').onclick = () => { if (!wiz.check(['story'])) { setStep(5); if (!coarse) setTimeout(() => $('#cMail').focus({ preventScroll: true }), 220); } };
-claimEl.querySelectorAll('[data-back]').forEach(b => b.onclick = () => setStep(Math.max(1, sub.step - 1)));
+$('#cSizes').addEventListener('click', e => {
+  const b = e.target.closest('[data-s]'); if (!b || b.disabled) return;
+  chooseZone(sub.zone, +b.dataset.s);
+});
+$('#cNext1').onclick = async () => {
+  if (!sub.spot || !placementSpotOk(sub.spot.x, sub.spot.y, sub.size)) { if (!chooseZone(sub.zone)) return; }
+  if (sub.moving) {
+    const slug = sub.moving, button = $('#cNext1'); button.disabled = true;
+    try { OWNDATA[slug] = await rpc('owner_choose_map_spot', {p_slug:slug,p_key:OWNED[slug].key,p_x:sub.spot.x,p_y:sub.spot.y,p_size:sub.size}); sub.moving=null; await refreshAll(); openManage(slug,'placement'); toast('Spot saved. No payment has been taken.'); }
+    catch(e) { toast(errCode(e)==='checkout_open'?'Finish your open payment or wait for the checkout to expire before moving.':errCode(e)==='active_purchase'?'Your paid spot is already active.':'That spot could not be saved. It may have just been taken.',5000); }
+    finally { button.disabled=false; }
+    return;
+  }
+  setStep(5); if (!coarse) requestAnimationFrame(() => $('#cMail').focus({ preventScroll: true }));
+};
+$('#cNext2').onclick = () => {
+  const error = wiz.check(['basics', 'fit', 'story']);
+  if (error) { if (!['name','url','tagline'].includes(error)) $('#cExtras').open = true; wiz.bad(error); return; }
+  setStep(1);
+};
+claimEl.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { if (sub.moving) { const slug=sub.moving;sub.moving=null;openManage(slug,'placement'); } else setStep(FLOW[Math.max(0, FLOW.indexOf(sub.step) - 1)]); });
 function renderSummary() {
   const d = wiz.get(), s = sub.spot, z = zoneOf(s.x, s.y, sub.size), cat = CATS[d.category] || CATS.other;
   $('#cSummary').style.setProperty('--c', cat.color);
   $('#sName').textContent = d.name; $('#sWhere').textContent = `${cat.label} · ${z.label} · ${sub.size}×${sub.size}`;
-  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), `today · founding ${eur(z.price * sub.size * sub.size)}`);
+  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' ? 'free profile' : `${eur(z.price * sub.size * sub.size)} / 12 months after review`);
+  $('#cReviewTerms').textContent = sub.plan === 'free' ? 'Every product is reviewed under the same rules. Your free profile, search listing and stats have no expiry. No payment required.' : 'Every product is reviewed under the same rules. Your spot is held free during review and for 7 days after approval. Once approved, you can pay once for 12 months of placement. No automatic renewal. Payment never buys approval, search ranking or Spotlight.';
 }
 $('#cSubmit').addEventListener('submit', async e => {
   e.preventDefault();
@@ -1605,7 +1675,7 @@ $('#cSubmit').addEventListener('submit', async e => {
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('#fMail').classList.add('bad'); input.focus(); toast('That email looks off.'); return; }
   $('#fMail').classList.remove('bad');
   if (!$('#cOwn').checked) { toast('Please confirm that you make or represent this product.'); $('#cOwn').focus(); return; }
-  const stepWithError = wiz.check(['basics', 'fit', 'story']); if (stepWithError) { setStep(STEP_OF[wiz.groupOf(stepWithError)]); wiz.bad(stepWithError); return; }
+  const stepWithError = wiz.check(['basics', 'fit', 'story']); if (stepWithError) { setStep(2); $('#cExtras').open = true; wiz.bad(stepWithError); return; }
   const btn = $('#cSend'); btn.disabled = true; btn.textContent = 'Sending…';
   try {
     const ref = store.get(REF_KEY);
@@ -1631,7 +1701,7 @@ $('#cSubmit').addEventListener('submit', async e => {
     else if (m.includes('too_many')) toast('You have sent several products recently. Give it an hour, or wait for the review.', 5000);
     else if (m.includes('busy')) toast('Lots of makers are adding products right now — try again in a minute.', 4500);
     else toast("Couldn't send it right now — check your connection and try again.");
-  } finally { btn.disabled = false; btn.textContent = 'Send for review'; }
+  } finally { btn.disabled = false; btn.textContent = 'Send for review · free'; }
 });
 function finish(r) {
   setStep(6);
@@ -1639,6 +1709,8 @@ function finish(r) {
   $('#dTitle').textContent = `Founding spot #${fmt(r.number)}.`;
   $('#dText').textContent = `${r.name} is held in the ${z.label} (${r.size}×${r.size}). We review it before it goes live. Your link will be ${productUrl(r.slug).replace(/^https?:\/\//, '')}.`;
   $('#dKey').textContent = r.key;
+  $('#dPlacement').replaceChildren(el('div', { class: 'note', text: sub.plan === 'paid' ? 'Your spot is held during review and for 7 days after approval. Once approved, open My product → Map spot to pay for 12 months. No payment has been taken.' : 'Your free profile is reserved. Add more detail or choose paid placement from your owner panel after review.' }));
+  if (!store.get(OWNED_KEY)?.[r.slug]) $('#dPlacement').prepend(el('div', { class: 'note', text: 'This browser could not save your owner key. Download it now so you can manage your product later.' }));
   const it = ITEMS.find(i => i.slug === r.slug); if (it) { celebrate(it); setTimeout(() => { if (ui === 'claim' && sub.step === 6) flyTo(it.x + it.w / 2, it.y + it.h / 2, clamp(cam.z * .5, ZMIN, ZMAX), 2200, easeInOut); }, 1200); }
 }
 $('#dKeyCopy').onclick = async () => toast((await copy($('#dKey').textContent)) ? 'Owner key copied. Keep it somewhere safe.' : 'Select the key and copy it.');
@@ -1660,6 +1732,52 @@ function celebrate(q) {
   f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); kick();
 }
 document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { closeSheet(); startSubmit(null); });
+
+/* Map purchases use the current reserved coordinates and a server-priced order. */
+let mapPoll = 0;
+async function renderMapPlacement(o) {
+  const box=$('#mPlacement'),slug=mSlug; clearTimeout(mapPoll);
+  if (!o.slug) { box.replaceChildren(el('p',{class:'fine',text:'Loading…'})); return; }
+  box.replaceChildren(el('p',{class:'fine',text:'Checking your map spot…'}));
+  let status;
+  try { status=await rpc('owner_map_status',{p_slug:slug,p_key:OWNED[slug].key}); }
+  catch { if(mSlug===slug&&mTab==='placement')box.replaceChildren(el('p',{class:'fine',text:'Map payments are temporarily unavailable. Your profile is safe. Please try again.'})); return; }
+  if(mSlug!==slug||mTab!=='placement')return;
+  const active=status.state==='paid'&&Date.parse(status.ends_at)>Date.now(),z=ZONE_BY_ID[o.zone]||ZONE_BY_ID.edge;
+  const holdText=status.hold_until&&Date.parse(status.hold_until)>Date.now()?` Your chosen spot is held until ${dateStr(status.hold_until)}; without payment it returns to a free 1×1 Edge spot.`:'';
+  const paid=el('div',{class:'purchase-state'},el('b',{text:active?'Your placement is active':status.state==='needs_review'?'Payment needs review':status.state==='pending'?'Waiting for payment confirmation':'Your current map spot'}),
+    el('p',{class:'fine',text:active?`Paid until ${dateStr(status.ends_at)}. No automatic renewal. Your free profile continues afterwards.`:status.state==='needs_review'?status.issue:'Your product page, search listing and stats remain free.'+holdText}));
+  const buy=el('button',{type:'button',class:'btn btn-primary',text:`Pay ${eur(status.amount_cents/100)} for 12 months ↗`,onclick:async()=>{
+    buy.disabled=true;buy.textContent='Preparing secure payment…';
+    try{
+      const order=await rpc('owner_map_checkout',{p_slug:slug,p_key:OWNED[slug].key});
+      const u=new URL(order.url);
+      if(u.origin!=='https://buy.stripe.com'||!order.id)throw new Error('invalid_checkout');
+      store.set('expanse.checkout.v1',{slug,id:order.id}); location.assign(u.href);
+    }catch(err){
+      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':'Could not start payment. Nothing was charged. Please try again.',5000);
+      buy.disabled=false;buy.textContent=`Pay ${eur(status.amount_cents/100)} for 12 months ↗`;
+    }
+  }});
+  const change=el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'Choose another zone or size',onclick:()=>{
+    sub.moving=slug;sub.plan='paid';sub.size=o.size;sub.zone=o.zone;sub.spot={x:o.x,y:o.y};sub.name=o.name;sub.cat=o.category;
+    openPanel(claimEl,'claim');setStep(1);$('#cNext1').textContent='Save this spot →';
+  }});
+  const consent=el('input',{type:'checkbox'});
+  const terms=el('label',{class:'check'},consent,el('span',{text:'I understand this is one payment for 12 months, without automatic renewal. It buys map placement, not search ranking, Spotlight, guaranteed traffic or sales. After expiry, my profile continues on the free Edge.'}));
+  buy.disabled=true;consent.addEventListener('change',()=>buy.disabled=!consent.checked);
+  box.replaceChildren(el('h3',{class:'display',text:`${z.label} · ${o.size}×${o.size}`}),paid);
+  if(!active){
+    box.append(el('div',{class:'placement-total',text:`${eur(status.amount_cents/100)} / 12 months`}),el('p',{class:'fine',text:'One payment in euros. Tax included where applicable. No automatic renewal. Map placement is separate from Sponsored cards.'}));
+    if(o.status!=='approved')box.append(el('p',{class:'note',text:'Your spot is held free while your product is reviewed. Payment opens after approval, under the same rules for every maker.'}));
+    else if(!COMMERCE.enabled)box.append(el('p',{class:'note',text:'Payments are temporarily paused. Your free listing continues.'}));
+    else if(status.state!=='needs_review')box.append(terms,buy);
+    if(status.state!=='pending')box.append(change);
+    else box.append(el('p',{class:'fine',text:'If you have just paid, wait for confirmation before trying again. An unpaid checkout can be resumed with the button above.'}));
+  }
+  if(status.state==='needs_review')box.append(el('button',{class:'linkbtn',text:'Contact support',onclick:()=>openContact('other')}));
+  if(status.state==='pending')mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);
+}
 
 /* ================= OWNER PANEL ================= */
 const mform = makeForm();
@@ -1702,6 +1820,7 @@ function renderManage() {
   if (mTab === 'verify') renderVerify(o);
   if (mTab === 'share') renderShare(o);
   if (mTab === 'promote') renderPromote(o);
+  if (mTab === 'placement') renderMapPlacement(o);
   if (mTab === 'key') renderKey(o);
 }
 $('#mTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; mTab = b.dataset.tab; renderManage(); });
@@ -1709,8 +1828,8 @@ async function renderStats(o) {
   const box = $('#mStats');
   if (o.status !== 'approved') { box.replaceChildren(el('p', { class: 'fine', text: 'Stats start counting when your product is live. We count profile views and clicks to your site and demo — once per visitor per day, without cookies, and without your own visits or known bots.' })); return; }
   box.replaceChildren(el('p', { class: 'fine', text: 'Loading…' }));
-  let s; try { s = await rpc('owner_stats', { p_slug: mSlug, p_key: OWNED[mSlug].key }); } catch (e) { box.replaceChildren(el('p', { class: 'fine', text: "Couldn't load stats right now." })); return; }
-  if (mTab !== 'stats') return;
+  let s, sources = []; const statsSlug=mSlug; try { [s,sources] = await Promise.all([rpc('owner_stats', { p_slug: mSlug, p_key: OWNED[mSlug].key }),rpc('owner_discovery_stats',{p_slug:mSlug,p_key:OWNED[mSlug].key}).catch(()=>[])]); } catch (e) { box.replaceChildren(el('p', { class: 'fine', text: "Couldn't load stats right now." })); return; }
+  if (mTab !== 'stats' || mSlug!==statsSlug) return;
   const days = s.days || [], sum = k => days.reduce((a, d) => a + (d[k] || 0), 0);
   const views = sum('view'), visits = sum('visit'), demos = sum('demo'), max = Math.max(1, ...days.map(d => d.view || 0), ...days.map(d => (d.visit || 0) + (d.demo || 0)));
   box.replaceChildren(
@@ -1723,6 +1842,8 @@ async function renderStats(o) {
       days.map(d => el('div', { class: 'd', title: `${d.d}: ${d.view} views, ${d.visit + d.demo} clicks` }, el('div', { class: 'v', style: `height:${(d.view || 0) / max * 100}%` }), el('div', { class: 'c', style: `height:${((d.visit || 0) + (d.demo || 0)) / max * 100}%` })))),
     el('div', { class: 'chart-legend' }, el('span', null, el('i', { style: 'background:rgba(94,225,255,.55)' }), 'Profile views'), el('span', null, el('i', { style: 'background:var(--lime)' }), 'Clicks')),
     el('p', { class: 'fine', text: 'Unique visitors per day. Counted without cookies; your own visits on days you open this panel and known bots are left out, as far as we can tell.' }));
+  const labels={map:'Map exploration',search:'Search',list:'Product list',shared:'Shared product link',sponsored:'Sponsored card',home:'Home page'};
+  box.append(el('div',{class:'source-stats'},el('h4',{class:'mono',text:'Where discovery happens · 30 days'}),sources.length?sources.map(row=>el('div',{class:'source-row'},el('span',{text:labels[row.source]||row.source}),el('b',{text:`${fmt(row.views)} views · ${fmt(Number(row.visits)+Number(row.demos))} clicks`}))):el('p',{class:'fine',text:'No attributed visits yet. New visits will show here as people discover your product.'}),el('p',{class:'fine',text:'One visitor can use several sources. These counts started with this update; older visits have no recorded source.'})));
 }
 function checksBox(o) {
   const c = o.checks || {}, row = (label, at, fails, status, okText) => el('li', { class: !at ? '' : fails ? 's-bad' : 's-up' },
@@ -2139,11 +2260,12 @@ sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closes
 /* ================= LIVE: COUNTER + FEED (real data only; demo items are labelled) ================= */
 function renderLive() {
   const live = STATS ? STATS.live | 0 : PRODUCTS.length, held = STATS ? STATS.reserved | 0 : 0, left = Math.max(0, FOUNDING_LIMIT - held);
-  $('#heroLive').textContent = STATS ? `${fmt(left)} of ${fmt(FOUNDING_LIMIT)} founding spots left` : 'Founding prices for the first 1,000 spots';
+  $('#heroLive').textContent = 'Free to list · map spots from €1 / 12 months';
+  const hp = $('#heroProducts'); hp.replaceChildren(...PRODUCTS.slice().sort((a,b) => dayRot(a.slug) - dayRot(b.slug)).slice(0, 3).map(p => el('button', { type: 'button', onclick: () => openProduct(p, { source: 'home' }) }, el('i', { style: '--pc:' + (CATS[p.category] || CATS.other).color }), p.name, p.verified_at ? ' ✓' : '')));
   const hc = $('#heroCounts'); hc.replaceChildren();
   if (live) hc.append(el('b', { text: fmt(live) }), live === 1 ? ' product live' : ' products live', ' · listing is ', el('b', { text: 'free' }));
-  else hc.append('No products live yet — the first get the ', el('b', { text: 'best spots' }));
-  const dock = $('#dockTxt'); dock.replaceChildren(el('b', { text: fmt(left) }), ' founding spots left');
+  else hc.append('Open to every maker · ', el('b', { text: 'same rules for everyone' }));
+  const dock = $('#dockTxt'); dock.replaceChildren(el('b', { text: 'Your product, discoverable.' }), ' Free profile · optional paid placement');
 }
 const ticker = $('#ticker'); let tickN = 0, tickItem = null;
 function demoLine(q) {
@@ -2210,23 +2332,31 @@ function endIntro() {
 {
   const h = home();
   cam.x = h.x; cam.y = h.y; cam.z = h.z;
-  if (deepSlug || deepSpot || reduce) { introEl.classList.add('out'); app.classList.add('ready'); }
+  if (deepSlug || deepSpot || reduce || store.get('expanse.intro.seen')) { introEl.classList.add('out'); app.classList.add('ready'); }
   else {
     introRunning = true; cam.z = h.z * .07;
     setTimeout(() => { if (introRunning) introEl.classList.add('out'); }, 1500);
     setTimeout(() => { if (!introRunning) return; flyTo(h.x, h.y, h.z, 4200, easeInOut); if (fly) fly.intro = true; }, 900);
-    setTimeout(() => { introRunning = false; app.classList.add('ready'); }, 3700);
+    setTimeout(() => { endIntro(); }, 1200);
+    try { store.set('expanse.intro.seen', true); } catch (e) {}
+    document.addEventListener('keydown', e => { if (introRunning && ['Escape', 'Enter', ' '].includes(e.key)) { e.preventDefault(); endIntro(); } });
     introEl.addEventListener('pointerdown', endIntro);
   }
 }
 kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 (async () => {
-  await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight()]);
+  await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight(), loadCommerce()]);
   rebuildItems(); renderLive(); loadUpdates();
+  if (new URLSearchParams(location.search).get('payment') === 'return') {
+    const pending = store.get('expanse.checkout.v1');
+    if (pending && OWNED[pending.slug]) { openManage(pending.slug, 'placement'); toast('Checking payment confirmation…', 4000); }
+    else toast('Payment is confirmed by Stripe in the background. Sign in to your product to see its status.', 6000);
+    history.replaceState(null, '', location.pathname);
+  }
   if (deepSlug) {
     const p = BY_SLUG.get(deepSlug);
-    if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true }); }
+    if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true, source: 'shared' }); }
     else if (OWNED[deepSlug]) openManage(deepSlug);
     else { setPath('/'); toast('That product isn’t live yet — it may still be in review.', 4500); }
   } else if (deepSpot) {
@@ -2241,3 +2371,4 @@ setInterval(() => { if (!document.hidden) loadUpdates(); }, 300000);
 setTimeout(nextTick, 4400); setInterval(nextTick, 5200);
 if (window.requestIdleCallback) requestIdleCallback(() => offsets(), { timeout: 5000 }); else setTimeout(offsets, 2500);
 })();
+

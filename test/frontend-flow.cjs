@@ -1,0 +1,40 @@
+const fs=require('fs'),assert=require('node:assert/strict');
+const {JSDOM,VirtualConsole}=require('jsdom');
+const root=require('node:path').join(__dirname,'..')+'/';
+const calls=[],errors=[];
+const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message)});
+const product={slug:'fixture',name:'Real Fixture',tagline:'Solve a real user problem',description:'',audience:'',category:'other',needs:[],pricing:'unspecified',price_text:'',platforms:[],integrations:[],url:'https://example.com',demo_url:'',images:[],domain:'example.com',x:130,y:10,size:1,zone:'edge',status:'approved'};
+function boot(blockStorage=false){
+ const dom=new JSDOM(fs.readFileSync(root+'index.html','utf8'),{url:'https://expanse.nyttolabs.com/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
+ const w=dom.window;w.matchMedia=()=>({matches:true,addEventListener(){}});w.requestAnimationFrame=fn=>0;w.cancelAnimationFrame=()=>{};
+ w.HTMLElement.prototype.scrollIntoView=()=>{};
+ const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
+ w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
+ w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
+ const defaults={public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:100},owner_discovery_stats:[],owner_stats:{days:[]}};
+ if(method==='submit_product')r={...product,...body.p,slug:'new-fixture',key:'fixture-owner-key',status:'pending',number:2};
+ else if(method==='owner_map_checkout')r={id:'fixture-order',url:'https://buy.stripe.com/fixture?client_reference_id=fixture-order',amount_cents:100};
+ else r=defaults[method]??[];
+ return {ok:true,status:200,text:async()=>JSON.stringify(r),json:async()=>r};};
+ if(blockStorage)Object.defineProperty(w,'localStorage',{get(){throw new Error('blocked')}});
+ w.eval(fs.readFileSync(root+'app.js','utf8'));return dom;
+}
+const tick=()=>new Promise(r=>setTimeout(r,20));
+(async()=>{
+ const dom=boot();const w=dom.window,d=w.document;await tick();
+ const click=id=>d.querySelector(id).click();const set=(selector,v)=>{const i=d.querySelector(selector);i.value=v;i.dispatchEvent(new w.Event('input',{bubbles:true}));};
+ click('#addBtn');assert.equal(d.querySelector('#cStep2').hidden,false);assert.equal(d.querySelector('#cStep1').hidden,true);
+ click('#cNext2');assert.equal(d.querySelector('#cStep2').hidden,false,'invalid profile blocked');
+ set('#fBasics input[maxlength="40"]','New Fixture');set('#fBasics input[type="url"]','example.com');set('#fBasics input[maxlength="90"]','Solve a real user problem');click('#cNext2');
+ assert.equal(d.querySelector('#cStep1').hidden,false);assert.equal(d.querySelector('#cPrice').textContent,'€0');assert.equal(d.querySelector('#cZone').textContent,'Edge');
+ click('[data-plan="paid"]');assert.equal(d.querySelector('#cPrice').textContent,'€1');
+ const zones=()=>[...d.querySelectorAll('#cZones button')];zones().find(e=>e.querySelector('b').textContent==='Inner ring').click();click('[data-s="2"]');assert.equal(d.querySelector('#cPrice').textContent,'€76');
+ zones().find(e=>e.querySelector('b').textContent==='Edge').click();assert.equal(d.querySelector('#cPrice').textContent,'€4');
+ click('[data-plan="free"]');assert.equal(d.querySelector('#cPrice').textContent,'€0');assert.equal(d.querySelector('[data-s="1"]').getAttribute('aria-pressed'),'true');
+ click('#cNext1');assert.equal(d.querySelector('#cStep5').hidden,false);set('#cMail','maker@example.invalid');d.querySelector('#cOwn').checked=true;
+ d.querySelector('#cSubmit').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
+ assert.equal(d.querySelector('#cStep6').hidden,false);const submit=calls.find(x=>x.method==='submit_product');assert.equal(submit.body.p.size,1);assert.equal(submit.body.p.pricing,'unspecified');assert.deepEqual(submit.body.p.needs,[]);assert.equal(submit.body.p.description,'');
+ assert.equal(errors.length,0,errors.join('\n'));dom.window.close();
+ const blocked=boot(true);await tick();assert.equal(errors.length,0,errors.join('\n'));blocked.window.close();
+ console.log('DOM flow passed: optional profile, free default, all zone/size totals, free reset, submission, blocked storage boot.');
+})().catch(e=>{console.error(e);process.exit(1)});

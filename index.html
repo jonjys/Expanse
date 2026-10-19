@@ -520,6 +520,29 @@ a{color:inherit;text-decoration:none}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.001ms!important}
 }
+
+@media(pointer:coarse){.glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(6,8,25,.96)}}
+/* Product-first launch flow */
+.plan-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.plan-choice button{display:grid;gap:7px;text-align:left;padding:16px 14px;border:1px solid var(--line2);border-radius:16px;background:rgba(255,255,255,.025)}
+.plan-choice button[aria-pressed="true"]{border-color:var(--lime);background:rgba(200,255,61,.07)}
+.plan-choice strong{font-size:24px;color:var(--lime)}
+.plan-choice small{font-size:12px;line-height:1.5;color:var(--muted)}
+.zone-list{display:grid;gap:7px;margin:16px 0}
+.zone-option{display:grid;grid-template-columns:1fr auto;gap:5px 10px;text-align:left;padding:12px;border:1px solid var(--line2);border-left:3px solid var(--zc);border-radius:12px;background:rgba(255,255,255,.025)}
+.zone-option[aria-pressed="true"]{border-color:var(--zc);background:rgba(255,255,255,.06)}
+.zone-option b,.zone-option strong{font-size:14px}.zone-option small{grid-column:1/-1;color:var(--muted);font-size:11px;line-height:1.5}
+.zone-option strong{color:var(--zc)}
+.profile-extra{margin:18px 0}.profile-extra summary{cursor:pointer;font-size:14px;color:var(--txt2);padding:12px 0}
+.profile-extra summary span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.profile-extra[open]{border-top:1px solid var(--line)}
+.hero-proof{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;pointer-events:auto}
+.hero-proof button{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:rgba(5,8,27,.85);font-size:12px}
+.hero-proof i{width:8px;height:8px;border-radius:3px;background:var(--pc);box-shadow:0 0 12px var(--pc)}
+.placement-total{font-size:28px;font-weight:700;color:var(--lime);margin:14px 0 6px}.purchase-state{padding:14px;border:1px solid var(--line2);border-radius:14px;margin-top:14px}
+.source-stats{margin-top:18px}.source-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.plan-choice button:focus-visible,.zone-option:focus-visible,.hero-proof button:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+@media(max-width:760px){.plan-choice{gap:8px}.plan-choice button{padding:13px 10px}.hero-proof{max-width:100%}.hero-proof button{max-width:100%}.claim .c-title{font-size:28px}}
+
 </style>
 </head>
 <body>
@@ -555,13 +578,14 @@ a{color:inherit;text-decoration:none}
   <div class="demo-bar" id="demoBar" hidden><span><b>Demo mode</b> · example products to show what a full universe looks like. None of them are real.</span><button class="btn btn-ghost" id="demoExit">Exit demo</button></div>
 
   <section class="hero" id="hero" aria-labelledby="heroTitle">
-    <div class="eyebrow mono"><span class="dot"></span><span id="heroLive">Founding spots are open</span></div>
+    <div class="eyebrow mono"><span class="dot"></span><span id="heroLive">Free to list · map spots from €1</span></div>
     <h1 class="display" id="heroTitle">The internet,<br><span class="grad">as a universe.</span></h1>
-    <p class="sub">Find tools by what you need. Every glowing square is a real product, placed by the people who make it. Add yours for free — a searchable profile, a place on the map and visits you can measure.</p>
+    <p class="sub">Find tools by what you need. Every glowing square is a real product, placed by the people who make it. Your product gets a searchable page, a link to your website and visits you can measure. List for free, or choose a map spot from €1 for 12 months.</p>
     <div class="ctas">
       <button class="btn btn-primary" data-add>Add your product</button>
       <button class="btn btn-ghost" data-list>Browse products</button>
     </div>
+    <div class="hero-proof" id="heroProducts" aria-label="Live products"></div>
     <div class="meta mono"><span id="heroCounts">Listing is <b>free</b></span><button id="demoHero">See a full universe (demo)</button></div>
   </section>
 
@@ -609,50 +633,48 @@ a{color:inherit;text-decoration:none}
   <!-- add your product -->
   <aside class="panel claim glass scroll" id="claim" tabindex="-1" aria-label="Add your product">
     <button class="x" data-close aria-label="Close">×</button>
-    <div class="steps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-    <div id="cStep1">
-      <div class="mono c-eyebrow">Step 1 of 5 · Your spot</div>
-      <div class="zone" style="margin-top:12px"><span class="zbadge" id="cZone">Inner ring</span><span class="mono c-eyebrow" id="cCloser"></span></div>
-      <h2 class="display c-title" id="cTitle">Close to the core.</h2>
-      <div class="sizes" id="cSizes" role="group" aria-label="Size">
-        <button data-s="1" aria-pressed="false">1×1<small></small></button>
-        <button data-s="2" aria-pressed="true">2×2<small></small></button>
-        <button data-s="4" aria-pressed="false">4×4<small></small></button>
-        <button data-s="8" aria-pressed="false">8×8<small></small></button>
-      </div>
-      <div class="price"><b id="cPrice">€76</b><span>founding price for this spot<br>free to hold today · listing is always free</span></div>
-      <div class="c-row">
-        <button class="btn btn-primary" id="cNext1">Continue →</button>
-        <button class="btn btn-ghost btn-sm" id="cCore">Closest to core</button>
-      </div>
-      <p class="fine" id="cMoveHint">Click anywhere on the map to move your spot.</p>
-    </div>
-    <div id="cStep2" hidden>
-      <div class="mono c-eyebrow">Step 2 of 5 · Your product</div>
+    <div class="steps" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div id="cStep2">
+      <div class="mono c-eyebrow">Step 1 of 3 · Your product</div>
+      <h2 class="display c-title">Give your product a home.</h2>
+      <p class="c-text">Your own page, a link to your website and measurable visits. Free to list. The same rules for every maker.</p>
       <div id="fBasics"></div>
-      <div class="c-row"><button class="btn btn-primary" id="cNext2">Continue →</button><button class="btn btn-ghost btn-sm" data-back>Back</button></div>
+      <details class="profile-extra" id="cExtras"><summary>Add more detail <span>optional · you can do this later</span></summary><div id="fFit"></div><div id="fStory"></div></details>
+      <div class="c-row"><button class="btn btn-primary" id="cNext2">Choose your place →</button></div>
     </div>
-    <div id="cStep3" hidden>
-      <div class="mono c-eyebrow">Step 3 of 5 · What it solves</div>
-      <div id="fFit"></div>
-      <div class="c-row"><button class="btn btn-primary" id="cNext3">Continue →</button><button class="btn btn-ghost btn-sm" data-back>Back</button></div>
-    </div>
-    <div id="cStep4" hidden>
-      <div class="mono c-eyebrow">Step 4 of 5 · Show it</div>
-      <div id="fStory"></div>
-      <div class="c-row"><button class="btn btn-primary" id="cNext4">Continue →</button><button class="btn btn-ghost btn-sm" data-back>Back</button></div>
+    <div id="cStep1" hidden>
+      <div class="mono c-eyebrow">Step 2 of 3 · Your place</div>
+      <h2 class="display c-title">A place for every product.</h2>
+      <div class="plan-choice" id="cPlans" role="group" aria-label="Listing plan">
+        <button type="button" data-plan="free" aria-pressed="true"><b>Free profile</b><strong>€0</strong><small>1×1 on the Edge. Search, profile and stats included.</small></button>
+        <button type="button" data-plan="paid" aria-pressed="false"><b>Choose your spot</b><strong>From €1</strong><small>Choose zone and size. One payment for 12 months after review.</small></button>
+      </div>
+      <div id="cPaidOptions" hidden>
+        <div class="zone-list" id="cZones" role="group" aria-label="Map zone"></div>
+        <div class="sizes" id="cSizes" role="group" aria-label="Size">
+          <button type="button" data-s="1" aria-pressed="true">1×1<small></small></button>
+          <button type="button" data-s="2" aria-pressed="false">2×2<small></small></button>
+          <button type="button" data-s="4" aria-pressed="false">4×4<small></small></button>
+          <button type="button" data-s="8" aria-pressed="false">8×8<small></small></button>
+        </div>
+      </div>
+      <div class="zone"><span class="zbadge" id="cZone">Edge</span><span class="mono c-eyebrow" id="cCloser"></span></div>
+      <div class="price" aria-live="polite"><b id="cPrice">€0</b><span id="cPriceTerms">Free profile · no payment required</span></div>
+      <p class="fine" id="cZoneValue">Your own product page, a website link and stats. Search position is never for sale.</p>
+      <div class="c-row"><button class="btn btn-primary" id="cNext1">Review your listing →</button><button class="btn btn-ghost btn-sm" type="button" data-back>Back</button></div>
+      <p class="fine" id="cMoveHint">Your free place is on the Edge.</p>
     </div>
     <div id="cStep5" hidden>
-      <div class="mono c-eyebrow">Step 5 of 5 · Send for review</div>
-      <h2 class="display c-title">Almost live.</h2>
+      <div class="mono c-eyebrow">Step 3 of 3 · Review</div>
+      <h2 class="display c-title">Ready for discovery.</h2>
       <div class="summary" id="cSummary"><i></i><div><b id="sName"></b><small id="sWhere"></small></div><span class="amt" id="sAmt"></span></div>
       <form id="cSubmit" novalidate>
-        <label class="field" id="fMail"><span class="mono">Your email <em>only for messages about this listing</em></span><input id="cMail" type="email" inputmode="email" placeholder="you@company.com" autocomplete="email" required></label>
+        <label class="field" id="fMail"><span class="mono">Your email <em>for your listing and sign-in</em></span><input id="cMail" type="email" inputmode="email" placeholder="you@company.com" autocomplete="email" required></label>
         <input class="hp" id="cWeb" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         <label class="check"><input type="checkbox" id="cOwn"><span>I make or represent this product, and everything here is accurate.</span></label>
-        <div class="c-row"><button class="btn btn-primary" type="submit" id="cSend">Send for review</button><button class="btn btn-ghost btn-sm" type="button" data-back>Back</button></div>
+        <div class="c-row"><button class="btn btn-primary" type="submit" id="cSend">Send for review · free</button><button class="btn btn-ghost btn-sm" type="button" data-back>Back</button></div>
       </form>
-      <p class="fine">We review every product before it goes live. Nothing is charged — listing is free and the spot is free to hold. Your email is stored in the EU and never shown, sold or shared.</p>
+      <p class="fine" id="cReviewTerms">Every product is reviewed under the same rules. No payment today. Your email is never public.</p>
     </div>
     <div id="cStep6" hidden>
       <div class="mono c-eyebrow" style="color:var(--lime)">Sent for review</div>
@@ -664,6 +686,7 @@ a{color:inherit;text-decoration:none}
         <small>It's how you edit your profile and see your stats. It's saved in this browser too, but we can't show it again. Lost it? You can get a new one by proving you own your site.</small>
         <div class="c-row"><button class="btn btn-ghost btn-xs" id="dKeyCopy">Copy key</button><button class="btn btn-ghost btn-xs" id="dKeySave">Download as file</button></div>
       </div>
+      <div id="dPlacement"></div>
       <div class="c-row">
         <button class="btn btn-primary" id="dManage">Verify your domain →</button>
         <button class="btn btn-ghost btn-sm" id="dCard">Share card</button>
@@ -682,10 +705,12 @@ a{color:inherit;text-decoration:none}
       <button role="tab" data-tab="edit" aria-selected="false">Edit</button>
       <button role="tab" data-tab="verify" aria-selected="false">Verify</button>
       <button role="tab" data-tab="share" aria-selected="false">Share</button>
+      <button role="tab" data-tab="placement" aria-selected="false">Map spot</button>
       <button role="tab" data-tab="promote" aria-selected="false">Promote</button>
       <button role="tab" data-tab="key" aria-selected="false">Key</button>
     </div>
     <div class="tabp" data-panel="stats" id="mStats"></div>
+    <div class="tabp" data-panel="placement" id="mPlacement" hidden></div>
     <div class="tabp" data-panel="edit" hidden>
       <div id="eBasics"></div><div id="eFit"></div><div id="eStory"></div>
       <p class="fine">Text changes go live right away. A new link or new images go back to review first, and a new domain needs to be verified again.</p>
@@ -710,6 +735,7 @@ a{color:inherit;text-decoration:none}
         <div class="box">
           <h4>Live now</h4>
           <ul>
+            <li>Three-step registration with a free profile by default; optional map placement from €1 for 12 months, paid securely through Stripe after approval.</li>
             <li>Product profiles: what it solves, who it's for, price, platforms, integrations, images, demo and link.</li>
             <li>Search by need, with filters for category, price, platform and integrations.</li>
             <li>AI search that matches what you describe in your own words, with a reason for every result — and the matches light up in the galaxy.</li>
@@ -727,9 +753,9 @@ a{color:inherit;text-decoration:none}
         <div class="box plan">
           <h4>Planned <span class="badge mono">Not live yet</span></h4>
           <ul>
-            <li>Paying for map spots at their founding price. Until then, spots are free to hold.</li>
-            <li>Paying by card inside Expanse. Today we confirm a Sponsored slot first and send a payment link.</li>
-            <li>Selling your spot to another maker, once spots are paid.</li>
+            <li>More integrations and richer discovery tools as the universe grows.</li>
+            <li>More self-service options for Sponsored campaigns.</li>
+            <li>Transferring a paid map placement to another maker.</li>
           </ul>
         </div>
       </div>
@@ -742,7 +768,7 @@ a{color:inherit;text-decoration:none}
       <p>Results are ranked by how well a product matches your search — what it solves, its name and its description — and then by how well liked it is: the share of visitors who click through or upvote over the last 30 days, not how many visitors it has. A well-liked product can pass a slightly closer match, never a much closer one, and ties rotate every day. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. Sponsored products are marked <b style="color:var(--amber)">Sponsored</b>, show in at most two cards above the results only when they fit what you searched for, and never change the ranking below them.</p>
 
       <h3>Your spot on the map</h3>
-      <p>Every product lives somewhere in the galaxy. Your position changes where people encounter your product while exploring; it never changes search ranking. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four. Every spot is free to hold today.</p>
+      <p>Every product lives somewhere in the galaxy. Your position changes where people encounter your product while exploring; it never changes search ranking. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four. Free profiles use a 1×1 Edge spot. You can choose another zone and size and pay after approval for 12 months of placement. Existing founding holds are preserved.</p>
       <table class="ptable">
         <thead><tr><th>Zone</th><th>Founding price</th><th>2×2 example</th></tr></thead>
         <tbody>
@@ -755,8 +781,8 @@ a{color:inherit;text-decoration:none}
       </table>
       <div class="terms">
         <div><b>What a spot gives you</b><p>A fixed position and size in the galaxy, where people exploring the map will see it. It doesn't change search results and doesn't make you verified.</p></div>
-        <div><b>What it costs today</b><p>Nothing. Listing a product is free, and spots are free to hold during the founding period. Each spot shows the founding price it will have.</p></div>
-        <div><b>When paid spots open</b><p>You choose: keep your spot for 12 months at its founding price, or move to the free outer edge. Your profile, search and stats stay either way. You'll see the full terms before anything is charged.</p></div>
+        <div><b>Free profile, optional placement</b><p>A profile, search listing, website link and statistics are free. Optional map placement starts at €1 for a 1×1 Edge spot for 12 months. Prices are in euros, including tax where applicable.</p></div>
+        <div><b>How payment works</b><p>After your product is approved, open My product → Map spot. Check the zone, size, full price and 12-month term, then pay securely with Stripe. Chosen spots are held during review and for 7 days after approval. Without payment they return to a free 1×1 Edge spot. Your 12-month placement starts when payment is confirmed. No automatic renewal. When the term ends, your product continues on a free 1×1 Edge spot. No visits, search positions or sales are guaranteed.</p></div>
         <div><b>If your product goes away</b><p>Take it down anytime from your owner panel and the spot is released. If its link stops working and reports are confirmed, we hide the profile until it's fixed.</p></div>
       </div>
       <p class="fine">Founding prices are for the first 1,000 spots.</p>
@@ -765,8 +791,8 @@ a{color:inherit;text-decoration:none}
       <div class="faq">
         <details><summary>Is everything on the map real?</summary><p>Squares are real products that passed review. White beacons are held spots whose profile isn't live yet. The faint dust is just the galaxy. Demo mode fills the universe with clearly labelled example products to show what it can become — none of them are real.</p></details>
         <details><summary>Who gets the middle of the map?</summary><p>The products people use most. The 8 places in the core — the Spotlight — go to live products with a verified domain and a working website, ranked by the share of visitors who click through or upvote over the last 30 days. 2 places are kept for products that went live in the last 30 days. Nobody is invited and you can't buy a place.</p></details>
-        <details><summary>Can big names or money buy their way up?</summary><p>No. Rankings use the share of visitors who like a product, not the number of visitors, so a big audience doesn't win by size. New products start at the average, not at zero, newcomers always get 2 places in the Spotlight, and ties rotate every day instead of going to whoever came first. Money only buys a card marked Sponsored — the same €19 a year for everyone — and never a place in the results or the Spotlight. Where a product sits on the map is first come, first served, free to hold, and never affects search. Our own products follow exactly the same rules.</p></details>
-        <details><summary>Does it cost anything?</summary><p>No. Listing is free and map spots are free to hold. The only paid option is being Sponsored for a year, which a maker asks for from their owner panel and pays for only after we've confirmed the dates.</p></details>
+        <details><summary>Can big names or money buy their way up?</summary><p>No. Rankings use the share of visitors who like a product, not the number of visitors, so a big audience doesn't win by size. New products start at the average, not at zero, newcomers always get 2 places in the Spotlight, and ties rotate every day instead of going to whoever came first. Payment can buy a chosen map placement or a card marked Sponsored under the same published terms for everyone. It never buys search ranking or Spotlight. Available map positions are first come, first served; payment never changes search relevance. Our own products follow exactly the same rules.</p></details>
+        <details><summary>Does it cost anything?</summary><p>Listing is free, including a 1×1 Edge spot. You can optionally pay once for 12 months of chosen map placement, from €1, after your product is approved. Sponsored cards are a separate paid option. Both follow the same terms for everyone.</p></details>
         <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and IP addresses are never stored. Known bots are left out, and so are your own visits on days you open your owner panel. Upvotes work without an account too: your browser keeps a random ID and we store only a scrambled version of it, so each browser has one vote per product.</p></details>
         <details><summary>What do you do with my email?</summary><p>We only use it to contact you about your listing. It's stored in the EU (Stockholm), never shown publicly, sold or shared. Take your listing down from the owner panel and the email is wiped.</p></details>
         <details><summary>I lost my owner key.</summary><p>Open your product, choose “I make this”, then “Sign in with email” — we send a code to the address you added the product with. No access to that inbox? Choose “Lost your key?” and publish the code we give you on your site: that proves the product is yours and gives you a new key.</p></details>
@@ -776,7 +802,7 @@ a{color:inherit;text-decoration:none}
       <div class="terms">
         <div><b>Who runs Expanse</b><p>Expanse is a Nytto Labs project from Sweden. Questions, a data request or anything else: use the contact form below and we answer by email.</p></div>
         <div><b>What we store</b><p>Product profiles (public), the maker's email (private, only for messages about the listing and sign-in codes), anonymous daily visit counts without cookies or IP addresses, upvotes (linked only to a scrambled random ID from your browser), and reports. The products you follow, your upvotes and your owner key stay in your own browser.</p></div>
-        <div><b>Who helps us run it</b><p>Supabase stores the data in the EU (Stockholm), Vercel serves the site and Resend sends the emails. Nothing is sold, and there are no ad trackers.</p></div>
+        <div><b>Who helps us run it</b><p>Supabase stores listing data in the EU (Stockholm), Vercel serves the site, Resend sends listing emails and Stripe processes optional payments. Card details stay with Stripe and are never stored by Expanse. Nothing is sold, and there are no ad trackers.</p></div>
         <div><b>The rules</b><p>Listings are for real software and tools, added by the people who make or represent them. Spam, scams, illegal or adult content and profiles that don't match their product are turned down or removed. You can edit or take down your listing anytime, and taking it down wipes your email.</p></div>
       </div>
       <div class="c-row" style="margin-top:14px"><button class="btn btn-ghost btn-sm" data-contact>Contact us</button></div>
@@ -800,6 +826,7 @@ a{color:inherit;text-decoration:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 <noscript><p style="padding:24px;color:#fff;font-family:system-ui">Expanse is a living map of real products. It needs JavaScript to fly through.</p></noscript>
-<script src="/app.js" defer></script>
+<script src="/app.js?v=launch-20261019" defer></script>
 </body>
 </html>
+
