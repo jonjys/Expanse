@@ -5,7 +5,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 
 ## Structure
 
-- `index.html` — markup and CSS. `app.js` — all the behaviour. No build step, no external dependencies.
+- `index.html` — markup and CSS. `app.js` — all the behaviour. No build step or runtime dependencies. The regression suite uses jsdom as a development dependency.
 - `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and share image in the `<head>`.
 - `api/sitemap.js` — serves `/sitemap.xml` with every live product page. `robots.txt` points to it.
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
@@ -51,8 +51,9 @@ Per cell; a 2×2 is four cells and an 8×8 landmark sixty-four.
 | Edge       | 125+    | €1 / cell      |
 
 The same table lives in `ZONES` in `app.js` and in `zone_of()` / `price_per_cell()` in Supabase — change both together.
-Nothing is charged today: listing is free and spots are free to hold. The terms shown on the site for when paid placement
-opens are in the "How it works" sheet in `index.html` (12 months at the founding price, or move to the free outer edge).
+Listing is free with a 1×1 Edge spot. Optional map placement uses a single Stripe payment for 12 months,
+including applicable tax, without automatic renewal. Payment opens after approval. Legacy founding holds remain valid. New chosen spots are held through review and for 7 days after approval; unpaid holds then return to the free Edge.
+The public terms are in the "How it works" sheet in `index.html`. Search and Spotlight never use purchase state.
 
 ## The Spotlight (the core)
 
@@ -205,3 +206,53 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, placements, settings, key rotation. Each checks the admin key. |
 
 Functions starting with `_` are internal and not callable through the API; the edge function reaches them over the database connection.
+
+
+## Product-first launch and map payments
+
+Adding a product takes three steps: basic profile, free or chosen map placement, and review. Extended descriptions,
+category, problems, audience, pricing and screenshots can be completed later. Missing pricing is shown as unspecified;
+we never invent that a product is free. Live products appear as rotating entry cards on the homepage.
+
+The **Map spot** owner tab shows the current zone, size, total and term. After approval, an owner can move to a free
+spot and open a Stripe Payment Link. `owner_map_checkout` checks the owner key and approved status, locks the product,
+uses the server-side catalog price, and reuses the pending order. Link quantity cannot be edited. No Stripe API key is
+needed in the app: the account's Payment Links create Checkout Sessions, linked by an unguessable order UUID.
+
+`api/stripe-webhook.js` checks the signature against the raw request body and a five-minute timestamp tolerance.
+Only live events for Expanse are accepted. `confirm_map_payment` independently checks a random callback credential,
+the stored order, payment link, currency, amount, zone, size and current product coordinates. Only a paid session
+starts the 12-month term. The return page never grants anything. Repeated events/session notifications are idempotent;
+a separate second payment or mismatch is flagged for review in **Admin → Map purchases**. Full refunds and disputes
+end the paid term; partial refunds do not automatically remove it. `expanse-map-terms` runs daily in Postgres to move
+expired terms to a free 1×1 Edge cell, preserving the product page and stats. Legacy holds are unaffected.
+
+Required Vercel **production** environment variables (never commit their values):
+
+- `STRIPE_WEBHOOK_SECRET`: signing secret for this project's Stripe endpoint.
+- `EXPANSE_PAYMENT_CALLBACK_TOKEN`: independent random 256-bit credential; only its SHA-256 is stored in the database.
+- `STRIPE_ACCOUNT_ID`: the account owning the Payment Links.
+
+The catalog, orders, webhook audit and attribution are in `expanse_private`, with table privileges revoked and RLS
+on. The public API exposes only deliberate RPCs with owner/admin key checks, visitor limits or the callback credential.
+`public_commerce` publishes prices and availability, never secrets or orders. Set `commerce_config.enabled` only after
+configuration and deployment are verified; otherwise the UI and checkout fail closed. Preview deployments have no
+production payment credentials. The account currently uses webhook API version `2026-08-26.dahlia` because Stripe limits
+an account to three unique live endpoint versions; other applications' endpoints are unchanged.
+
+**Attribution:** new profile views and outgoing clicks are recorded by source (map, search, list, shared link, Sponsored,
+home). The owner sees 30-day source totals next to their existing unique counts. These do not change popularity, and
+source totals are not additive unique people. Existing visits are never backfilled with an invented source.
+
+### Verification
+
+```sh
+npm ci
+npm run check
+npm test
+```
+
+`test/commerce.sql` is a database transaction fixture: run it between `BEGIN` and `ROLLBACK` only. It verifies owner
+access, review gating, unpaid asynchronous payments, successful activation, repeat events, duplicate checkouts,
+refunds and free fallback. Do not commit test sales or fixture products. Local tests use synthetic webhook signatures;
+a real customer payment is not claimed as verified until Stripe has actually processed one.

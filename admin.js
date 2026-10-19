@@ -9,7 +9,7 @@ const CATS = {
   marketing: ['Marketing & sales', '#ffcf4a'], finance: ['Finance & admin', '#3dff8a'], ai: ['AI', '#b39cff'],
   commerce: ['E-commerce', '#ff9f43'], education: ['Education', '#7aa8ff'], health: ['Health & wellbeing', '#ff7ad9'], other: ['Other', '#c3caf0']
 };
-const PRICING = { free: 'Free', freemium: 'Free plan', trial: 'Free trial', paid: 'Paid' };
+const PRICING = { unspecified: 'Not specified', free: 'Free', freemium: 'Free plan', trial: 'Free trial', paid: 'Paid' };
 const PLATFORMS = { web: 'Web', ios: 'iOS', android: 'Android', macos: 'macOS', windows: 'Windows', linux: 'Linux', api: 'API', extension: 'Browser extension' };
 const STATUS = { pending: 'In review', approved: 'Live', rejected: 'Changes needed', hidden: 'Hidden', removed: 'Removed' };
 const REASONS = { broken_link: 'The link is broken', wrong_info: 'Information is wrong', spam: 'Spam, scam or harmful', other: 'Something else' };
@@ -72,9 +72,15 @@ $('#loginForm').addEventListener('submit', async e => {
 });
 $('#signOut').onclick = () => signOut(false);
 
+async function renderMapPurchases(main) {
+  const rows=await rpc('admin_map_purchases'); if(tab!=='map-purchases')return;
+  main.replaceChildren(el('h2',{class:'display',text:'Map purchases'}),el('p',{class:'sub',text:'Stripe-confirmed map placements. These do not change search ranking or Spotlight. Payments marked for review need a check in Stripe before any refund or activation.'}));
+  if(!rows.length){main.append(el('div',{class:'empty',text:'No map purchases yet. Never count a reservation or an unpaid checkout as revenue.'}));return;}
+  for(const row of rows)main.append(el('article',{class:'prod'},el('h3',{text:row.name}),el('p',{text:`${row.zone} · ${row.size}×${row.size} · €${(row.amount_cents/100).toLocaleString('en')} · ${row.state}`}),el('p',{class:'sub',text:row.ends_at?'Placement ends '+day(row.ends_at):'Created '+ago(row.created_at)}),row.review_events?el('p',{class:'note',text:`${row.review_events} payment event(s) need manual review.`}):null,row.issue?el('p',{text:row.issue}):null,row.session_id?el('a',{class:'linkbtn',href:'https://dashboard.stripe.com/payments/'+encodeURIComponent(row.payment_intent||''),target:'_blank',rel:'noopener',text:'Open payment in Stripe ↗'}):null));
+}
 /* ---------- shell ---------- */
 let tab = 'queue';
-const TABS = { queue: renderQueue, reports: renderReports, placements: renderPlacements, products: renderProducts, overview: renderOverview, settings: renderSettings };
+const TABS = { 'map-purchases': renderMapPurchases, queue: renderQueue, reports: renderReports, placements: renderPlacements, products: renderProducts, overview: renderOverview, settings: renderSettings };
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab); });
 $('#refresh').onclick = () => { go(tab); counts(); };
 function go(t) {
@@ -428,3 +434,4 @@ if (KEY) {
   rpc('admin_settings').then(start).catch(err => { if (err.message !== 'bad_admin') { start(); } });
 } else showLogin();
 })();
+

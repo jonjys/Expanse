@@ -1,0 +1,12 @@
+{
+  "name": "expanse",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node --test test/*.test.cjs && node test/frontend-flow.cjs",
+    "check": "node --check app.js && node --check admin.js && node --check api/stripe-webhook.js"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}
