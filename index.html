@@ -131,9 +131,9 @@ a{color:inherit;text-decoration:none}
 .follow-btn[aria-pressed="true"]{border-color:rgba(255,207,74,.6);color:var(--amber)}
 .vote-btn{font-variant-numeric:tabular-nums}
 .vote-btn[aria-pressed="true"]{border-color:rgba(200,255,61,.65);color:var(--lime);background:rgba(200,255,61,.08)}
-.vote-btn.pop span:first-child{display:inline-block;animation:vpop .45s cubic-bezier(.2,1.6,.4,1)}
+.vote-btn.voted-pulse span:first-child{display:inline-block;animation:vpop .45s cubic-bezier(.2,1.6,.4,1)}
 @keyframes vpop{0%{transform:translateY(0) scale(1)}40%{transform:translateY(-5px) scale(1.45)}100%{transform:none}}
-@media (prefers-reduced-motion:reduce){.vote-btn.pop span:first-child{animation:none}}
+@media (prefers-reduced-motion:reduce){.vote-btn.voted-pulse span:first-child{animation:none}}
 .feed{list-style:none;display:grid;gap:6px;margin-top:14px}
 .feed li button,.feed li a{display:flex;gap:12px;align-items:flex-start;width:100%;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--line);text-align:left;transition:border-color .15s}
 .feed li button:hover,.feed li a:hover{border-color:var(--line2)}
@@ -275,8 +275,23 @@ a{color:inherit;text-decoration:none}
 .pact{display:flex;gap:8px;margin-top:16px}
 .pact .btn{flex:1;min-width:0}
 .pact .btn span{overflow:hidden;text-overflow:ellipsis}
-.ptools{display:flex;gap:8px;margin-top:8px}
-.ptools .chip-btn{height:36px;font-size:13.5px}
+.ptools{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ptools .chip-btn{position:static;flex:0 0 auto;max-width:100%;height:36px;font-size:13.5px;padding:0 11px}
+.save-btn[aria-pressed="true"]{color:var(--cyan);border-color:var(--cyan)}
+.sheet.my-space .sheet-in{width:min(780px,100%)}
+.space-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:20px 0}
+.space-kpis div{padding:14px 10px;border:1px solid var(--line2);border-radius:14px;min-width:0}
+.space-kpis b{display:block;font-size:26px;color:var(--lime)}
+.space-kpis small{color:var(--txt2);font-size:12px}
+.space-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.space-tabs [aria-selected="true"]{background:rgba(200,255,61,.12);border-color:var(--lime);color:var(--lime)}
+.space-list{display:grid;gap:10px;margin-top:14px}
+.space-item{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px;border:1px solid var(--line2);border-radius:14px;min-width:0}
+.space-item .space-info{flex:1 1 220px;min-width:0}
+.space-item b,.space-item p{overflow-wrap:anywhere}
+.space-item p{color:var(--muted);font-size:13px;margin-top:4px}
+.space-actions{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:500px){.space-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.space-tabs .chip-btn{font-size:12px;padding:0 10px}}
 .chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;min-width:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);font-weight:600;font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s}
 .chip-btn:hover{border-color:rgba(255,255,255,.6)}
 .sec{margin-top:18px}
@@ -568,7 +583,7 @@ a{color:inherit;text-decoration:none}
     <div class="bar-r">
       <button class="iconbtn" id="searchBtn" aria-label="Search">⌕</button>
       <button class="btn btn-ghost btn-sm" id="infoBtn" aria-label="How it works"><span class="lbl">How it works</span><span aria-hidden="true" class="q">?</span></button>
-      <button class="btn btn-ghost btn-sm" id="followBtn" hidden aria-label="Products you follow"><span aria-hidden="true">★</span><span class="long">Following</span><span class="fcount" id="followCount" hidden></span></button>
+      <button class="btn btn-ghost btn-sm" id="followBtn" aria-label="My space"><span aria-hidden="true">◇</span><span class="long">My space</span><span class="fcount" id="followCount" hidden></span></button>
       <button class="btn btn-ghost btn-sm" id="mineBtn" hidden><span class="long">My product</span><span class="short">Mine</span></button>
       <button class="btn btn-primary btn-sm" id="addBtn" data-add><span class="long">Add your product</span><span class="short">+ Add</span></button>
     </div>
@@ -744,7 +759,7 @@ a{color:inherit;text-decoration:none}
             <li>An owner key to edit your profile and see profile views and clicks to your site — or sign in with your email and a one-time code.</li>
             <li>Domain verification with a meta tag or a file on your site.</li>
             <li>Daily checks that each website and demo link still works, shown on the profile with the date.</li>
-            <li>Follow products and get their launches, changes and GitHub releases in one feed — saved in your browser, no account.</li>
+            <li>My space: save favorite tools, see your upvotes and local click history, follow product updates, and open statistics for the products you own. Personal collections stay in your browser.</li>
             <li>Release updates from GitHub for products that connect their repo.</li>
             <li>Every new profile is reviewed before it goes live. Anyone can report a broken link or wrong information.</li>
             <li>Sponsored for a year, which makers ask for: clearly marked, at most two cards, shown only where they fit a search, with a report of the views and clicks they delivered.</li>
@@ -768,6 +783,7 @@ a{color:inherit;text-decoration:none}
       <p>Results are ranked by how well a product matches your search — what it solves, its name and its description — and then by how well liked it is: the share of visitors who click through or upvote over the last 30 days, not how many visitors it has. A well-liked product can pass a slightly closer match, never a much closer one, and ties rotate every day. Where a product sits on the map never changes its ranking. <b style="color:#fff">Verified</b> means the maker proved they control the domain; it isn't a quality rating and it can't be bought. Sponsored products are marked <b style="color:var(--amber)">Sponsored</b>, show in at most two cards above the results only when they fit what you searched for, and never change the ranking below them.</p>
 
       <h3>Your spot on the map</h3>
+      <p>Each product has one connected square: 1×1, 2×2, 4×4 or 8×8. One company may list several genuinely different products. Duplicate profiles for the same product are not allowed; choose a larger square rather than several copies of one listing.</p>
       <p>Every product lives somewhere in the galaxy. Your position changes where people encounter your product while exploring; it never changes search ranking. Prices are per cell, so a 2×2 is four cells and an 8×8 landmark is sixty-four. Free profiles use a 1×1 Edge spot. You can choose another zone and size and pay after approval for 12 months of placement. Existing founding holds are preserved.</p>
       <table class="ptable">
         <thead><tr><th>Zone</th><th>Per cell / 12 months</th><th>2×2 / 12 months</th></tr></thead>
@@ -801,7 +817,7 @@ a{color:inherit;text-decoration:none}
       <h3>Privacy and rules</h3>
       <div class="terms">
         <div><b>Who runs Expanse</b><p>Expanse is a Nytto Labs project from Sweden. Questions, a data request or anything else: use the contact form below and we answer by email.</p></div>
-        <div><b>What we store</b><p>Product profiles (public), the maker's email (private, only for messages about the listing and sign-in codes), anonymous daily visit counts without cookies or IP addresses, upvotes (linked only to a scrambled random ID from your browser), and reports. The products you follow, your upvotes and your owner key stay in your own browser.</p></div>
+        <div><b>What we store</b><p>Product profiles (public), the maker's email (private, only for messages about the listing and sign-in codes), anonymous daily visit counts without cookies or IP addresses, upvotes (linked only to a scrambled random ID from your browser), and reports. Saved products, followed products, your vote list, your owner key and your personal activity history stay in your own browser. My space does not create a public profile or sync across devices. You can clear local activity from its History tab; clearing browser storage also removes local collections.</p></div>
         <div><b>Who helps us run it</b><p>Supabase stores listing data in the EU (Stockholm), Vercel serves the site, Resend sends listing emails and Stripe processes optional payments. Card details stay with Stripe and are never stored by Expanse. Nothing is sold, and there are no ad trackers.</p></div>
         <div><b>The rules</b><p>Listings are for real software and tools, added by the people who make or represent them. Spam, scams, illegal or adult content and profiles that don't match their product are turned down or removed. You can edit or take down your listing anytime, and taking it down wipes your email.</p></div>
       </div>

@@ -4,7 +4,7 @@ const root=require('node:path').join(__dirname,'..')+'/';
 const calls=[],errors=[];
 const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message)});
 const product={slug:'fixture',name:'Real Fixture',tagline:'Solve a real user problem',description:'',audience:'',category:'other',needs:[],pricing:'unspecified',price_text:'',platforms:[],integrations:[],url:'https://example.com',demo_url:'',images:[],domain:'example.com',x:130,y:10,size:1,zone:'edge',status:'approved'};
-function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.readFileSync(root+'index.html','utf8')){
+function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.readFileSync(root+'index.html','utf8'),storage={}){
  const dom=new JSDOM(html,{url,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
  const w=dom.window;w.matchMedia=()=>({matches:true,addEventListener(){}});w.requestAnimationFrame=fn=>0;w.cancelAnimationFrame=()=>{};
  w.HTMLElement.prototype.scrollIntoView=()=>{};
@@ -12,12 +12,15 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
  w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
  const defaults={public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:100},owner_discovery_stats:[],owner_stats:{days:[]}};
- if(method==='submit_product')r={...product,...body.p,slug:'new-fixture',key:'fixture-owner-key',status:'pending',number:2};
+ if(method==='upvote')r={upvotes:body.p_on?1:0};
+ else if(method==='submit_product')r={...product,...body.p,slug:'new-fixture',key:'fixture-owner-key',status:'pending',number:2};
  else if(method==='owner_map_checkout')r={id:'fixture-order',url:'https://buy.stripe.com/fixture?client_reference_id=fixture-order',amount_cents:100};
  else r=defaults[method]??[];
  return {ok:true,status:200,text:async()=>JSON.stringify(r),json:async()=>r};};
  if(blockStorage)Object.defineProperty(w,'localStorage',{get(){throw new Error('blocked')}});
- w.eval(fs.readFileSync(root+'app.js','utf8'));return dom;
+ for(const [key,value] of Object.entries(storage))w.localStorage.setItem(key,value);
+ const source=fs.readFileSync(root+'app.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testMapPick = spot => startSubmit(spot,true);})();');
+ w.eval(source);return dom;
 }
 const tick=()=>new Promise(r=>setTimeout(r,20));
 (async()=>{
@@ -40,5 +43,17 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  const browse=boot(false,'https://expanse.nyttolabs.com/browse?q=Fixture');await tick();assert.equal(browse.window.document.querySelector('#list').getAttribute('aria-hidden'),'false');assert.match(browse.window.document.querySelector('#cards').textContent,/Real Fixture/);browse.window.close();
  const rendered=require('../api/p').withProduct(fs.readFileSync(root+'index.html','utf8'),product,'https://expanse.nyttolabs.com/p/fixture');
  const profile=boot(false,'https://expanse.nyttolabs.com/p/fixture',rendered);await tick();assert.equal(profile.window.document.querySelector('#serverContent'),null,'app replaces initial profile after load');assert.equal(errors.length,0,errors.join('\n'));profile.window.close();
- console.log('DOM flow passed: optional profile, free default, all zone/size totals, free reset, submission, blocked storage boot.');
+
+ const personal=boot(false,'https://expanse.nyttolabs.com/p/fixture');await tick();const pd=personal.window.document;
+ pd.querySelector('.save-btn').click();assert.equal(pd.querySelector('.save-btn').getAttribute('aria-pressed'),'true');assert.equal(JSON.parse(personal.window.localStorage.getItem('expanse.saved.v1')).length,1);
+ const beforeFollowVotes=calls.filter(x=>x.method==='upvote').length;pd.querySelector('.follow-btn').click();await tick();assert.equal(calls.filter(x=>x.method==='upvote').length,beforeFollowVotes,'saving/following never cast votes');
+ pd.querySelector('.vote-btn').click();await tick();assert.equal(pd.querySelector('.vote-btn').classList.contains('pop'),false,'upvote animation must not acquire product-panel layout');assert.equal(pd.querySelector('.vote-btn').getAttribute('aria-pressed'),'true');
+ pd.querySelector('.pact a').click();pd.querySelector('#followBtn').click();assert.match(pd.querySelector('#dlgBody').textContent,/My space/);assert.match(pd.querySelector('#space-content').textContent,/Real Fixture/);assert.match(pd.querySelector('.space-kpis').textContent,/1your website\/demo clicks/);
+ pd.querySelector('[data-space-tab="following"]').click();assert.match(pd.querySelector('#space-content').textContent,/Real Fixture/);
+ pd.querySelector('[data-space-tab="upvoted"]').click();assert.match(pd.querySelector('#space-content').textContent,/Real Fixture/);
+ const storage={};for(let i=0;i<personal.window.localStorage.length;i++){const key=personal.window.localStorage.key(i);storage[key]=personal.window.localStorage.getItem(key);}personal.window.close();
+ const reload=boot(false,'https://expanse.nyttolabs.com/me',fs.readFileSync(root+'index.html','utf8'),storage);await tick();const rd=reload.window.document;assert.match(rd.querySelector('#space-content').textContent,/Real Fixture/);rd.querySelector('[data-space-tab="history"]').click();assert.match(rd.querySelector('#space-content').textContent,/1 website\/demo clicks/);rd.querySelector('[data-space-tab="saved"]').click();rd.querySelector('[aria-label="Remove saved Real Fixture"]').click();assert.equal(JSON.parse(reload.window.localStorage.getItem('expanse.saved.v1')).length,0);reload.window.close();
+ const map=boot();await tick();map.window.testMapPick({x:20,y:20});const md=map.window.document;assert.equal(md.querySelector('#cPrice').textContent,'€76','clicked 2×2 Inner ring preview must keep its €76 total');assert.equal(md.querySelector('[data-s="2"]').getAttribute('aria-pressed'),'true');assert.equal(md.querySelector('#intro').classList.contains('out'),true);assert.equal(md.querySelector('#app').classList.contains('ready'),true);map.window.close();
+ assert.equal(errors.length,0,errors.join('\n'));
+ console.log('DOM flow passed: registration, euro totals, map quote consistency, Save/Follow/Upvote separation, vote layout, private activity, My space persistence, and blocked storage.');
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -261,3 +261,13 @@ a real customer payment is not claimed as verified until Stripe has actually pro
 ## Launch preparation
 
 See [the launch plan](docs/launch/LAUNCH.md), [unpublished copy](docs/launch/COPY.md) and [manual measurement sheet](docs/launch/MEASUREMENT.csv). The site being deployed does not mean a marketing campaign was launched. Real payment completion, inbox delivery, Google indexing and channel conversion must not be claimed without evidence.
+
+## Personal space and map consistency
+
+`/me` opens **My space**: saved tools, followed products and their update feed, successful upvotes, local profile-open / outbound-click history, and the products this browser owns. Save does not vote or follow. Collections and personal activity are private to the browser, capped at 200 saves and 100 recent products; there is no account sync or public member profile. Maker statistics still use the owner-key RPCs and show other visitors separately. History can be cleared without removing owner keys or saved tools.
+
+Map hover previews offer a 2×2 block, and clicking keeps that same size, position and euro total through registration. The chosen size is also shown in the map label. Each product uses one square (1×1, 2×2, 4×4 or 8×8); several genuinely different products from one company are allowed. Duplicate listings of one product are disallowed in review. Existing purchases are not repriced, expanded or merged by this UI change.
+
+The intro no longer shrinks the galaxy to a dot or blocks initial controls. Zooming out is bounded relative to the whole-galaxy view. Upvote feedback uses its own `voted-pulse` class instead of accidentally applying the product panel's `.pop` layout to a button. Profile actions wrap when they need more room.
+
+Regression coverage includes save/follow/vote separation, successful vote persistence, local click history, My space after reload, saved-item removal, and preserving the map preview's 2×2 €76 Inner-ring quote when entering registration.
