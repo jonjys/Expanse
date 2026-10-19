@@ -667,7 +667,7 @@ function draw(T) {
     rrect(ctx, vx + 1, vy + 1, vs - 2, vs - 2, Math.min(5, vs * .18));
     if (named) { ctx.fillStyle = col; ctx.fill(); }
     else { ctx.fillStyle = `rgba(${rgb},${.18 + .16 * pu})`; ctx.fill(); ctx.setLineDash([4, 4]); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
-    floatLabel(c.x + s / 2, c.y, named ? sub.name : `YOUR SPOT · ${eur(priceOf(c.x, c.y, s))}`, col, T);
+    floatLabel(c.x + s / 2, c.y, named ? sub.name : sub.plan === 'free' ? 'YOUR FREE SPOT · €0' : `YOUR SPOT · ${eur(priceOf(c.x, c.y, s))} / 12 MONTHS`, col, T);
   }
   for (const it of ITEMS) if (it.owned && !(ui === 'claim' && sub.step < 6)) floatLabel(it.x + it.w / 2, it.y, '★ ' + it.name + (it.kind === 'mine' ? ' · in review' : ''), '#c8ff3d', T);
   if (sel && sel.kind === 'product' && !sel.owned && ui === 'pop') floatLabel(sel.x + sel.w / 2, sel.y, sel.name, itemColor(sel), T);
@@ -1615,7 +1615,7 @@ function describe() {
   $('#cZone').textContent = z.label; $('#cZone').style.background = z.color;
   $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells unoccupied`;
   $('#cPrice').textContent = sub.plan === 'free' ? '€0' : eur(z.price * sub.size * sub.size);
-  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${sub.size * sub.size} cells × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
+  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
   $('#cPaidOptions').hidden = sub.plan === 'free';
   $('#cPlans').querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.plan === sub.plan)));
   $('#cZoneValue').textContent = 'Every zone includes your own page, website link and stats. Map position changes where you appear while exploring; it never buys search ranking or Spotlight. No traffic or sales are guaranteed.';

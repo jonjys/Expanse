@@ -524,12 +524,12 @@ a{color:inherit;text-decoration:none}
 @media(pointer:coarse){.glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(6,8,25,.96)}}
 /* Product-first launch flow */
 .plan-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
-.plan-choice button{display:grid;gap:7px;text-align:left;padding:16px 14px;border:1px solid var(--line2);border-radius:16px;background:rgba(255,255,255,.025)}
+.plan-choice button{display:grid;gap:5px;text-align:left;padding:12px 14px;border:1px solid var(--line2);border-radius:16px;background:rgba(255,255,255,.025)}
 .plan-choice button[aria-pressed="true"]{border-color:var(--lime);background:rgba(200,255,61,.07)}
 .plan-choice strong{font-size:24px;color:var(--lime)}
 .plan-choice small{font-size:12px;line-height:1.5;color:var(--muted)}
 .zone-list{display:grid;gap:7px;margin:16px 0}
-.zone-option{display:grid;grid-template-columns:1fr auto;gap:5px 10px;text-align:left;padding:12px;border:1px solid var(--line2);border-left:3px solid var(--zc);border-radius:12px;background:rgba(255,255,255,.025)}
+.zone-option{display:grid;grid-template-columns:1fr auto;gap:3px 10px;text-align:left;padding:12px;border:1px solid var(--line2);border-left:3px solid var(--zc);border-radius:12px;background:rgba(255,255,255,.025)}
 .zone-option[aria-pressed="true"]{border-color:var(--zc);background:rgba(255,255,255,.06)}
 .zone-option b,.zone-option strong{font-size:14px}.zone-option small{grid-column:1/-1;color:var(--muted);font-size:11px;line-height:1.5}
 .zone-option strong{color:var(--zc)}
@@ -646,8 +646,8 @@ a{color:inherit;text-decoration:none}
       <div class="mono c-eyebrow">Step 2 of 3 · Your place</div>
       <h2 class="display c-title">A place for every product.</h2>
       <div class="plan-choice" id="cPlans" role="group" aria-label="Listing plan">
-        <button type="button" data-plan="free" aria-pressed="true"><b>Free profile</b><strong>€0</strong><small>1×1 on the Edge. Search, profile and stats included.</small></button>
-        <button type="button" data-plan="paid" aria-pressed="false"><b>Choose your spot</b><strong>From €1</strong><small>Choose zone and size. One payment for 12 months after review.</small></button>
+        <button type="button" data-plan="free" aria-pressed="true"><b>Free profile</b><strong>€0</strong><small>1×1 Edge spot. Page, search & stats.</small></button>
+        <button type="button" data-plan="paid" aria-pressed="false"><b>Choose your spot</b><strong>From €1</strong><small>Zone + size. 12 months after review.</small></button>
       </div>
       <div id="cPaidOptions" hidden>
         <div class="zone-list" id="cZones" role="group" aria-label="Map zone"></div>
@@ -660,8 +660,8 @@ a{color:inherit;text-decoration:none}
       </div>
       <div class="zone"><span class="zbadge" id="cZone">Edge</span><span class="mono c-eyebrow" id="cCloser"></span></div>
       <div class="price" aria-live="polite"><b id="cPrice">€0</b><span id="cPriceTerms">Free profile · no payment required</span></div>
-      <p class="fine" id="cZoneValue">Your own product page, a website link and stats. Search position is never for sale.</p>
       <div class="c-row"><button class="btn btn-primary" id="cNext1">Review your listing →</button><button class="btn btn-ghost btn-sm" type="button" data-back>Back</button></div>
+      <p class="fine" id="cZoneValue">Your own product page, a website link and stats. Search position is never for sale.</p>
       <p class="fine" id="cMoveHint">Your free place is on the Edge.</p>
     </div>
     <div id="cStep5" hidden>
