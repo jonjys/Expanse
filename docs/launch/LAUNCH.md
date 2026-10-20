@@ -1,48 +1,35 @@
 # Expanse — lanseringsplan
 
-Kontrollerad 19 oktober 2026. Ingen kampanj har publicerats genom detta arbete.
+Uppdaterad 20 oktober 2026. Ingen kampanj har publicerats genom detta arbete.
 
 ## Beslut
 
-Sidan är tekniskt publicerad. Vi skiljer det från att aktivt lansera den.
+Sidan är publicerad. Den aktiva marknadsföringen är ännu inte startad.
 Nästa offentliga steg är en **öppen maker-beta**, med samma gratisprofil, priser, granskning och rankning för alla.
 Den breda upptäcktslanseringen kommer efter att katalogen faktiskt kan hjälpa besökare.
 
 Vi lovar en produktprofil, en webbplatslänk, sökbarhet och mätning. Vi lovar inte trafik, SEO-värde, försäljning eller köpt rankning.
 Vår position: **Find real tools by what you need. Search ranking and Spotlight cannot be bought.**
-Makers: **A searchable home for your product. Free to list. Optional map placement from €1 for 12 months.**
+Makers: **A searchable home for your product. Free to list. Same rules for every maker.**
 
-## Kontroller och kvarvarande villkor
+## Aktuellt läge
 
-| Del | Verifierat / återstår |
-| --- | --- |
-| Drift | Produktionsversion publicerad, HTTPS, delningsbild och typsnitt svarar 200. |
-| E-post och kontakt | Kontaktadress och e-postnyckel finns; `_email_ready()` är true; inga väntande eller misslyckade utskick vid kontrollen. Leverans till en mottagares inkorg är inte testad i detta arbete. |
-| Bakgrundsjobb | Worker kördes 19 okt 17:00 UTC utan rapporterade fel. Cron aktivt. |
-| Katalog | **En** godkänd produkt: DeployDoctor. Den är vår egen och ska beskrivas så om frågan kommer. Ingen kundvolym är bevisad. |
-| Produktkvalitet | DeployDoctor har verifierad domän, fungerande senaste länkkontroll och sökindex. |
-| Betalning | 16 Stripe-alternativ och checkout aktiva sedan föregående release; signatur-, order- och databasregler testade. **Ett riktigt köp med korrekt aktivering och eventuell återbetalning är fortfarande inte verifierat.** |
-| SEO och delning | Denna ändring ger synligt produktinnehåll i första HTML-svaret, /browse med riktiga länkar, korrekta 404/503 och stabila canonical-adresser. Det bevisar inte Google-indexering. |
-| Annonser | Ingen budget och inga annonsköp beställda. Börja organiskt och granska faktisk användning innan pengar spenderas. |
-| Kanalspårning | Kampanjlänkar förberedda nedan. **UTM-parametrarna är etiketter, inte en färdig analysintegration.** Dagens produktstatistik skiljer map/search/list/shared/home, inte X från Threads. |
-| Support och villkor | Kontakt fungerar enligt konfiguration. Tydlig offentlig återbetalningshantering och fullständiga säljaruppgifter behöver granskas före betald kampanj. Ingen juridisk bedömning gjord. |
+- Gratislistning, produktprofiler, sökning, My space och ägarstatistik är publicerade.
+- Betalda köp är pausade genom säljargrinden. Stripe-katalog och webhook finns kvar, men komplett publicerad säljarinformation saknas. Personuppgifter ska inte publiceras utan uttryckligt godkännande; sådant godkännande finns inte.
+- Engelska sidor för villkor, integritet, säljare och ånger finns. Ångeranmälan ger en nedladdningsbar bekräftelse och köar e-post; själva återbetalningen görs manuellt efter kontroll av betalningen.
+- GitHub Actions på produktionscommit `eda6e5ed9d48404d1f5a35dbda12bb9c8fa8418c` är grön: 26 Node-tester, DOM-flöden och 28 isolerade databaskontroller. Detta är inte bevis för ett genomfört Stripe-köp.
+- Ett riktigt köp eller en återbetalning ska inte utföras i detta uppdrag enligt användarens instruktion. Kvarvarande betalningsverifiering är uttryckligen undantagen.
+- Historiska Expanse-mejl har verifierats i mottagarens inkorg. Den nya ångerbekräftelsens leverans till en inkorg är inte testad.
+- Senaste livekontroll: startsida, produkt, katalog, juridiksidor och registrering svarar 200; okända adresser ger en egen 404. Villkor och integritet cachas inte. Privat My space och registrering har noindex.
+- En godkänd produkt, DeployDoctor. Ingen efterfrågan, extern kundvolym eller intäkt är bevisad.
+- Sitemap och serverrenderade produktlänkar finns. Google-indexering och Search Console-ägarskap är inte verifierade.
+- Daglig datarensning är schemalagd. Supportinkorgens gallring kräver manuell hantering, se OPERATIONS.md.
 
-## Kontroll av denna förhandsversion
+## Publiceringsmaterial
 
-PR #21: https://github.com/jonjys/Expanse/pull/21
-Commit: adcbf5f4488f8d8c1d7012ab076bd41fc1f7c48c
-Vercel-preview byggd READY. Webbläsarkontroll visar fungerande /browse?q=Vercel, direkt produktlänk och /add med kampanjparametrar. Okänd produkt ger HTTP 404, noindex och en synlig felsida utan att ändra adressen till startsidan. 14 Node-tester och DOM-flöden går igenom.
+COPY.md innehåller engelska utkast som passar den öppna gratisbetan. Ingen post, inbjudan, kampanj eller annons har skickats eller publicerats. Ingen annonsbudget är beställd.
 
-Den publicerade DeployDoctor-profilen innehöll en gammal gräns om tre gratisskanningar. Detta har korrigerats i katalogen efter kontroll av produktens aktuella hemsida: första publika skanningen per dag gratis, $2 ger 24 timmars obegränsade skanningar. Expanse säljer fortfarande sina egna kartplatser i EUR; USD-beloppet beskriver den externa produktens eget pris.
-
-## Etapp 0: färdigställ före annonsering av betalda platser
-
-1. Kontrollera nya /browse, /add, produktlänk och okänd produktlänk på den publicerade releasen.
-2. Genomför ett avsiktligt riktigt köp för en godkänd produkt. Stäm av belopp, kvitto, order i admin och att placeringens slutdatum är 12 månader från bekräftelsen. Ingen betalning får skapas bara av återkomstsidan.
-3. Prova återbetalning på samma köp och stäm av att status/placering följer reglerna. Använd inte en köpt placering som bevis på extern kundförsäljning.
-4. Verifiera ett gransknings-/inloggningsmejl i rätt inkorg. Skapa inga massutskick.
-5. Färdigställ support- och återbetalningsinformationen som ska gälla för alla.
-6. Ta två autentiska skärmbilder: sökning → riktig produkt, samt gratisregistrering → placeringens pris. Håll demo tydligt märkt om den används. Logotyp finns som favicon.svg; Product Hunt behöver en uppladdningsbar kvadratisk bild.
+Visa bara riktig trafik och riktiga produkter som bevis. Demo ska vara tydligt märkt. Gör inga löften om exponering, SEO-värde, försäljning eller knapphet som inte kan styrkas.
 
 ## Etapp 1: öppen maker-beta
 
@@ -95,3 +82,4 @@ Beslutsregler efter 14 dagar:
 - Reddit: https://support.reddithelp.com/hc/en-us/articles/360043504051-Spam — undvik repetitiv masspridning och följ varje communitys lokala regler.
 - Google: https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics — synligt serverinnehåll, riktiga länkar och meningsfulla statuskoder.
 - Search Console: https://support.google.com/webmasters/answer/7451001 — sitemap-submission kräver ägarbehörighet och garanterar inte indexering.
+

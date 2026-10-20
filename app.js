@@ -901,7 +901,8 @@ addEventListener('keydown', e => {
   if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target.closest && e.target.closest('button,a,summary') && (e.key === 'Enter' || e.key === ' ')) return;
   if (introRunning) { endIntro(); return; }
-  if (view === 'list' || dlg.classList.contains('open') || sheet.classList.contains('open')) { if (e.key === '/') { e.preventDefault(); openSearch(); } return; }
+  if (dlg.classList.contains('open') || sheet.classList.contains('open')) return;
+  if (view === 'list') { if (e.key === '/') { e.preventDefault(); openSearch(); } return; }
   const st = 360 / (CELL * cam.z); let used = true;
   if (e.key === 'ArrowLeft' || e.key === 'a') vel.x = -st; else if (e.key === 'ArrowRight' || e.key === 'd') vel.x = st;
   else if (e.key === 'ArrowUp' || e.key === 'w') vel.y = -st; else if (e.key === 'ArrowDown' || e.key === 's') vel.y = st;
@@ -2071,8 +2072,41 @@ $('#eSave').onclick = async () => {
 };
 
 /* ================= DIALOGS: owner key, recovery, report ================= */
-function openDlg(...kids) { dlg.classList.remove('my-space'); fill(dlgBody, ...kids); dlg.classList.add('open'); hideTip(); setTimeout(() => { const f = dlgBody.querySelector('[role=tab][aria-selected=true]') || dlgBody.querySelector('input,textarea,button'); (f || dlg.querySelector('.sheet-in')).focus({ preventScroll: true }); }, 60); }
-function closeDlg() { dlg.classList.remove('open'); }
+const modalOrigins = new Map();
+const topModal = () => dlg.classList.contains('open') ? dlg : sheet.classList.contains('open') ? sheet : null;
+const modalControls = node => [...node.querySelectorAll('a[href],button,input,textarea,select,summary,[tabindex]')]
+  .filter(e => !e.matches(':disabled') && e.tabIndex >= 0 && !e.closest('[hidden],[inert]') && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
+function focusModal(node, preferred) { (preferred || modalControls(node)[0] || node.querySelector('.sheet-in')).focus({ preventScroll: true }); }
+function openModal(node, preferred) {
+  if (!node.classList.contains('open')) modalOrigins.set(node, document.activeElement);
+  node.classList.add('open'); focusModal(node, preferred);
+}
+function closeModal(node) {
+  if (!node.classList.contains('open')) return;
+  const wasTop = topModal() === node, opener = modalOrigins.get(node);
+  node.classList.remove('open'); modalOrigins.delete(node);
+  if (!wasTop) return;
+  const parent = topModal();
+  if (opener?.isConnected && !opener.closest('[hidden],[inert]') && getComputedStyle(opener).visibility !== 'hidden' && (!parent || parent.contains(opener))) opener.focus({ preventScroll: true });
+  else if (parent) focusModal(parent);
+}
+document.addEventListener('keydown', e => {
+  const node = topModal(); if (e.key !== 'Tab' || !node) return;
+  const controls = modalControls(node), index = controls.indexOf(document.activeElement);
+  if (!controls.length) { e.preventDefault(); focusModal(node); }
+  else if (index < 0 || (e.shiftKey ? index === 0 : index === controls.length - 1)) {
+    e.preventDefault(); controls[e.shiftKey ? controls.length - 1 : 0].focus({ preventScroll: true });
+  }
+});
+document.addEventListener('focusin', () => { const node = topModal(); if (node && !node.contains(document.activeElement)) focusModal(node); });
+function openDlg(...kids) {
+  dlg.classList.remove('my-space'); fill(dlgBody, ...kids); hideTip();
+  const title = dlgBody.querySelector('h2');
+  if (title) { title.id = 'dlgTitle'; dlg.setAttribute('aria-labelledby', title.id); dlg.removeAttribute('aria-label'); }
+  else { dlg.removeAttribute('aria-labelledby'); dlg.setAttribute('aria-label', 'Product action'); }
+  openModal(dlg, dlgBody.querySelector('[role=tab][aria-selected=true]') || dlgBody.querySelector('input,textarea,button') || dlg.querySelector('.sheet-in'));
+}
+function closeDlg() { closeModal(dlg); }
 dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[data-dlg-close]')) closeDlg(); });
 function slugFrom(v) { v = String(v || '').trim(); const m = v.match(/\/p\/([a-z0-9-]+)/i); if (m) return m[1].toLowerCase(); return normQ(v).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48); }
 function openOwnerLogin(slug, name) {
@@ -2284,6 +2318,7 @@ function spaceItem(slug, fallback, tab) {
 }
 function openMySpace(tab='saved',focusTab=false) {
   if(!['saved','following','upvoted','history','owned'].includes(tab))tab='saved';
+  const opener = topModal() ? null : document.activeElement;
   closeSheet();closeUI();
   const counter=(n,label)=>el('div',null,el('b',{text:fmt(n)}),el('small',{text:label}));
   const tabs=el('div',{class:'space-tabs',role:'tablist','aria-label':'My space collections'});
@@ -2306,6 +2341,7 @@ function openMySpace(tab='saved',focusTab=false) {
   if(tab==='history'&&entries.length)panel.append(el('button',{class:'linkbtn',style:'margin-top:16px',text:'Clear local activity history',onclick:()=>{ACTIVITY.splice(0);store.del(ACTIVITY_KEY);openMySpace('history');}}));
   openDlg(el('div',{class:'mono kick',text:'Your private collection'}),el('h2',{class:'display',text:'My space'}),el('p',{class:'fine',text:'Save tools you want to return to. Follow releases. Keep your votes and activity in one place.'}),el('div',{class:'space-kpis'},counter(SAVED.length,'saved apps'),counter(Object.keys(FOLLOW.slugs).filter(isSlug).length,'following'),counter(Object.keys(VOTED).filter(isSlug).length,'your upvotes'),counter(activityCount('clicks'),'your website/demo clicks')),tabs,panel,el('p',{class:'fine',style:'margin-top:20px',text:'Saved apps, follows, votes and activity belong to this browser. They are not a public profile and do not sync across devices. Activity totals cover your latest 100 products. Maker statistics come from Expanse and count other visitors separately.'}));
   dlg.classList.add('my-space');
+  if (opener) modalOrigins.set(dlg, opener);
   if(focusTab)$('#space-tab-'+tab)?.focus({preventScroll:true});
 }
 
@@ -2350,8 +2386,8 @@ function openFollowing() {
 $('#followBtn').onclick = () => openMySpace();
 
 /* ================= INFO SHEET ================= */
-function openSheet() { sheet.classList.add('open'); hideTip(); setTimeout(() => sheet.querySelector('.sheet-in').focus({ preventScroll: true }), 50); }
-function closeSheet() { sheet.classList.remove('open'); }
+function openSheet() { hideTip(); openModal(sheet, sheet.querySelector('.sheet-in')); }
+function closeSheet() { closeModal(sheet); }
 $('#infoBtn').onclick = openSheet;
 sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-sheet-close]')) closeSheet(); });
 
