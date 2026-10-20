@@ -5,7 +5,7 @@ fixtures are not evidence of a completed Stripe payment or inbox delivery.
 
 ## Seller publication
 
-The proprietor requested a compact “by NyttoLabs” attribution in the main footer. Do not show a company-details panel there. Seller fields remain unpublished following the explicit refusal to publish personal identifiers and address; paid checkout remains gated. Legal pages retain the seller block, ready for any later explicitly authorized publication.
+The proprietor requested a compact “by NyttoLabs” attribution in the main footer. Do not show a company-details panel there. Seller fields remain unpublished following the explicit refusal to publish personal identifiers and address; payment availability is controlled separately by commerce_config.enabled. Legal pages retain the seller block, ready for any later explicitly authorized publication.
 
 To update authorized details, open `/admin#settings` and enter legal name, registration number, postal and
 complaints address, support email and phone. Publish only after the proprietor
@@ -13,9 +13,15 @@ explicitly authorizes the public fields. A Swedish sole trader's registration
 number may be their personal identity number. Uploaded tax documents are not
 automatically published or seeded into public settings.
 
-`public_commerce.enabled` and the checkout RPC require complete published seller
-details. The existing Stripe links and webhook remain configured. Existing free
-listings and withdrawal notices continue to work while new checkout is gated.
+`public_commerce.enabled` and the checkout RPC respect `commerce_config.enabled`.
+They do not make seller publication a technical prerequisite. Owner keys, product
+approval, accepted terms, catalog prices, the pause switch and signed payment
+confirmation remain enforced. The existing Stripe links and webhook remain configured.
+Contracts and receipt reply addresses read published seller data only.
+
+Seller registration/address are still unpublished. Removing the application gate
+is not legal clearance or proof of a real purchase. Complete the seller disclosure
+separately using only details the proprietor explicitly authorizes.
 
 ## Withdrawal notices
 

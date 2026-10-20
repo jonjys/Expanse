@@ -15,7 +15,7 @@ Makers: **A searchable home for your product. Free to list. Same rules for every
 ## Aktuellt läge
 
 - Gratislistning, produktprofiler, sökning, My space och ägarstatistik är publicerade.
-- Sidfoten visar “by NyttoLabs” och juridiklänkar. Säljaruppgifter är ännu inte publicerade och betalda köp är pausade. Juridiksidorna har ett förberett säljarblock. Ett riktigt köp är undantaget från uppdraget.
+- Sidfoten visar “by NyttoLabs” och juridiklänkar. Säljaruppgifter är ännu inte publicerade. Betalda köp styrs av commerce_config.enabled, separat från publiceringen av personuppgifter. Juridiksidorna har ett förberett säljarblock. Ett riktigt köp är undantaget från uppdraget.
 - Engelska sidor för villkor, integritet, säljare och ånger finns. Ångeranmälan ger en nedladdningsbar bekräftelse och köar e-post; själva återbetalningen görs manuellt efter kontroll av betalningen.
 - GitHub Actions på produktionscommit `eda6e5ed9d48404d1f5a35dbda12bb9c8fa8418c` är grön: 26 Node-tester, DOM-flöden och 28 isolerade databaskontroller. Detta är inte bevis för ett genomfört Stripe-köp.
 - Ett riktigt köp eller en återbetalning ska inte utföras i detta uppdrag enligt användarens instruktion. Kvarvarande betalningsverifiering är uttryckligen undantagen.
