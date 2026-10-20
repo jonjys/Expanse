@@ -11,7 +11,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 - `api/sitemap.js` — serves `/sitemap.xml` with every live product page. `robots.txt` points to it.
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
 - `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
-- `supabase/migrations/` — the database schema (already applied to the Supabase project).
+- `supabase/migrations/` — the database schema; compare migration history before deploying changes.
 - `supabase/functions/verify-domain/` — the domain and GitHub checks. `supabase/functions/worker/` — background jobs
   (link checks, email, releases, embeddings). `supabase/functions/search/` — AI search.
 - `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `favicon.svg`, `og.jpg` — browser icon and 1200×630 share image.
@@ -271,3 +271,26 @@ Map hover previews offer a 2×2 block, and clicking keeps that same size, positi
 The intro no longer shrinks the galaxy to a dot or blocks initial controls. Zooming out is bounded relative to the whole-galaxy view. Upvote feedback uses its own `voted-pulse` class instead of accidentally applying the product panel's `.pop` layout to a button. Profile actions wrap when they need more room.
 
 Regression coverage includes save/follow/vote separation, successful vote persistence, local click history, My space after reload, saved-item removal, and preserving the map preview's 2×2 €76 Inner-ring quote when entering registration.
+
+
+## Purchase and privacy operations
+
+English `/terms`, `/privacy`, `/seller` and `/withdraw` pages are served by
+`api/legal.js`. Seller details are configured in `/admin#settings` and are public
+only after explicit publication. Complete published details are required before
+new paid checkout opens. No personal identity number is seeded from tax documents.
+
+Withdrawal notices do not require login. A recorded notice returns a downloadable
+acknowledgement and queues email; admin review never automatically issues a payout.
+The owner panel keeps order details and accepted purchase-term snapshots.
+
+GitHub Actions runs `npm run check`, `npm test` and fresh local Supabase
+`npm run test:db` on push/pull request. DB fixtures always roll back, cannot use
+production credentials and disable outgoing worker calls in the test transaction.
+Function JWT settings are versioned in `supabase/config.toml`; custom owner and
+worker-secret checks remain required.
+
+Daily database retention and manual mailbox responsibilities, refund handling and
+remaining launch verification are documented in [OPERATIONS.md](docs/launch/OPERATIONS.md).
+A real checkout/refund test was explicitly excluded by the user on 2026-10-20.
+Passing synthetic tests is not verification of a real payment or inbox delivery.
