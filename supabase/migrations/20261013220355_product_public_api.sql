@@ -229,4 +229,10 @@ grant execute on function
   public.track(text, text), public.report_product(text, text, text), public.start_recovery(text)
 to anon, authenticated;
 
-revoke execute on function public.probe_headers() from public, anon, authenticated;
+-- This one-off debugging helper exists only on some older installations.
+do $$ begin
+  if to_regprocedure('public.probe_headers()') is not null then
+    revoke execute on function public.probe_headers() from public, anon, authenticated;
+  end if;
+end $$;
+
