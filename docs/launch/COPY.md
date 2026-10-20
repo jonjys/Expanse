@@ -1,6 +1,6 @@
 # Expanse — opublicerade lanseringstexter
 
-För gratisbetan medan betalda köp är pausade. Alla kanaler har samma villkor. Ingen påhittad trafik, exklusiv tilldelning eller deadline. Inget är publicerat.
+Utkast för gratisbetan. Betalningsläget styrs separat i commerce_config. Alla kanaler har samma villkor. Ingen påhittad trafik, exklusiv tilldelning eller deadline. Inget är publicerat.
 
 ## X
 

@@ -277,8 +277,12 @@ Regression coverage includes save/follow/vote separation, successful vote persis
 
 English `/terms`, `/privacy`, `/seller` and `/withdraw` pages are served by
 `api/legal.js`. Seller details are configured in `/admin#settings` and are public
-only after explicit publication. Complete published details are required before
-new paid checkout opens. No personal identity number is seeded from tax documents.
+only after explicit publication. Checkout availability is controlled separately by
+`commerce_config.enabled`; personal-data publication is not a technical checkout prerequisite.
+No personal identity number is seeded from tax documents. Accepted terms and receipt
+reply addresses use only explicitly published seller data, never private drafts.
+Unpublished seller registration/address remains a legal-information gap; the attribution
+“by NyttoLabs” is not a statement that all seller-disclosure requirements are satisfied.
 
 Withdrawal notices do not require login. A recorded notice returns a downloadable
 acknowledgement and queues email; admin review never automatically issues a payout.
