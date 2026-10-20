@@ -1,0 +1,14 @@
+(() => {
+'use strict';
+const $=id=>document.getElementById(id),form=$('withdrawForm');if(!form)return;
+const status=$('formStatus'),review=$('withdrawReview'),confirm=$('withdrawConfirm');let notice=null,receipt='';
+function detail(label,value){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;return[dt,dd];}
+const ref=new URLSearchParams(location.search).get('reference');if(ref)$('withdrawReference').value=ref.slice(0,200);
+form.onsubmit=e=>{e.preventDefault();if(!form.reportValidity())return;notice={p_name:$('withdrawName').value.trim(),p_email:$('withdrawEmail').value.trim(),p_reference:$('withdrawReference').value.trim(),p_message:$('withdrawMessage').value.trim()};if(!notice.p_name||!notice.p_reference){status.textContent='Enter your name and contract reference.';return;}
+ $('reviewDetails').replaceChildren(...detail('Name',notice.p_name),...detail('Confirmation email',notice.p_email),...detail('Contract / order reference',notice.p_reference),...detail('Message',notice.p_message||'None'));form.hidden=true;review.hidden=false;status.textContent='';confirm.focus();};
+$('withdrawBack').onclick=()=>{review.hidden=true;form.hidden=false;$('withdrawName').focus();};
+confirm.onclick=async()=>{if(!notice||confirm.disabled)return;confirm.disabled=true;$('withdrawBack').disabled=true;status.textContent='Recording your withdrawal notice…';
+ try{const r=await fetch('https://gjmkhnrgznorxxaemsmo.supabase.co/rest/v1/rpc/submit_withdrawal',{method:'POST',headers:{'Content-Type':'application/json',apikey:'sb_publishable_b1uzRroOaHTGp9oXOhHjtQ_J-A-IUCZ'},body:JSON.stringify(notice),signal:AbortSignal.timeout(15000)});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.message||'unavailable');receipt=String(data.receipt);$('receiptText').textContent=receipt;review.hidden=true;$('withdrawDone').hidden=false;status.textContent='Recorded. Download your acknowledgement and check your email.';}
+ catch(e){status.textContent=e.message==='slow_down'?'Too many notices right now. Receipt is not confirmed. Please retry or email the seller.':'We could not confirm receipt. Retry with the same details; an already-recorded notice will not be duplicated. You can also email the seller.';}finally{confirm.disabled=false;$('withdrawBack').disabled=false;}};
+$('downloadReceipt').onclick=()=>{const url=URL.createObjectURL(new Blob([receipt],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='expanse-withdrawal-acknowledgement.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+})();

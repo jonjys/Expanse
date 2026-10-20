@@ -13,9 +13,34 @@
     }
   ],
   "rewrites": [
-    {"source": "/add", "destination": "/index.html"},
-    {"source": "/me", "destination": "/index.html"},
-    {"source": "/browse", "destination": "/api/browse"},
+    {
+      "source": "/terms",
+      "destination": "/api/legal?kind=terms"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/api/legal?kind=privacy"
+    },
+    {
+      "source": "/withdraw",
+      "destination": "/api/legal?kind=withdraw"
+    },
+    {
+      "source": "/seller",
+      "destination": "/api/legal?kind=seller"
+    },
+    {
+      "source": "/add",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/me",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/browse",
+      "destination": "/api/browse"
+    },
     {
       "source": "/admin",
       "destination": "/admin.html"
@@ -38,8 +63,24 @@
     }
   },
   "headers": [
-    {"source": "/add", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
-    {"source": "/me", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {
+      "source": "/add",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/me",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

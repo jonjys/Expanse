@@ -1,0 +1,19 @@
+project_id = "expanse"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+[db]
+port = 54322
+major_version = 17
+[db.seed]
+enabled = false
+# Owner/recovery key checked in Postgres. The worker requires a Vault secret.
+# Public semantic search has visitor limits. These match deployed settings.
+[functions.search]
+verify_jwt = false
+[functions.verify-domain]
+verify_jwt = false
+[functions.worker]
+verify_jwt = false

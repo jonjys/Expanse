@@ -220,6 +220,7 @@ Deno.serve(async (req) => {
   if (!(await authorized(req))) return json({ ok: false }, 401);
   let body: { task?: unknown; wait?: unknown } = {};
   try { body = await req.json(); } catch { /* empty body: run everything */ }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return json({ ok: false, reason: "bad_request" }, 400);
   const task = typeof body.task === "string" && (Object.hasOwn(GROUPS, body.task) || Object.hasOwn(JOBS, body.task)) ? body.task : "all";
   if (body.wait === true) return json(await run(task));
   // Answer at once; the jobs keep running in the background.
@@ -229,3 +230,4 @@ Deno.serve(async (req) => {
   if (rt && typeof rt.waitUntil === "function") rt.waitUntil(job);
   return json({ ok: true, accepted: task }, 202);
 });
+
