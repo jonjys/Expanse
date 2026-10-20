@@ -5,9 +5,9 @@ fixtures are not evidence of a completed Stripe payment or inbox delivery.
 
 ## Seller publication
 
-Seller publication is currently declined. Keep seller fields unpublished and paid checkout gated. Do not copy identity numbers or home addresses from uploaded documents.
+On 20 October the proprietor requested seller details in the footer, Terms and Privacy. Use the verified registration document and existing Stripe public support profile for those fields. Do not commit personal identifiers or addresses to source files. The database public seller settings are the single source of truth.
 
-If the proprietor later authorizes publication, open `/admin#settings` and enter legal name, registration number, postal and
+To update authorized details, open `/admin#settings` and enter legal name, registration number, postal and
 complaints address, support email and phone. Publish only after the proprietor
 explicitly authorizes the public fields. A Swedish sole trader's registration
 number may be their personal identity number. Uploaded tax documents are not

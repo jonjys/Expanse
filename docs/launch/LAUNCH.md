@@ -15,7 +15,7 @@ Makers: **A searchable home for your product. Free to list. Same rules for every
 ## Aktuellt läge
 
 - Gratislistning, produktprofiler, sökning, My space och ägarstatistik är publicerade.
-- Betalda köp är pausade genom säljargrinden. Stripe-katalog och webhook finns kvar, men komplett publicerad säljarinformation saknas. Personuppgifter ska inte publiceras utan uttryckligt godkännande; sådant godkännande finns inte.
+- Säljaruppgifter visas diskret i sidfoten och på juridiksidorna enligt ägarens instruktion den 20 oktober. Betalda köp kräver fortfarande komplett publicerad säljarinformation; aktuell status kommer från public_commerce. Ett riktigt köp är undantaget från uppdraget.
 - Engelska sidor för villkor, integritet, säljare och ånger finns. Ångeranmälan ger en nedladdningsbar bekräftelse och köar e-post; själva återbetalningen görs manuellt efter kontroll av betalningen.
 - GitHub Actions på produktionscommit `eda6e5ed9d48404d1f5a35dbda12bb9c8fa8418c` är grön: 26 Node-tester, DOM-flöden och 28 isolerade databaskontroller. Detta är inte bevis för ett genomfört Stripe-köp.
 - Ett riktigt köp eller en återbetalning ska inte utföras i detta uppdrag enligt användarens instruktion. Kvarvarande betalningsverifiering är uttryckligen undantagen.

@@ -11,7 +11,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
  w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
  w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
- const defaults={public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:100},owner_discovery_stats:[],owner_stats:{days:[{view:3,visit:2,demo:1}]}};
+ const defaults={public_seller:{ready:true,legal_name:'Fixture <seller>',registration_number:'TEST-ONLY',address:'Test street\nSweden',email:'support@example.invalid',phone:'TEST-PHONE'},public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:100},owner_discovery_stats:[],owner_stats:{days:[{view:3,visit:2,demo:1}]}};
  if(method==='upvote' && scenario.failVote)return {ok:false,status:429,text:async()=>JSON.stringify({message:'slow_down'})};
  if(method==='upvote')r={upvotes:body.p_on?1:0};
  else if(method==='submit_product')r={...product,...body.p,slug:'new-fixture',key:'fixture-owner-key',status:'pending',number:2};
@@ -26,6 +26,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
 const tick=()=>new Promise(r=>setTimeout(r,20));
 (async()=>{
  const dom=boot();const w=dom.window,d=w.document;await tick();
+ assert.ok(d.querySelector('.site-legal a[href="/terms"]'));assert.match(d.querySelector('#companyDetails').textContent,/Fixture <seller>/);assert.equal(d.querySelector('#companyDetails seller'),null,'seller names are rendered as text');assert.match(d.querySelector('#sheetCompany').textContent,/TEST-PHONE/);
  const click=id=>d.querySelector(id).click();const set=(selector,v)=>{const i=d.querySelector(selector);i.value=v;i.dispatchEvent(new w.Event('input',{bubbles:true}));};
  click('#addBtn');assert.equal(d.querySelector('#cStep2').hidden,false);assert.equal(d.querySelector('#cStep1').hidden,true);
  click('#cNext2');assert.equal(d.querySelector('#cStep2').hidden,false,'invalid profile blocked');
