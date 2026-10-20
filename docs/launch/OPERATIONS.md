@@ -5,7 +5,9 @@ fixtures are not evidence of a completed Stripe payment or inbox delivery.
 
 ## Seller publication
 
-Open `/admin#settings` and enter legal name, registration number, postal and
+Seller publication is currently declined. Keep seller fields unpublished and paid checkout gated. Do not copy identity numbers or home addresses from uploaded documents.
+
+If the proprietor later authorizes publication, open `/admin#settings` and enter legal name, registration number, postal and
 complaints address, support email and phone. Publish only after the proprietor
 explicitly authorizes the public fields. A Swedish sole trader's registration
 number may be their personal identity number. Uploaded tax documents are not
@@ -67,3 +69,7 @@ listing does not establish market demand or guarantee maker revenue.
 The voluntary full refund within 14 days applies to business purchasers too.
 It avoids deductions for an immediately started placement. It is a product
 policy, not a claim that all business purchases have statutory withdrawal rights.
+
+## Keyboard access
+
+Information and product-action dialogs have accessible titles, keep Tab and Shift+Tab inside the active dialog, and restore focus on Escape or close. Replacing dialog content preserves its opener. Global search shortcuts do not steal focus from an open dialog. DOM regression checks cover these interactions.
