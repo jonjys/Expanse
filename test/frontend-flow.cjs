@@ -26,7 +26,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
 const tick=()=>new Promise(r=>setTimeout(r,20));
 (async()=>{
  const dom=boot();const w=dom.window,d=w.document;await tick();
- assert.ok(d.querySelector('.site-legal a[href="/terms"]'));assert.match(d.querySelector('#companyDetails').textContent,/Fixture <seller>/);assert.equal(d.querySelector('#companyDetails seller'),null,'seller names are rendered as text');assert.match(d.querySelector('#sheetCompany').textContent,/TEST-PHONE/);
+ assert.ok(d.querySelector('.site-legal a[href="/terms"]'));assert.match(d.querySelector('.site-legal').textContent,/by NyttoLabs/);assert.equal(d.querySelector('.site-legal details'),null,'main footer stays compact without a company panel');
  const click=id=>d.querySelector(id).click();const set=(selector,v)=>{const i=d.querySelector(selector);i.value=v;i.dispatchEvent(new w.Event('input',{bubbles:true}));};
  click('#addBtn');assert.equal(d.querySelector('#cStep2').hidden,false);assert.equal(d.querySelector('#cStep1').hidden,true);
  click('#cNext2');assert.equal(d.querySelector('#cStep2').hidden,false,'invalid profile blocked');
