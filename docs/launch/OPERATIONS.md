@@ -45,7 +45,7 @@ application cleanup does not delete provider logs, mailbox copies or backups.
 withdrawal UI, admin denial/escaping/manual resolution, all three Edge Function
 request handlers, webhook validation and the original product/registration flows.
 
-`npm run test:db` is intentionally hardcoded to localhost port 54322 and wraps
+`npm run test:db` is intentionally fixed to local Docker container `supabase_db_expanse` and wraps
 all fixtures in BEGIN/ROLLBACK. Its transaction replaces `_kick_worker` with a
 no-op and disables cron, so tests do not send real messages. CI builds a fresh
 local Supabase stack and replays every migration before running commerce and
