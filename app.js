@@ -290,18 +290,6 @@ function track(slug, kind, source) {
 }
 let STATS = null, COMMERCE = { enabled: false };
 async function loadCommerce() { try { COMMERCE = await rpc('public_commerce'); } catch (e) { COMMERCE = { enabled: false }; } }
-async function loadSeller() {
-  const box = $('#companyDetails'), info = $('#sheetCompany');
-  try {
-    const seller = await rpc('public_seller');
-    if (!seller?.ready) return;
-    const details = () => el('div', { class: 'company-details' },
-      el('b', { text: 'Nytto Labs · Expanse' }), el('span', { text: seller.legal_name }),
-      el('span', { text: 'Registration / VAT: ' + seller.registration_number }), el('span', { text: seller.address }),
-      el('a', { href: 'mailto:' + seller.email, text: seller.email }), el('span', { text: 'Phone: ' + seller.phone }));
-    box.replaceChildren(details()); info.replaceChildren(details()); info.hidden = false;
-  } catch { /* Legal links remain usable when the seller lookup fails. */ }
-}
 async function loadStats() { try { STATS = await rpc('founding_stats'); } catch (e) { STATS = null; } renderLive(); }
 function prepProduct(p) {
   const words = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').split(/[^a-z0-9+#.]+/).filter(Boolean).map(stem);
@@ -2483,7 +2471,7 @@ function endIntro() {
 kick();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
 (async () => {
-  const [productsLoaded] = await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight(), loadCommerce(), loadSeller()]);
+  const [productsLoaded] = await Promise.all([loadProducts(), loadSpots(), loadOwned(), loadPlacements(), loadSpotlight(), loadCommerce()]);
   rebuildItems(); renderLive(); loadUpdates();
   if (new URLSearchParams(location.search).get('payment') === 'return') {
     const pending = store.get('expanse.checkout.v1');

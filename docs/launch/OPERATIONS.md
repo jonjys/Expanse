@@ -5,7 +5,7 @@ fixtures are not evidence of a completed Stripe payment or inbox delivery.
 
 ## Seller publication
 
-On 20 October the proprietor requested seller details in the footer, Terms and Privacy. Use the verified registration document and existing Stripe public support profile for those fields. Do not commit personal identifiers or addresses to source files. The database public seller settings are the single source of truth.
+The proprietor requested a compact “by NyttoLabs” attribution in the main footer. Do not show a company-details panel there. Seller fields remain unpublished following the explicit refusal to publish personal identifiers and address; paid checkout remains gated. Legal pages retain the seller block, ready for any later explicitly authorized publication.
 
 To update authorized details, open `/admin#settings` and enter legal name, registration number, postal and
 complaints address, support email and phone. Publish only after the proprietor

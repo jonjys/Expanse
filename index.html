@@ -519,11 +519,7 @@ a{color:inherit;text-decoration:none}
 }
 
 .site-legal{position:absolute;z-index:30;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;min-height:34px;padding:7px 12px calc(7px + var(--sb));font-size:11px;color:var(--txt2);background:rgba(2,3,12,.92);border-top:1px solid var(--line)}
-.site-legal a:hover,.site-legal summary:hover{color:var(--lime)}
-.site-legal summary{cursor:pointer;list-style:none}.site-legal summary::-webkit-details-marker{display:none}
-.site-legal details>div{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:min(420px,calc(100% - 24px));max-height:60vh;overflow:auto;padding:20px;border:1px solid var(--line2);border-radius:16px;background:#0b1025;box-shadow:0 12px 40px #0008}
-.company-details{display:grid!important;gap:5px!important;font-size:12px;line-height:1.6;overflow-wrap:anywhere}.company-details span{white-space:pre-line}.company-details b{color:var(--txt)}
-#sheetCompany{flex-basis:100%;padding-top:16px;border-top:1px solid var(--line)}
+.site-legal a:hover{color:var(--lime)}
 .hero{bottom:72px}.dock,.minimap,.legend{bottom:54px}.list{padding-bottom:54px}
 .ui .site-legal{display:none}
 @media(max-width:760px){.site-legal{gap:12px;font-size:10px}.hero{bottom:calc(52px + var(--sb))}.dock{bottom:calc(46px + var(--sb))}}
@@ -825,14 +821,14 @@ a{color:inherit;text-decoration:none}
       </div>
       <h3>Privacy and rules</h3>
       <div class="terms">
-        <div><b>Who runs Expanse</b><p>Expanse is a Nytto Labs project from Sweden. Questions, a data request or anything else: use the contact form below and we answer by email.</p></div>
+        <div><b>Who runs Expanse</b><p>Expanse is made by NyttoLabs in Sweden. Questions, a data request or anything else: use the contact form below and we answer by email.</p></div>
         <div><b>What we store</b><p>Product profiles (public), the maker's email (private, only for messages about the listing and sign-in codes), daily visit counts using salted hashes rather than storing raw IP addresses in event tables, upvotes (linked only to a scrambled random ID from your browser), and reports. Saved products, followed products, your vote list, your owner key and your personal activity history stay in your own browser. My space does not create a public profile or sync across devices. You can clear local activity from its History tab; clearing browser storage also removes local collections.</p></div>
         <div><b>Who helps us run it</b><p>Supabase stores listing data in Stockholm, Vercel serves the site, Resend sends listing emails and Stripe processes optional payments. Their logs and subprocessors may involve international processing; see the privacy notice. Card details stay with Stripe and are never stored by Expanse. Nothing is sold, and there are no ad trackers.</p></div>
         <div><b>The rules</b><p>Listings are for real software and tools, added by the people who make or represent them. Spam, scams, illegal or adult content and profiles that don't match their product are turned down or removed. You can edit or take down your listing anytime, and taking it down wipes your email.</p></div>
       </div>
       <div class="c-row" style="margin-top:14px"><button class="btn btn-ghost btn-sm" data-contact>Contact us</button></div>
 
-      <div class="foot"><span>© 2026 Expanse · A Nytto Labs project · <button class="linkbtn" data-contact>Contact</button> · <a href="/seller">Seller</a> · <a href="/terms">Terms & refunds</a> · <a href="/privacy">Privacy</a> · <a href="/withdraw">Withdraw from a contract</a></span><div><button class="btn btn-ghost btn-sm" id="ownerOpen">I already have a product here</button><button class="btn btn-primary btn-sm" data-add>Add your product</button></div><div id="sheetCompany" hidden></div></div>
+      <div class="foot"><span>© 2026 Expanse · by NyttoLabs · <button class="linkbtn" data-contact>Contact</button> · <a href="/seller">Seller</a> · <a href="/terms">Terms & refunds</a> · <a href="/privacy">Privacy</a> · <a href="/withdraw">Withdraw from a contract</a></span><div><button class="btn btn-ghost btn-sm" id="ownerOpen">I already have a product here</button><button class="btn btn-primary btn-sm" data-add>Add your product</button></div></div>
     </div>
   </div>
 
@@ -845,7 +841,7 @@ a{color:inherit;text-decoration:none}
   </div>
 
   <footer class="site-legal" aria-label="Company and legal information">
-    <details><summary>Nytto Labs · Company</summary><div id="companyDetails"><a href="/seller">Seller & contact details</a></div></details>
+    <span>by NyttoLabs</span>
     <a href="/terms">Terms & refunds</a><a href="/privacy">Privacy</a><a href="/withdraw">Withdraw</a>
   </footer>
   <div class="intro" id="intro" aria-hidden="true">
@@ -855,7 +851,7 @@ a{color:inherit;text-decoration:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 <noscript><p style="padding:24px;color:#fff;font-family:system-ui">Expanse is a living map of real products. It needs JavaScript to fly through.</p></noscript>
-<script src="/app.js?v=launch-20261020-footer" defer></script>
+<script src="/app.js?v=launch-20261020-brand" defer></script>
 </body>
 </html>
 
