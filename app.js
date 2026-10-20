@@ -1760,7 +1760,7 @@ async function renderMapPlacement(o) {
   const buy=el('button',{type:'button',class:'btn btn-primary',text:`Pay ${eur(status.amount_cents/100)} for 12 months ↗`,onclick:async()=>{
     buy.disabled=true;buy.textContent='Preparing secure payment…';
     try{
-      const order=await rpc('owner_map_checkout',{p_slug:slug,p_key:OWNED[slug].key});
+      const order=await rpc('owner_map_checkout',{p_slug:slug,p_key:OWNED[slug].key,p_terms_version:'2026-10-20'});
       const u=new URL(order.url);
       if(u.origin!=='https://buy.stripe.com'||!order.id)throw new Error('invalid_checkout');
       store.set('expanse.checkout.v1',{slug,id:order.id}); location.assign(u.href);
@@ -1774,19 +1774,31 @@ async function renderMapPlacement(o) {
     openPanel(claimEl,'claim');setStep(1);$('#cNext1').textContent='Save this spot →';
   }});
   const consent=el('input',{type:'checkbox'});
-  const terms=el('label',{class:'check'},consent,el('span',{text:'I understand this is one payment for 12 months, without automatic renewal. It buys map placement, not search ranking, Spotlight, guaranteed traffic or sales. After expiry, my profile continues on the free Edge.'}));
+  const terms=el('label',{class:'check'},consent,el('span',{text:'I agree to the purchase terms and request placement to start when payment is confirmed. One payment for 12 months, no automatic renewal, no guaranteed traffic or sales, and no effect on search or Spotlight. I keep the 14-day full-refund right.'}));
   buy.disabled=true;consent.addEventListener('change',()=>buy.disabled=!consent.checked);
   box.replaceChildren(el('h3',{class:'display',text:`${z.label} · ${o.size}×${o.size}`}),paid);
   if(!active){
     box.append(el('div',{class:'placement-total',text:`${eur(status.amount_cents/100)} / 12 months`}),el('p',{class:'fine',text:'One payment in euros. Tax included where applicable. No automatic renewal. Map placement is separate from Sponsored cards.'}));
     if(o.status!=='approved')box.append(el('p',{class:'note',text:'Your spot is held free while your product is reviewed. Payment opens after approval, under the same rules for every maker.'}));
     else if(!COMMERCE.enabled)box.append(el('p',{class:'note',text:'Payments are temporarily paused. Your free listing continues.'}));
-    else if(status.state!=='needs_review')box.append(terms,buy);
+    else if(status.state!=='needs_review')box.append(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);
     if(status.state!=='pending')box.append(change);
     else box.append(el('p',{class:'fine',text:'If you have just paid, wait for confirmation before trying again. An unpaid checkout can be resumed with the button above.'}));
   }
+  box.append(el('a',{class:'linkbtn',href:'/withdraw',text:'Withdraw from a contract / request a refund'}));
+  renderPurchaseHistory(box,slug);
   if(status.state==='needs_review')box.append(el('button',{class:'linkbtn',text:'Contact support',onclick:()=>openContact('other')}));
   if(status.state==='pending')mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);
+}
+
+async function renderPurchaseHistory(box,slug) {
+ const section=el('section');box.append(section);
+ try {const rows=await rpc('owner_purchase_history',{p_slug:slug,p_key:OWNED[slug].key});if(mSlug!==slug||mTab!=='placement'||!box.isConnected||!rows.length)return;
+  section.append(el('h3',{text:'Order history'}));
+  for(const row of rows){const text=`Expanse order ${row.id}\nState: ${row.state}\nPlacement: ${row.zone} ${row.size}×${row.size}\nTotal: ${eur(row.amount_cents/100)}\nPaid: ${row.paid_at||'Not confirmed'}\nEnds: ${row.ends_at||'Not started'}\n\n${row.contract_text||'No purchase terms recorded for this unpaid/legacy order.'}`;
+   section.append(el('article',{class:'note'},el('b',{text:`${eur(row.amount_cents/100)} · ${row.state}`}),el('p',{class:'fine',text:`Order reference: ${row.id}`}),el('button',{type:'button',class:'linkbtn',text:'Download order details',onclick:()=>download(`expanse-order-${row.id}.txt`,new Blob([text],{type:'text/plain;charset=utf-8'}))}),row.paid_at?el('a',{class:'linkbtn',href:'/withdraw?reference='+encodeURIComponent(row.id),text:'Withdraw from this contract'}):null));
+  }
+ }catch{section.append(el('p',{class:'fine',text:'Order history could not load. Try again or contact support.'}));}
 }
 
 /* ================= OWNER PANEL ================= */
@@ -2431,6 +2443,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
     else toast('Payment is confirmed by Stripe in the background. Sign in to your product to see its status.', 6000);
     history.replaceState(null, '', location.pathname);
   }
+  if (new URLSearchParams(location.search).get('contact') === '1') openContact();
   if (deepSlug) {
     const p = BY_SLUG.get(deepSlug);
     if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true, source: 'shared' }); $('#serverContent')?.remove(); }
@@ -2457,4 +2470,5 @@ setInterval(() => { if (!document.hidden) loadUpdates(); }, 300000);
 setTimeout(nextTick, 4400); setInterval(nextTick, 5200);
 if (window.requestIdleCallback) requestIdleCallback(() => offsets(), { timeout: 5000 }); else setTimeout(offsets, 2500);
 })();
+
 

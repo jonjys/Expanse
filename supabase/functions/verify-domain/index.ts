@@ -132,6 +132,7 @@ Deno.serve(async (req) => {
 
   let body: { slug?: unknown; key?: unknown; repo?: unknown; recover?: { token?: unknown; secret?: unknown } };
   try { body = await req.json(); } catch { return reply({ ok: false, reason: "bad_request" }, 400); }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return reply({ ok: false, reason: "bad_request" }, 400);
   const slug = typeof body.slug === "string" && /^[a-z0-9-]{1,48}$/.test(body.slug) ? body.slug : null;
   if (!slug) return reply({ ok: false, reason: "bad_request" }, 400);
 
@@ -170,3 +171,4 @@ Deno.serve(async (req) => {
     return reply({ ok: false, reason: "error" }, 500);
   }
 });
+

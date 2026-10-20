@@ -78,9 +78,26 @@ async function renderMapPurchases(main) {
   if(!rows.length){main.append(el('div',{class:'empty',text:'No map purchases yet. Never count a reservation or an unpaid checkout as revenue.'}));return;}
   for(const row of rows)main.append(el('article',{class:'prod'},el('h3',{text:row.name}),el('p',{text:`${row.zone} · ${row.size}×${row.size} · €${(row.amount_cents/100).toLocaleString('en')} · ${row.state}`}),el('p',{class:'sub',text:row.ends_at?'Placement ends '+day(row.ends_at):'Created '+ago(row.created_at)}),row.review_events?el('p',{class:'note',text:`${row.review_events} payment event(s) need manual review.`}):null,row.issue?el('p',{text:row.issue}):null,row.session_id?el('a',{class:'linkbtn',href:'https://dashboard.stripe.com/payments/'+encodeURIComponent(row.payment_intent||''),target:'_blank',rel:'noopener',text:'Open payment in Stripe ↗'}):null));
 }
+async function renderWithdrawals(main) {
+ const rows=await rpc('admin_withdrawals');if(tab!=='withdrawals')return;
+ main.replaceChildren(el('h2',{class:'display',text:'Withdrawal notices'}),el('p',{class:'sub',text:'Check the original Stripe payment and deadline, refund in Stripe, and reply to the customer. Marking handled does not issue a refund.'}));
+ if(!rows.length)main.append(el('div',{class:'empty',text:'No withdrawal notices.'}));
+ for(const row of rows){const note=el('textarea',{rows:'3',maxlength:'1000',placeholder:'Action taken, refund reference and customer reply'}),card=el('article',{class:'pc'},el('h3',{text:row.resolved_at?'Handled':'Needs review'}),el('p',{text:`Received ${new Date(row.created_at).toISOString()} · ${row.name}`}),el('p',{text:`Contract: ${row.reference}`}),el('p',{text:row.message||'No message supplied.'}),el('p',{class:'sub',text:row.receipt_sent_at?'Acknowledgement accepted by email provider. Inbox delivery is not confirmed.':row.receipt_failed_at?'Acknowledgement email failed — check outbox and contact customer.':'Acknowledgement email queued.'}),el('a',{href:'mailto:'+row.email,text:'Reply to '+row.email}),row.payment_intent?el('a',{class:'linkbtn',href:'https://dashboard.stripe.com/payments/'+encodeURIComponent(row.payment_intent),target:'_blank',rel:'noopener',text:'Check payment / refund in Stripe ↗'}):el('p',{class:'sub',text:'No automatic order match. Locate the payment before taking action.'}));
+  if(row.admin_note)card.append(el('p',{text:row.admin_note}));
+  if(!row.resolved_at)card.append(note,el('button',{class:'btn btn-primary btn-sm',text:'Mark handled',onclick:async e=>{if(note.value.trim().length<5){toast('Record the action taken first.',true);return;}const btn=e.currentTarget;btn.disabled=true;try{await rpc('admin_resolve_withdrawal',{p_id:row.id,p_note:note.value});toast('Marked handled. No payment action was performed.');go('withdrawals');}catch(err){toast('Could not save: '+err.message,true);btn.disabled=false;}}}));main.append(card);
+ }
+}
+function sellerPanel(s) {
+ const fields={},panel=el('form',{class:'panel'},el('h3',{text:'Public seller details'}),el('p',{class:'sub',text:'These details appear publicly on Seller, Terms and Privacy pages. Checkout requires complete published details. For a sole proprietor, the registration number may be a personal identity number: the proprietor must explicitly authorize publishing it.'}));
+ for(const [key,label]of [['legal_name','Legal name / trading name'],['registration_number','Registration number'],['address','Postal and complaints address'],['email','Support email'],['phone','Phone']]){fields[key]=el(key==='address'?'textarea':'input',{name:key,type:key==='email'?'email':'text',required:true,maxlength:key==='address'?'300':key==='registration_number'?'40':key==='phone'?'50':key==='email'?'254':'160'});fields[key].value=s[key]||'';panel.append(el('label',{class:'field'},el('span',{text:label}),fields[key]));}
+ const publish=el('input',{type:'checkbox',name:'published'});publish.checked=!!s.published;panel.append(el('label',{class:'check'},publish,' I authorize publishing these details, including any personal identity number and address, on this public website.'));
+ const submit=el('button',{class:'btn btn-primary btn-sm',type:'submit',text:'Save seller details'});panel.append(submit,el('p',{class:'sub',text:'Current state: '+(s.published?'published':'private / checkout unavailable')}));
+ panel.onsubmit=async e=>{e.preventDefault();if(!panel.reportValidity())return;submit.disabled=true;const p={published:publish.checked};for(const key in fields)p[key]=fields[key].value.trim();try{await rpc('admin_save_seller',{p});toast(p.published?'Seller details published.':'Saved privately. New checkouts remain unavailable.');go('settings');}catch(err){toast('Could not save: '+err.message,true);submit.disabled=false;}};return panel;
+}
+
 /* ---------- shell ---------- */
 let tab = 'queue';
-const TABS = { 'map-purchases': renderMapPurchases, queue: renderQueue, reports: renderReports, placements: renderPlacements, products: renderProducts, overview: renderOverview, settings: renderSettings };
+const TABS = { withdrawals: renderWithdrawals, 'map-purchases': renderMapPurchases, queue: renderQueue, reports: renderReports, placements: renderPlacements, products: renderProducts, overview: renderOverview, settings: renderSettings };
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab); });
 $('#refresh').onclick = () => { go(tab); counts(); };
 function go(t) {
@@ -392,7 +409,7 @@ function pricePanel(s) {
     } })));
 }
 async function renderSettings(main) {
-  const s = await rpc('admin_settings');
+  const [s,seller] = await Promise.all([rpc('admin_settings'),rpc('admin_seller')]);
   if (tab !== 'settings') return;
   const mail = el('input', { type: 'email', placeholder: 'you@example.com', value: s.notify_email || '' });
   mail.value = s.notify_email || '';
@@ -408,6 +425,7 @@ async function renderSettings(main) {
         catch (err) { toast(err.message === 'invalid:notify_email' ? 'That email looks off.' : 'Couldn’t save: ' + err.message, true); }
         finally { btn.disabled = false; }
       } }))),
+    sellerPanel(seller),
     emailPanel(s.email || {}),
     pricePanel(s),
     el('div', { class: 'panel' }, el('h3', { text: 'Admin key' }),
@@ -434,4 +452,5 @@ if (KEY) {
   rpc('admin_settings').then(start).catch(err => { if (err.message !== 'bad_admin') { start(); } });
 } else showLogin();
 })();
+
 
