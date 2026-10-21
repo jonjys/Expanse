@@ -141,4 +141,4 @@ no emails, outreach or contact-sharing. Matching uses at least two shared meanin
 terms and 35% query coverage in real approved profiles, with the exact overlapping terms and
 profile tagline shown. It is a conservative lexical pilot, not an assessment of capability or
 purchase intent; map payments and votes do not affect it. Needs expire after 90 days, rate
-hashes after seven, and withdrawn records after seven days via expanse-needs-retention.
+hashes after seven, and withdrawn records within seven days via expanse-needs-retention.

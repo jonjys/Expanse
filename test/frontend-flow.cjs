@@ -8,6 +8,13 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  const dom=new JSDOM(html,{url,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
  const w=dom.window;w.AbortSignal=global.AbortSignal;w.matchMedia=()=>({matches:true,addEventListener(){}});w.requestAnimationFrame=fn=>0;w.cancelAnimationFrame=()=>{};
  w.HTMLElement.prototype.scrollIntoView=()=>{};
+ if(scenario.exposure){
+  const io=scenario.exposure,timers=new Map();let seq=100000;const later=w.setTimeout.bind(w),cancel=w.clearTimeout.bind(w);
+  w.setTimeout=(fn,ms,...args)=>{if(ms===1000){const id=++seq;timers.set(id,()=>fn(...args));return id;}return later(fn,ms,...args);};w.clearTimeout=id=>{if(timers.has(id))timers.delete(id);else cancel(id);};
+  io.advance=()=>{const jobs=[...timers.values()];timers.clear();jobs.forEach(fn=>fn());};io.nodes=new Set();
+  w.IntersectionObserver=class{constructor(cb){io.callback=cb;}observe(n){io.nodes.add(n);}unobserve(n){io.nodes.delete(n);}disconnect(){io.nodes.clear();}};
+ }
+
  const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
  w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
  w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
@@ -27,7 +34,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  return {ok:true,status:200,text:async()=>JSON.stringify(r),json:async()=>r};};
  if(blockStorage)Object.defineProperty(w,'localStorage',{get(){throw new Error('blocked')}});
  for(const [key,value] of Object.entries(storage))w.localStorage.setItem(key,value);
- const source=fs.readFileSync(root+'app.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testOwner=(slug,tab)=>openManage(slug,tab);window.testMapPick = spot => startSubmit(spot,true);})();');
+ const source=fs.readFileSync(root+'app.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testObserve=()=>observeProductCards();window.testOwner=(slug,tab)=>openManage(slug,tab);window.testMapPick = spot => startSubmit(spot,true);})();');
  w.eval(fs.readFileSync(root+'marketing.js','utf8'));w.eval(source);return dom;
 }
 const tick=()=>new Promise(r=>setTimeout(r,20));
@@ -110,6 +117,12 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  const share=boot(false,shared);await tick();assert.match(share.window.document.querySelector('.stack-table').textContent,/Real Fixture/);assert.equal(share.window.localStorage.getItem('expanse.stacks.v1'),null,'opening a shared stack never silently saves it');share.window.close();
  const unsafe=boot(false,'https://expanse.nyttolabs.com/stack#'+encodeURIComponent(JSON.stringify({v:1,title:'<img src=x onerror=alert(1)>',slugs:['fixture','../admin','https://evil.test']})));await tick();assert.equal(unsafe.window.document.querySelector('#stackTitle').value,'<img src=x onerror=alert(1)>');assert.equal(unsafe.window.document.querySelector('#dlgBody img'),null);assert.equal(unsafe.window.document.querySelectorAll('.stack-table thead th').length,2);unsafe.window.close();
  assert.equal(errors.length,0,errors.join('\n'));
+ // Visible-card attribution requires dwell and releases removed DOM nodes.
+ const io={},exposure=boot(false,undefined,undefined,{}, {exposure:io});await tick();const en=exposure.window.document.querySelector('#heroProducts [data-exposure]');assert.ok(en);const startExposure=calls.filter(x=>x.method==='track_exposure').length;
+ io.callback([{target:en,isIntersecting:true,intersectionRatio:.4}]);io.advance();assert.equal(calls.filter(x=>x.method==='track_exposure').length,startExposure,'below 60% excluded');
+ io.callback([{target:en,isIntersecting:true,intersectionRatio:1}]);io.callback([{target:en,isIntersecting:false,intersectionRatio:0}]);io.advance();assert.equal(calls.filter(x=>x.method==='track_exposure').length,startExposure,'leaving before dwell excluded');
+ io.callback([{target:en,isIntersecting:true,intersectionRatio:1}]);io.advance();assert.equal(calls.filter(x=>x.method==='track_exposure').length,startExposure+1);io.callback([{target:en,isIntersecting:true,intersectionRatio:1}]);io.advance();assert.equal(calls.filter(x=>x.method==='track_exposure').length,startExposure+1,'repeat exposure deduplicated');
+ en.remove();exposure.window.testObserve();assert.ok(!io.nodes.has(en),'removed cards released');exposure.window.close();
  // The incoming campaign is captured before the product router removes its query string.
  const campaignUrl='https://expanse.nyttolabs.com/p/fixture?ref=maker&channel=linkedin&campaign=mk-123456abcdef';
  const priorCampaign=calls.filter(x=>x.method==='track_campaign').length;

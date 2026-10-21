@@ -959,50 +959,6 @@ function download(name, blob) {
 function setPath(path) { try { if (location.protocol.startsWith('http') && location.pathname + location.search !== path) history.replaceState(null, '', path); } catch (e) {} }
 
 /* 1080×1350 share card: the product's square in its corner of the galaxy. */
-async function squareCard(it, title, line) {
-  if (document.fonts && document.fonts.ready) await document.fonts.ready;
-  const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; const g = c.getContext('2d');
-  const bg = g.createRadialGradient(540, 620, 0, 540, 620, 950); bg.addColorStop(0, '#16206a'); bg.addColorStop(.45, '#080c2c'); bg.addColorStop(1, '#02030c');
-  g.fillStyle = bg; g.fillRect(0, 0, 1080, 1350);
-  const r3 = mulberry(it.x * 7919 + it.y * 104729 + 7);
-  for (let i = 0; i < 320; i++) { g.globalAlpha = .15 + r3() * .6; g.fillStyle = '#fff'; const s = .6 + r3() * 1.8; g.fillRect(r3() * 1080, r3() * 1350, s, s); }
-  const sc = 26, cx = 540, cy = 640, wx = it.x + it.size / 2, wy = it.y + it.size / 2, col = itemColor(it), rgb = itemRgb(it);
-  g.globalCompositeOperation = 'lighter';
-  for (const q of DEMO) {
-    const sx = cx + (q.x + q.w / 2 - wx) * sc, sy = cy + (q.y + q.h / 2 - wy) * sc;
-    if (sx < -20 || sy < -20 || sx > 1100 || sy > 1370) continue;
-    const fade = clamp(1 - Math.hypot(sx - cx, sy - cy) / 650, 0, 1); if (fade <= 0) continue;
-    g.globalAlpha = fade * .5; g.fillStyle = '#a9bcff'; g.fillRect(sx - 1.5, sy - 1.5, 3, 3);
-  }
-  g.globalCompositeOperation = 'source-over';
-  for (const q of ITEMS) {
-    if (q === it) continue;
-    const sx = cx + (q.x - wx) * sc, sy = cy + (q.y - wy) * sc, sw = q.size * sc;
-    if (sx > 1080 || sy > 1350 || sx + sw < 0 || sy + sw < 0) continue;
-    g.globalAlpha = clamp(1 - Math.hypot(sx + sw / 2 - cx, sy + sw / 2 - cy) / 650, 0, 1) * .9;
-    g.fillStyle = itemColor(q); rrect(g, sx + 2, sy + 2, sw - 4, sw - 4, 6); g.fill();
-  }
-  g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
-  const ms = it.size * sc, mx = cx - ms / 2, my = cy - ms / 2, R = ms * 2.6 + 80;
-  g.drawImage(sprite(rgb), cx - R, cy - R, R * 2, R * 2); g.globalCompositeOperation = 'source-over';
-  g.fillStyle = col; rrect(g, mx + 2, my + 2, ms - 4, ms - 4, 8); g.fill();
-  g.strokeStyle = '#fff'; g.lineWidth = 6; rrect(g, mx - 6, my - 6, ms + 12, ms + 12, 12); g.stroke();
-  g.font = '700 34px "Instrument Sans",sans-serif'; const lw = Math.min(900, g.measureText(title).width + 48);
-  g.fillStyle = 'rgba(4,6,22,.95)'; rrect(g, cx - lw / 2, my - 110, lw, 64, 32); g.fill(); g.strokeStyle = col; g.lineWidth = 3; g.stroke();
-  g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(title, cx, my - 77, lw - 40);
-  g.beginPath(); g.moveTo(cx, my - 46); g.lineTo(cx, my - 10); g.stroke();
-  const top = g.createLinearGradient(0, 0, 0, 260); top.addColorStop(0, 'rgba(2,3,12,.95)'); top.addColorStop(1, 'rgba(2,3,12,0)'); g.fillStyle = top; g.fillRect(0, 0, 1080, 260);
-  const bot = g.createLinearGradient(0, 960, 0, 1350); bot.addColorStop(0, 'rgba(2,3,12,0)'); bot.addColorStop(.45, 'rgba(2,3,12,.92)'); bot.addColorStop(1, '#02030c'); g.fillStyle = bot; g.fillRect(0, 960, 1080, 390);
-  const og = g.createRadialGradient(92, 98, 2, 100, 106, 26); og.addColorStop(0, '#c8ff3d'); og.addColorStop(.5, '#5ee1ff'); og.addColorStop(1, '#1a5fff'); g.fillStyle = og; g.beginPath(); g.arc(100, 106, 26, 0, 6.2832); g.fill();
-  g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '700 46px "Instrument Sans",sans-serif'; g.fillText('Expanse', 142, 108);
-  g.textAlign = 'right'; g.font = '600 22px "IBM Plex Mono",monospace'; g.fillStyle = '#c8ff3d'; g.fillText('THE INTERNET, AS A UNIVERSE', 1000, 108);
-  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-  g.font = '700 92px "Instrument Sans",sans-serif'; g.fillStyle = '#fff'; g.fillText(it.name, 80, 1150, 920);
-  g.font = '500 34px "Instrument Sans",sans-serif'; g.fillStyle = '#c3caf0'; g.fillText(line, 80, 1210, 920);
-  g.font = '600 26px "IBM Plex Mono",monospace'; g.fillStyle = '#c8ff3d';
-  g.fillText(productUrl(it.slug).replace(/^https:\/\//, '').toUpperCase() + ' →', 80, 1280, 920);
-  return new Promise(res => c.toBlob(res, 'image/png'));
-}
 const kitCache = new Map();
 async function preparedKit(slug) {
   if (kitCache.has(slug)) return kitCache.get(slug);
@@ -1012,11 +968,6 @@ async function preparedKit(slug) {
   if (!kit?.svg || !kit.revision) throw new Error('kit_not_ready');
   kitCache.set(slug,kit);return kit;
 }
-async function shareCard(slug) {
-  try { const kit=await preparedKit(slug);toast('Preparing your image…',1500);const blob=await marketing.png(slug,kit);download(slug+'-expanse.png',blob);toast('Image saved. Copy your post and tracking link from the sharing kit.'); }
-  catch { toast('The image could not be prepared. Open your sharing kit to download the original or copy your link.',5000); }
-}
-
 /* ================= PANELS ================= */
 const pop = $('#pop'), popBody = $('#popBody'), claimEl = $('#claim'), manageEl = $('#manage'), sheet = $('#sheet'), dlg = $('#dlg'), dlgBody = $('#dlgBody');
 function setUI(v) {
@@ -1461,7 +1412,7 @@ function renderList() {
   for (const sp of sps) trackSpon(sp, 'impression');
 }
 
-const exposed=new Set(),exposureTimers=new Map();let exposureObserver;
+const exposed=new Set(),exposureTimers=new Map();let exposureObserver;const observedCards=new Set();
 function observeProductCards(){
   if(!window.IntersectionObserver||navigator.webdriver)return;
   if(!exposureObserver)exposureObserver=new IntersectionObserver(entries=>{for(const e of entries){const node=e.target;clearTimeout(exposureTimers.get(node));exposureTimers.delete(node);if(!e.isIntersecting||e.intersectionRatio<.6)continue;
@@ -1471,9 +1422,10 @@ function observeProductCards(){
       if(source!=='home'&&ui!=='none')return;
       exposed.add(key);rpc('track_exposure',{p_slug:slug,p_source:source},{keepalive:true}).catch(()=>{});
     },1000));}}, {threshold:[0,.6,1]});
-  for(const node of document.querySelectorAll('[data-exposure]'))exposureObserver.observe(node);
+  for(const node of observedCards)if(!node.isConnected){exposureObserver.unobserve(node);observedCards.delete(node);clearTimeout(exposureTimers.get(node));exposureTimers.delete(node);}
+  for(const node of document.querySelectorAll('[data-exposure]'))if(!observedCards.has(node)){observedCards.add(node);exposureObserver.observe(node);}
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const timer of exposureTimers.values())clearTimeout(timer);exposureTimers.clear();}else if(exposureObserver){exposureObserver.disconnect();observeProductCards();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const timer of exposureTimers.values())clearTimeout(timer);exposureTimers.clear();}else if(exposureObserver){exposureObserver.disconnect();observedCards.clear();observeProductCards();}});
 
 /* ================= PRODUCT FORM (used by "add" and by the owner panel) ================= */
 function normUrl(v) {
@@ -1777,7 +1729,7 @@ function finish(r) {
 $('#dKeyCopy').onclick = async () => toast((await copy($('#dKey').textContent)) ? 'Owner key copied. Keep it somewhere safe.' : 'Select the key and copy it.');
 $('#dKeySave').onclick = () => { const r = sub.result; if (r) saveKeyFile(r.slug, r.name, $('#dKey').textContent); };
 $('#dManage').onclick = () => { if (sub.result) openManage(sub.result.slug, 'verify'); };
-$('#dCard').onclick = () => { if (sub.result) shareCard(sub.result.slug); };
+$('#dCard').onclick = () => { if (sub.result) openManage(sub.result.slug, 'share'); };
 $('#dExplore').onclick = () => closeUI();
 function saveKeyFile(slug, name, key) {
   download(`expanse-owner-key-${slug}.txt`, new Blob([`Expanse owner key for ${name}\n\nProduct: ${productUrl(slug)}\nOwner key: ${key}\n\nKeep this private. Anyone with this key can edit the listing.\n`], { type: 'text/plain' }));
