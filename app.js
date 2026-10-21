@@ -1064,7 +1064,7 @@ function openProduct(p, opts) {
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
     imgs,
     el('div', { class: 'pact' }, visit, demoBtn),
-    el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
+    el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), stackBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
@@ -1562,7 +1562,37 @@ function makeForm() {
 /* ================= ADD YOUR PRODUCT ================= */
 const sub = { step: 0, spot: null, size: 1, plan: 'free', zone: 'edge', name: '', cat: '', result: null };
 const wiz = makeForm();
-$('#fBasics').append(...wiz.groups.basics.slice(0, 3)); $('#fFit').append(wiz.groups.basics[3], ...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
+$('#fBasics').append(wiz.groups.basics[1],$('#cAiImport'),wiz.groups.basics[0],wiz.groups.basics[2]); $('#fFit').append(wiz.groups.basics[3], ...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
+async function aiRequest(body) {
+  const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(55000)});
+  let result;try{result=await r.json();}catch{throw new Error('ai_unavailable');}
+  if(!r.ok)throw new Error(result.error||'ai_unavailable');return result;
+}
+function aiMessage(e) {
+  return {rate_limited:'You’ve used your suggestions for now. Try later, or continue manually.',daily_capacity:'Today’s AI suggestions are used up. You can still search, compare and register manually.',invalid_url:'Enter a public HTTPS website above first.',website_unavailable:'We couldn’t read that public page. You can fill in your profile manually.',page_too_large:'That page is too large to import. Try a simpler product page or fill in the details.',not_enough_content:'There isn’t enough readable text on that page. Fill in the details below.',invalid_brief:'Describe your goal in at least 12 characters.'}[e.message]||'AI suggestions are temporarily unavailable. Your work is safe; you can continue manually.';
+}
+let profileRequest=0;
+$('#cAiDraft').onclick=async()=>{
+  const url=wiz.get().url,status=$('#cAiStatus'),review=$('#cAiReview'),button=$('#cAiDraft');
+  if(!urlOk(url)){status.textContent='Enter your public website above first.';wiz.groups.basics[1].querySelector('input').focus();return;}
+  const request=++profileRequest;button.disabled=true;review.hidden=true;status.textContent='Reading your public page and drafting a profile…';
+  try{
+    const {profile}=await aiRequest({mode:'profile',url});
+    if(request!==profileRequest||wiz.get().url!==url){status.textContent='The website changed. Request a new draft for the current address.';return;}
+    const replace=el('input',{type:'checkbox',id:'cAiReplace'});
+    const use=el('button',{type:'button',id:'cAiUse',class:'btn btn-primary btn-sm',text:'Use this draft',onclick:()=>{
+      if(wiz.get().url!==url){status.textContent='The website changed. Request a new draft.';review.hidden=true;return;}
+      const current=wiz.get(),next={...current};
+      for(const k of ['name','tagline','description','audience','price_text','needs','platforms','integrations'])if(replace.checked||!(Array.isArray(current[k])?current[k].length:current[k]))next[k]=profile[k];
+      if(replace.checked||current.category==='other')next.category=profile.category;
+      if(replace.checked||current.pricing==='unspecified')next.pricing=profile.pricing;
+      wiz.set(next);sub.name=next.name;sub.cat=next.category;store.set(DRAFT_KEY,{...next,size:sub.size,plan:sub.plan,zone:sub.zone});kick();
+      review.hidden=true;status.textContent='Draft applied. Check the details below before continuing. Nothing has been submitted.';
+    }});
+    fill(review,el('div',{class:'mono',text:'Review the suggestion'}),el('h3',{text:profile.name}),el('p',{text:profile.tagline}),el('p',{text:profile.description}),el('p',{class:'fine',text:[CATS[profile.category]?.label,PRICING[profile.pricing],...(profile.needs||[])].filter(Boolean).join(' · ')}),el('label',{class:'check'},replace,' Replace details I already typed'),el('div',{class:'c-row'},use,el('button',{type:'button',class:'linkbtn',text:'Discard',onclick:()=>{review.hidden=true;status.textContent='Draft discarded. Your details were kept.';}})));
+    review.hidden=false;status.textContent='AI can make mistakes. Review all facts, including pricing. Existing details are kept unless you choose to replace them.';
+  }catch(e){status.textContent=aiMessage(e);}finally{button.disabled=false;}
+};
 let draftT = 0;
 wiz.onChange(() => { const d = wiz.get(); sub.name = d.name; sub.cat = d.category; kick(); clearTimeout(draftT); draftT = setTimeout(() => store.set(DRAFT_KEY, Object.assign(d, { size: sub.size, plan: sub.plan, zone: sub.zone })), 400); });
 const STEP_OF = { basics: 2, fit: 2, story: 2 };
@@ -2100,7 +2130,7 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('focusin', () => { const node = topModal(); if (node && !node.contains(document.activeElement)) focusModal(node); });
 function openDlg(...kids) {
-  dlg.classList.remove('my-space'); fill(dlgBody, ...kids); hideTip();
+  dlg.classList.remove('my-space','mission-dialog'); fill(dlgBody, ...kids); hideTip();
   const title = dlgBody.querySelector('h2');
   if (title) { title.id = 'dlgTitle'; dlg.setAttribute('aria-labelledby', title.id); dlg.removeAttribute('aria-label'); }
   else { dlg.removeAttribute('aria-labelledby'); dlg.setAttribute('aria-label', 'Product action'); }
@@ -2317,12 +2347,12 @@ function spaceItem(slug, fallback, tab) {
   return row;
 }
 function openMySpace(tab='saved',focusTab=false) {
-  if(!['saved','following','upvoted','history','owned'].includes(tab))tab='saved';
+  if(!['saved','stacks','following','upvoted','history','owned'].includes(tab))tab='saved';
   const opener = topModal() ? null : document.activeElement;
   closeSheet();closeUI();
   const counter=(n,label)=>el('div',null,el('b',{text:fmt(n)}),el('small',{text:label}));
   const tabs=el('div',{class:'space-tabs',role:'tablist','aria-label':'My space collections'});
-  const choices=[['saved','Saved',SAVED.length],['following','Following',Object.keys(FOLLOW.slugs).filter(isSlug).length],['upvoted','Upvoted',Object.keys(VOTED).filter(isSlug).length],['history','History',ACTIVITY.length],['owned','My products',Object.keys(OWNED).filter(isSlug).length]];
+  const choices=[['saved','Saved',SAVED.length],['stacks','Stacks',STACKS.length],['following','Following',Object.keys(FOLLOW.slugs).filter(isSlug).length],['upvoted','Upvoted',Object.keys(VOTED).filter(isSlug).length],['history','History',ACTIVITY.length],['owned','My products',Object.keys(OWNED).filter(isSlug).length]];
   for(const [id,label,count]of choices){
     const button=el('button',{type:'button',class:'chip-btn',role:'tab',id:'space-tab-'+id,'data-space-tab':id,'aria-controls':'space-content','aria-selected':String(tab===id),tabindex:tab===id?'0':'-1',text:`${label} (${count})`,onclick:()=>openMySpace(id,true)});
     button.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();let i=choices.findIndex(x=>x[0]===id);i=e.key==='Home'?0:e.key==='End'?choices.length-1:(i+(e.key==='ArrowRight'?1:-1)+choices.length)%choices.length;openMySpace(choices[i][0],true);});tabs.append(button);
@@ -2335,7 +2365,11 @@ function openMySpace(tab='saved',focusTab=false) {
   if(tab==='history')entries=ACTIVITY.map(p=>[p.slug,p]);
   if(tab==='owned')entries=Object.keys(OWNED).filter(isSlug).slice(0,20).map(s=>[s]);
   const empty={saved:'Save a product with ◇ Save to keep it here. Saving is private and does not affect rankings.',following:'Follow a product to keep up with its launches and releases.',upvoted:'Your successful upvotes from this browser will appear here. Saving and following do not cast a vote.',history:'The profiles you open and website/demo links you click will appear here.',owned:'Your own products and their statistics appear here when this browser has an owner key. Sign in with your email or owner key.'};
-  if(entries.length)panel.append(el('div',{class:'space-list'},entries.map(([s,p])=>spaceItem(s,p,tab))));else panel.append(el('p',{class:'fine',text:empty[tab]}));
+  if(tab==='stacks') {
+    if(!STACKS.length)panel.append(el('p',{class:'fine',text:'Build a stack for a goal, or add products to a stack from their profiles. Compare them, save a collection and share it with a link.'}));
+    for(const stack of STACKS)panel.append(el('article',{class:'stack-saved'},el('b',{text:stack.title}),el('p',{class:'fine',text:stack.slugs.length+' products · stored in this browser'}),el('div',{class:'c-row'},el('button',{class:'chip-btn',text:'Open & compare',onclick:()=>openStack(stack)}),el('button',{class:'chip-btn',text:'Share',onclick:()=>shareStack(stack)}),el('button',{class:'linkbtn','aria-label':'Delete stack '+stack.title,text:'Delete',onclick:()=>{STACKS.splice(STACKS.indexOf(stack),1);persistPersonal(STACK_KEY,STACKS);openMySpace('stacks');}}))));
+    panel.append(el('button',{class:'btn btn-ghost btn-sm',text:'Build a new stack',onclick:()=>openMission()}));
+  } else if(entries.length)panel.append(el('div',{class:'space-list'},entries.map(([s,p])=>spaceItem(s,p,tab))));else panel.append(el('p',{class:'fine',text:empty[tab]}));
   if(tab==='following')panel.prepend(el('button',{class:'btn btn-ghost btn-sm',text:'Open updates feed',onclick:openFollowing}));
   if(tab==='owned'&&!entries.length)panel.append(el('button',{class:'btn btn-ghost btn-sm',text:'Sign in to my product',onclick:()=>openOwnerLogin()}));
   if(tab==='history'&&entries.length)panel.append(el('button',{class:'linkbtn',style:'margin-top:16px',text:'Clear local activity history',onclick:()=>{ACTIVITY.splice(0);store.del(ACTIVITY_KEY);openMySpace('history');}}));
@@ -2344,6 +2378,80 @@ function openMySpace(tab='saved',focusTab=false) {
   if (opener) modalOrigins.set(dlg, opener);
   if(focusTab)$('#space-tab-'+tab)?.focus({preventScroll:true});
 }
+
+/* ================= MISSIONS & PORTABLE TOOL STACKS ================= */
+const STACK_KEY='expanse.stacks.v1',SELECTION_KEY='expanse.stack-selection.v1';
+const plainTitle=v=>String(v||'').replace(/[\u0000-\u001f]/g,' ').trim().slice(0,100);
+function cleanStack(v) {
+  if(!v||typeof v!=='object'||!Array.isArray(v.slugs))return null;
+  const slugs=[...new Set(v.slugs.filter(s=>typeof s==='string'&&isSlug(s)))].slice(0,8);
+  return slugs.length?{id:typeof v.id==='string'&&/^[a-z0-9-]{1,50}$/.test(v.id)?v.id:'',title:plainTitle(v.title)||'My tool stack',slugs}:null;
+}
+const storedStacks=store.get(STACK_KEY),STACKS=(Array.isArray(storedStacks)?storedStacks:[]).map(cleanStack).filter(Boolean).slice(0,20);
+const selection=store.get(SELECTION_KEY);let STACK_SELECTION=(Array.isArray(selection)?selection:[]).filter(s=>typeof s==='string'&&isSlug(s)).slice(0,8);
+const stackDock=el('div',{class:'stack-dock glass',id:'stackDock',hidden:!STACK_SELECTION.length},el('span',{id:'stackCount'}),el('button',{class:'btn btn-primary btn-sm',id:'openStack',text:'Compare & save',onclick:()=>openStack({title:'My tool stack',slugs:STACK_SELECTION})}));app.append(stackDock);
+function paintStackSelection() {
+  stackDock.hidden=!STACK_SELECTION.length;$('#stackCount').textContent=STACK_SELECTION.length+' '+(STACK_SELECTION.length===1?'tool':'tools')+' in your stack';
+  document.querySelectorAll('[data-stack-slug]').forEach(b=>{const on=STACK_SELECTION.includes(b.dataset.stackSlug);b.setAttribute('aria-pressed',String(on));b.classList.toggle('stack-selected',on);b.textContent=on?'✓ In stack':'+ Add to stack';});
+}
+function addToSelection(slug) {
+  if(STACK_SELECTION.includes(slug))STACK_SELECTION=STACK_SELECTION.filter(s=>s!==slug);
+  else{if(STACK_SELECTION.length>=8){toast('Compare up to 8 tools. Remove one first.');return;}STACK_SELECTION.push(slug);}
+  persistPersonal(SELECTION_KEY,STACK_SELECTION);paintStackSelection();
+}
+function stackBtn(p) {
+  const on=STACK_SELECTION.includes(p.slug);return el('button',{class:'chip-btn stack-btn'+(on?' stack-selected':''),type:'button','data-stack-slug':p.slug,'aria-pressed':String(on),'aria-label':'Add or remove '+p.name+' from your stack',text:on?'✓ In stack':'+ Add to stack',onclick:()=>addToSelection(p.slug)});
+}
+function stackLink(stack) {
+  const safe=cleanStack(stack);if(!safe)return null;
+  return SITE+'/stack#'+encodeURIComponent(JSON.stringify({v:1,title:safe.title,slugs:safe.slugs}));
+}
+function shareStack(stack) {const url=stackLink(stack);if(url)shareUrl(url,stack.title,'A tool stack on Expanse','Stack link copied.');}
+function saveStack(stack,status) {
+  const safe=cleanStack(stack);if(!safe){status.textContent='Add at least one product first.';return;}
+  const i=STACKS.findIndex(x=>x.id&&x.id===safe.id);
+  if(i<0&&STACKS.length>=20){status.textContent='You have 20 saved stacks. Delete one in My space first.';return;}
+  if(!safe.id)safe.id=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+  const next=STACKS.slice();if(i>=0)next[i]=safe;else next.unshift(safe);
+  if(!persistPersonal(STACK_KEY,next)){status.textContent='Browser storage is blocked. Share the stack link to keep a copy.';return;}
+  STACKS.splice(0,STACKS.length,...next);stack.id=safe.id;status.textContent='Saved to My space → Stacks in this browser.';return safe.id;
+}
+function openStack(value) {
+  const stack=cleanStack(value);if(!stack){toast('Add a product to a stack first.');return;}
+  closeUI();closeSheet();
+  const title=el('input',{id:'stackTitle',class:'stack-title',value:stack.title,maxlength:'100','aria-label':'Stack name'});
+  const products=stack.slugs.map(s=>BY_SLUG.get(s));
+  const facts=[['What it does',p=>p.tagline],['Solves',p=>(p.needs||[]).join(', ')||'Not specified'],['Who it’s for',p=>p.audience||'Not specified'],['Price',p=>(PRICING[p.pricing]||'Not specified')+(p.price_text?' · '+p.price_text:'')],['Platforms',p=>(p.platforms||[]).map(x=>PLATFORMS[x]||x).join(', ')||'Not specified'],['Works with',p=>(p.integrations||[]).join(', ')||'Not specified'],['Checked by Expanse',p=>[p.verified_at?'Domain verified '+dateStr(p.verified_at):'Domain not verified',p.site_ok_at?'Website answered '+dateStr(p.site_ok_at):'No website check shown'].join(' · ')]];
+  const table=el('table',{class:'stack-table'},el('thead',null,el('tr',null,el('th',{scope:'col',text:'Compare facts'}),stack.slugs.map((slug,i)=>el('th',{scope:'col'},el('span',{text:products[i]?.name||slug}),el('br'),el('button',{class:'linkbtn','aria-label':'Remove '+(products[i]?.name||slug)+' from comparison',text:'Remove',onclick:()=>{stack.slugs=stack.slugs.filter(s=>s!==slug);if(stack.slugs.length)openStack({...stack,title:title.value});else{closeDlg();toast('No tools left in this comparison.');}}}))))),el('tbody',null,facts.map(([label,get])=>el('tr',null,el('th',{scope:'row',text:label}),products.map(p=>el('td',{text:p?get(p):'This product is no longer public.'})))),el('tr',null,el('th',{scope:'row',text:'Explore'}),products.map(p=>el('td',null,p?el('button',{class:'chip-btn',text:'Open product',onclick:()=>{closeDlg();openProduct(p,{source:'shared'});}}):null)))));
+  const status=el('p',{class:'mission-status',role:'status','aria-live':'polite'});
+  const current=()=>({...stack,title:plainTitle(title.value)||'My tool stack'});
+  openDlg(el('div',{class:'mono kick',text:'Your tools, together'}),el('h2',{class:'display',text:'Compare your stack.'}),title,el('p',{class:'mission-intro',text:'Compare maker-provided facts and dated checks. “Not specified” means we don’t know. Listing products together does not prove they integrate.'}),el('div',{class:'stack-table-wrap',tabindex:'0','aria-label':'Product comparison, scroll horizontally'},table),el('div',{class:'stack-toolbar'},el('button',{class:'btn btn-primary btn-sm',id:'saveStack',text:'Save stack',onclick:()=>{const id=saveStack(current(),status);if(id)stack.id=id;}}),el('button',{class:'btn btn-ghost btn-sm',id:'shareStack',text:'Share stack',onclick:()=>shareStack(current())}),el('button',{class:'linkbtn',text:'Use as my current stack',onclick:()=>{STACK_SELECTION=stack.slugs.slice();persistPersonal(SELECTION_KEY,STACK_SELECTION);paintStackSelection();status.textContent='Current stack updated. Add more tools from their profiles.';}})),status,el('p',{class:'fine',text:'Saved stacks stay in this browser. A share link includes only the stack name and selected product IDs. Anyone with that link can open it. Owner keys, email, votes and private statistics are never included.'}));
+  dlg.classList.add('mission-dialog');
+}
+let missionResult=null,missionGoal='';
+function openMission(initial='') {
+  closeUI();closeSheet();if(demo)setDemo(false);
+  const goal=el('textarea',{id:'missionGoal',rows:'3',maxlength:'500',placeholder:'e.g. Launch my indie app, find my first customers and manage payments',value:initial||missionGoal});
+  const free=el('input',{type:'checkbox',id:'missionFree'}),platform=el('select',{id:'missionPlatform','aria-label':'Required platform'},el('option',{value:'',text:'Any platform'}),Object.entries(PLATFORMS).map(([v,label])=>el('option',{value:v,text:label})));
+  const status=el('p',{class:'mission-status',id:'missionStatus',role:'status','aria-live':'polite'}),results=el('div',{id:'missionResults'});
+  const render=result=>{
+    const steps=(result.steps||[]).filter(s=>BY_SLUG.has(s.slug));
+    fill(results,el('h3',{text:result.title}),el('p',{class:'fine',text:'Suggested fit from public product details. Confirm critical features and prices on the maker’s site.'}),steps.map((step,i)=>{
+      const p=BY_SLUG.get(step.slug);
+      return el('article',{class:'mission-step','data-mission-slug':p.slug},el('div',{class:'mono',text:'0'+(i+1)+' · '+step.task}),el('h3',{text:p.name}),el('p',{text:step.reason}),el('p',{text:p.tagline}),el('div',{class:'mission-facts'},el('span',{text:PRICING[p.pricing]||'Price not specified'}),(p.platforms||[]).slice(0,3).map(x=>el('span',{text:PLATFORMS[x]||x})),p.verified_at?el('span',{text:'✓ Verified domain'}):null),el('div',{class:'c-row'},el('button',{class:'chip-btn',text:'Explore product ↗',onclick:()=>{closeDlg();openProduct(p,{source:'search'});}}),stackBtn(p)));
+    }),el('div',{class:'mission-gaps'},el('h3',{text:'What’s still missing'}),el('ul',null,(result.gaps?.length?result.gaps:['No additional gaps were identified by AI. Check the fit yourself before choosing.']).map(g=>el('li',{text:g})))),steps.length?el('div',{class:'stack-toolbar'},el('button',{class:'btn btn-primary btn-sm',id:'missionCompare',text:'Compare & save these tools',onclick:()=>openStack({title:result.title,slugs:steps.map(s=>s.slug)})})):null);
+  };
+  const submit=el('button',{class:'btn btn-primary',type:'submit',id:'missionSubmit',text:'Find my starting stack ↗'});
+  const form=el('form',{onsubmit:async e=>{
+    e.preventDefault();const brief=goal.value.trim();if(brief.length<12){status.textContent='Describe your goal in at least 12 characters.';goal.focus();return;}
+    submit.disabled=true;status.textContent='Matching your goal to the live catalog…';results.replaceChildren();missionGoal=brief;
+    try{const r=await aiRequest({mode:'mission',goal:brief,free:free.checked,platform:platform.value});missionResult=r.mission;if(!form.isConnected)return;render(r.mission);status.textContent=`Based on ${r.catalog_count} live ${r.catalog_count===1?'product':'products'} matching your filters. Suggestions cannot be bought.`;}
+    catch(err){status.textContent=aiMessage(err);}finally{submit.disabled=false;}
+  }},el('label',{class:'field'},el('span',{class:'mono',text:'What are you trying to do?'}),goal),el('div',{class:'mission-controls'},el('label',null,free,'Free plan available'),platform),submit);
+  openDlg(el('div',{class:'mono kick',text:'From a goal to a starting stack'}),el('h2',{class:'display',text:'What’s your next move?'}),el('p',{class:'mission-intro',text:'Describe the job. Get a small set of tools with a reason for each one, and see the needs our catalog cannot cover yet.'}),el('div',{class:'mission-examples'},['Fix a failing deployment','Launch my first indie product','Run my freelance business'].map(text=>el('button',{class:'chip-btn',type:'button',text,onclick:()=>{goal.value=text;goal.focus();}}))),form,status,results,el('p',{class:'fine',style:'margin-top:22px',text:'Your brief and public catalog details are sent to Anthropic only when you ask. Don’t include private information. AI suggestions can be wrong; they do not verify compatibility or change search rankings.'}),el('div',{class:'stack-toolbar'},el('button',{class:'linkbtn',text:'Browse without AI',onclick:()=>{closeDlg();if(goal.value.trim())runSearch(goal.value.trim());else setView('list');}}),el('button',{class:'linkbtn',text:'My saved stacks',onclick:()=>openMySpace('stacks')})));
+  dlg.classList.add('mission-dialog');if(missionResult&&missionGoal===goal.value)render(missionResult);
+}
+$('#missionBtn').onclick=()=>openMission();$('#heroMission').onclick=()=>openMission();paintStackSelection();
 
 /* ================= FOLLOWING: saved in this browser, one combined feed of updates ================= */
 const isFollowed = slug => !!FOLLOW.slugs[slug];
@@ -2487,6 +2595,9 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
     else if (!$('#serverContent')) { setPath('/'); toast('That product isn’t live yet — it may still be in review.', 4500); }
   } else if (location.pathname === '/add') {
     startSubmit();
+  } else if (location.pathname === '/stack') {
+    let shared;try{if(location.hash.length<=3000){const payload=JSON.parse(decodeURIComponent(location.hash.slice(1)));if(payload.v===1)shared=cleanStack(payload);}}catch{}
+    if(shared)openStack(shared);else{openMission();toast('That stack link is incomplete. Build a new stack below.');}
   } else if (location.pathname === '/me') {
     openMySpace();
   } else if (location.pathname === '/browse') {

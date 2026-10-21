@@ -6,12 +6,18 @@ const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('nav
 const product={slug:'fixture',name:'Real Fixture',tagline:'Solve a real user problem',description:'',audience:'',category:'other',needs:[],pricing:'unspecified',price_text:'',platforms:[],integrations:[],url:'https://example.com',demo_url:'',images:[],domain:'example.com',x:130,y:10,size:1,zone:'edge',status:'approved'};
 function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.readFileSync(root+'index.html','utf8'),storage={},scenario={}){
  const dom=new JSDOM(html,{url,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
- const w=dom.window;w.matchMedia=()=>({matches:true,addEventListener(){}});w.requestAnimationFrame=fn=>0;w.cancelAnimationFrame=()=>{};
+ const w=dom.window;w.AbortSignal=global.AbortSignal;w.matchMedia=()=>({matches:true,addEventListener(){}});w.requestAnimationFrame=fn=>0;w.cancelAnimationFrame=()=>{};
  w.HTMLElement.prototype.scrollIntoView=()=>{};
  const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
  w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
  w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
  const defaults={public_seller:{ready:true,legal_name:'Fixture <seller>',registration_number:'TEST-ONLY',address:'Test street\nSweden',email:'support@example.invalid',phone:'TEST-PHONE'},public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:100},owner_discovery_stats:[],owner_stats:{days:[{view:3,visit:2,demo:1}]}};
+ if(method==='ai'){
+   if(scenario.failAI)return {ok:false,status:429,json:async()=>({error:'rate_limited'})};
+   if(scenario.delayAI)await scenario.delayAI();
+   r=body.mode==='profile'?{profile:{...product,name:'AI Fixture',tagline:'Drafted from a public product website',description:'A real draft that needs review before any submission.',category:'developer',needs:['fix deployments']}}:{mission:{title:'Ship a working app',steps:[{slug:'fixture',task:'Fix the build',reason:'The product description matches this job.'}],gaps:['No payment tool is listed yet.']},catalog_count:1};
+   return {ok:true,status:200,json:async()=>r};
+ }
  if(method==='upvote' && scenario.failVote)return {ok:false,status:429,text:async()=>JSON.stringify({message:'slow_down'})};
  if(method==='upvote')r={upvotes:body.p_on?1:0};
  else if(method==='submit_product')r={...product,...body.p,slug:'new-fixture',key:'fixture-owner-key',status:'pending',number:2};
@@ -85,6 +91,23 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  assert.ok(sheet.classList.contains('open'));press('Escape');assert.equal(kd.activeElement,info);
  keyboard.window.close();
  assert.equal(errors.length,0,errors.join('\n'));
- console.log('DOM flow passed: registration, euro totals, map quote consistency, Save/Follow/Upvote separation, vote layout, private activity, My space persistence, and blocked storage.');
+ // AI profile drafts are explicitly reviewed, preserve manual edits and never submit.
+ const ai=boot(false,'https://expanse.nyttolabs.com/add');await tick();const aw=ai.window,ad=aw.document;
+ const change=(selector,value)=>{const input=ad.querySelector(selector);input.value=value;input.dispatchEvent(new aw.Event('input',{bubbles:true}));};
+ change('#fBasics input[type="url"]','example.com');change('#fBasics input[maxlength="40"]','My manually typed name');const beforeAI=calls.filter(x=>x.method==='submit_product').length;
+ ad.querySelector('#cAiDraft').click();await tick();assert.equal(ad.querySelector('#cAiReview').hidden,false);assert.equal(ad.querySelector('#fBasics input[maxlength="90"]').value,'','AI cannot apply before review');ad.querySelector('#cAiUse').click();assert.equal(ad.querySelector('#fBasics input[maxlength="40"]').value,'My manually typed name');assert.match(ad.querySelector('#fBasics input[maxlength="90"]').value,/Drafted/);assert.equal(calls.filter(x=>x.method==='submit_product').length,beforeAI,'draft never submits a product');
+ ad.querySelector('#cAiDraft').click();await tick();ad.querySelector('#cAiReplace').checked=true;ad.querySelector('#cAiUse').click();assert.equal(ad.querySelector('#fBasics input[maxlength="40"]').value,'AI Fixture');ai.window.close();
+ const quota=boot(false,'https://expanse.nyttolabs.com/add',undefined,{}, {failAI:true});await tick();quota.window.document.querySelector('#fBasics input[type="url"]').value='example.com';quota.window.document.querySelector('#cAiDraft').click();await tick();assert.match(quota.window.document.querySelector('#cAiStatus').textContent,/Try later/);assert.equal(quota.window.document.querySelector('#cAiDraft').disabled,false);quota.window.close();
+ // A response for an earlier address must not overwrite a later address.
+ let resume;const stale=boot(false,'https://expanse.nyttolabs.com/add',undefined,{}, {delayAI:()=>new Promise(r=>resume=r)});await tick();const sd=stale.window.document;sd.querySelector('#fBasics input[type="url"]').value='example.com';sd.querySelector('#cAiDraft').click();sd.querySelector('#fBasics input[type="url"]').value='different.example.com';resume();await tick();assert.equal(sd.querySelector('#cAiReview').hidden,true);assert.match(sd.querySelector('#cAiStatus').textContent,/website changed/);stale.window.close();
+ const mission=boot();await tick();const mw=mission.window,mm=mw.document;let shared='';Object.defineProperty(mw.navigator,'clipboard',{value:{writeText:async value=>shared=value}});
+ mm.querySelector('#heroMission').click();mm.querySelector('#missionGoal').value='Fix a failing deployment';mm.querySelector('#missionSubmit').click();await tick();assert.match(mm.querySelector('#missionResults').textContent,/Real Fixture/);assert.match(mm.querySelector('.mission-gaps').textContent,/No payment tool/);assert.equal(mm.querySelectorAll('[data-mission-slug]').length,1);mm.querySelector('.stack-btn').click();assert.equal(mm.querySelector('#stackDock').hidden,false);
+ mm.querySelector('#missionCompare').click();assert.match(mm.querySelector('.stack-table').textContent,/Not specified/);mm.querySelector('#stackTitle').value='My launch stack';mm.querySelector('#saveStack').click();mm.querySelector('#saveStack').click();assert.equal(JSON.parse(mw.localStorage.getItem('expanse.stacks.v1')).length,1,'repeated save updates a stack');mm.querySelector('#shareStack').click();await tick();assert.match(shared,/\/stack#/);assert.doesNotMatch(shared,/owner|email|key|fixture-owner-key/);
+ const ms={};for(let i=0;i<mw.localStorage.length;i++){const key=mw.localStorage.key(i);ms[key]=mw.localStorage.getItem(key);}mw.close();
+ const stackReload=boot(false,'https://expanse.nyttolabs.com/me',undefined,ms);await tick();stackReload.window.document.querySelector('[data-space-tab="stacks"]').click();assert.match(stackReload.window.document.querySelector('#space-content').textContent,/My launch stack/);stackReload.window.close();
+ const share=boot(false,shared);await tick();assert.match(share.window.document.querySelector('.stack-table').textContent,/Real Fixture/);assert.equal(share.window.localStorage.getItem('expanse.stacks.v1'),null,'opening a shared stack never silently saves it');share.window.close();
+ const unsafe=boot(false,'https://expanse.nyttolabs.com/stack#'+encodeURIComponent(JSON.stringify({v:1,title:'<img src=x onerror=alert(1)>',slugs:['fixture','../admin','https://evil.test']})));await tick();assert.equal(unsafe.window.document.querySelector('#stackTitle').value,'<img src=x onerror=alert(1)>');assert.equal(unsafe.window.document.querySelector('#dlgBody img'),null);assert.equal(unsafe.window.document.querySelectorAll('.stack-table thead th').length,2);unsafe.window.close();
+ assert.equal(errors.length,0,errors.join('\n'));
+ console.log('DOM flow passed: registration, pricing, private collections, accessibility, reviewed AI imports, preserved edits, quota errors, stale requests, mission gaps, stack comparison, save/reload and safe portable sharing.');
 })().catch(e=>{console.error(e);process.exit(1)});
 
