@@ -14,6 +14,10 @@
   ],
   "rewrites": [
     {
+      "source": "/needs",
+      "destination": "/index.html"
+    },
+    {
       "source": "/stack",
       "destination": "/index.html"
     },
@@ -70,6 +74,15 @@
     }
   },
   "headers": [
+    {
+      "source": "/needs",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
     {
       "source": "/stack",
       "headers": [

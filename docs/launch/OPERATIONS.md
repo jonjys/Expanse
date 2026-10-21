@@ -104,3 +104,41 @@ replay exception is 20261013220355: production had an unrecorded temporary `prob
 debugging helper. The repository conditionally revokes it so fresh databases can replay the
 migration. The test reconstructs and hashes the original final statement, allowing only that
 specific guard; it never creates the debugging endpoint or changes production privileges.
+
+## Maker discovery release
+
+Deploy SQL through the existing Supabase GitHub production integration, preserving the
+CLI-generated filename version. Run the disposable database workflow before merging. After
+main is applied, verify Supabase Preview and compare the two recorded versions with the repo;
+refresh the read-only history snapshot. Do not apply the same SQL through MCP with a new version.
+
+The Sharing kit owner tab reads a prepared kit. Publication and public profile edits refresh
+its version; private contact edits and traffic do not. Older campaign IDs continue to work.
+Makers choose a channel and copy their own post; nothing publishes to a social account.
+PNG conversion is local and cached (20 images); the original SVG is available if conversion fails.
+
+Stats show daily deduplicated card impressions, profile opens and outbound website clicks.
+Search, list and home cards require 60% visibility for a second in an active tab. The map canvas
+is not instrumented for impressions. Campaign parameters are restricted to generated IDs and
+four channels; no arbitrary referrer or contact data is recorded. Verified product purchases
+are not connected. Do not infer them from outbound clicks or Expanse placement payments.
+Acquisition events expire after 90 days via expanse-acquisition-retention.
+
+## Needs pilot
+
+Visitor entry: an empty search, /needs, or My space → Needs. At most 200 active requests;
+three per UTC visitor hash per hour and five per day. Private receipts allow checking matches
+and withdrawing without collecting an email. Download the receipt for use on another device.
+Browser storage is not a synchronized account. Submitted needs are not sent to Anthropic.
+
+Sharing consent is optional and unchecked. Consented submissions remain private until reviewed
+in /admin#needs. Remove identifying names, contacts and confidential details, edit the public
+version, then explicitly acknowledge anonymization before publishing. Do not seed demonstration
+requests in production. Declining keeps a request private; withdrawing clears shared text at once.
+
+Makers opt in from their Needs pilot tab (off by default). Delivery is in that panel only;
+no emails, outreach or contact-sharing. Matching uses at least two shared meaningful English
+terms and 35% query coverage in real approved profiles, with the exact overlapping terms and
+profile tagline shown. It is a conservative lexical pilot, not an assessment of capability or
+purchase intent; map payments and votes do not affect it. Needs expire after 90 days, rate
+hashes after seven, and withdrawn records after seven days via expanse-needs-retention.

@@ -71,12 +71,15 @@ function el(tag, props, ...kids) {
 const app = $('#app');
 const timeAgo = iso => { const s = (Date.now() - Date.parse(iso)) / 1000; if (!(s >= 60)) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; };
 const dateStr = iso => { try { return new Date(iso).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } };
-function discoveryUrl(value) {
+const marketing = window.ExpanseMarketing;
+const campaignLanding = marketing.landing(location.href);
+function discoveryUrl(value, slug) {
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:') return value;
     if (!url.searchParams.has('utm_source')) url.searchParams.set('utm_source', 'expanse');
     if (!url.searchParams.has('utm_medium')) url.searchParams.set('utm_medium', 'referral');
+    if (campaignLanding?.slug === slug && !url.searchParams.has('utm_campaign')) url.searchParams.set('utm_campaign', campaignLanding.campaign);
     return url.href;
   } catch (e) { return value; }
 }
@@ -286,6 +289,7 @@ function track(slug, kind, source) {
   if (source && slug && !OWNED[slug] && !navigator.webdriver) rpc('track_discovery', { p_slug: slug, p_kind: kind, p_source: source }, { keepalive: true }).catch(() => {});
   if (!slug || OWNED[slug] || navigator.webdriver) return;
   const k = slug + ':' + kind; if (kind === 'view' && tracked.has(k)) return; tracked.add(k);
+  if(campaignLanding?.slug===slug)rpc('track_campaign',{p_slug:slug,p_kind:kind,p_campaign:campaignLanding.campaign,p_channel:campaignLanding.channel},{keepalive:true}).catch(()=>{});
   rpc('track', { p_slug: slug, p_kind: kind }, { keepalive: true }).catch(() => {});
 }
 let STATS = null, COMMERCE = { enabled: false };
@@ -999,18 +1003,18 @@ async function squareCard(it, title, line) {
   g.fillText(productUrl(it.slug).replace(/^https:\/\//, '').toUpperCase() + ' →', 80, 1280, 920);
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
+const kitCache = new Map();
+async function preparedKit(slug) {
+  if (kitCache.has(slug)) return kitCache.get(slug);
+  const key = OWNED[slug]?.key;
+  if (!key) throw new Error('owner_required');
+  const kit = await rpc('owner_marketing_kit',{p_slug:slug,p_key:key});
+  if (!kit?.svg || !kit.revision) throw new Error('kit_not_ready');
+  kitCache.set(slug,kit);return kit;
+}
 async function shareCard(slug) {
-  const it = ITEMS.find(i => i.slug === slug); if (!it) return;
-  const o = OWNDATA[slug] || it.p || {}, z = zoneOf(it.x, it.y, it.size);
-  toast('Rendering your share card…', 1500);
-  const line = `${CATS[it.cat].label} · ${z.label} · ${it.size}×${it.size}` + (o.number ? ` · Founding spot #${fmt(o.number)}` : '');
-  const blob = await squareCard(it, '★ ' + it.name, line); if (!blob) return;
-  const file = new File([blob], slug + '-expanse.png', { type: 'image/png' }), url = productUrl(slug);
-  if (coarse && navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: it.name + ' on Expanse', text: `${it.name} is in the Expanse universe: ${url}` }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
-  }
-  download(slug + '-expanse.png', blob);
-  toast((await copy(url)) ? 'Card saved and link copied — post them together.' : 'Card saved.');
+  try { const kit=await preparedKit(slug);toast('Preparing your image…',1500);const blob=await marketing.png(slug,kit);download(slug+'-expanse.png',blob);toast('Image saved. Copy your post and tracking link from the sharing kit.'); }
+  catch { toast('The image could not be prepared. Open your sharing kit to download the original or copy your link.',5000); }
 }
 
 /* ================= PANELS ================= */
@@ -1051,7 +1055,7 @@ function openProduct(p, opts) {
   const it = ITEMS.find(i => i.slug === p.slug); sel = it || null;
   const cat = CATS[p.category] ? p.category : 'other', z = zoneOf(p.x, p.y, p.size);
   const source = opts && opts.source || (view === 'list' ? (listQ ? 'search' : 'list') : 'map');
-  const visit = el('a', { class: 'btn btn-primary btn-sm', href: discoveryUrl(p.url), target: '_blank', rel: 'noopener nofollow ugc', title: p.url, onclick: () => track(p.slug, 'visit', source) }, el('span', { text: 'Visit website' }), ' ↗');
+  const visit = el('a', { class: 'btn btn-primary btn-sm', href: discoveryUrl(p.url, p.slug), target: '_blank', rel: 'noopener nofollow ugc', title: p.url, onclick: () => track(p.slug, 'visit', source) }, el('span', { text: 'Visit website' }), ' ↗');
   const demoBtn = p.demo_url ? el('a', { class: 'btn btn-ghost btn-sm', href: p.demo_url, target: '_blank', rel: 'noopener nofollow ugc', onclick: () => track(p.slug, 'demo', source) }, 'Try demo ↗') : null;
   const imgs = (p.images || []).length ? el('div', { class: 'imgs' }, p.images.map(src => el('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', decoding: 'async', onerror: e => e.target.remove() }))) : null;
   const facts = [['For', p.audience], ['Price', p.pricing === 'unspecified' ? '' : PRICING[p.pricing] + (p.price_text ? ' · ' + p.price_text : '')]].filter(f => f[1]);
@@ -1346,7 +1350,7 @@ function renderResults() {
     el('span', { class: 'sw', style: 'background:' + CATS[sp.p.category].color }), el('span', { class: 'rt' }, el('b', { text: sp.p.name }), el('small', { text: sp.p.tagline })), el('span', { class: 'tagx mono', text: 'Sponsored' })));
   for (const x of r) {
     const marks = [x.p.upvotes ? '▲ ' + fmt(x.p.upvotes) : '', x.p.verified_at ? '✓' : ''].filter(Boolean).join('  ');
-    kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p, { source: 'search' }); } },
+    kids.push(el('button', { type: 'button', 'data-exposure':x.p.slug, 'data-source':'search', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openProduct(x.p, { source: 'search' }); } },
       el('span', { class: 'sw', style: 'background:' + CATS[x.p.category].color }), el('span', { class: 'rt' }, el('b', { text: x.p.name }), el('small', { text: x.why || x.p.tagline })), marks ? el('span', { class: 'tagx', text: marks }) : null));
   }
   for (const q of d) kids.push(el('button', { type: 'button', onclick: () => { results.hidden = true; searchEl.classList.remove('open'); openDemo(q); } },
@@ -1357,8 +1361,9 @@ function renderResults() {
   }
   const pendingAi = !r.length && v.length >= 3 && PRODUCTS.length && !aiCached(v);
   if (pendingAi) kids.unshift(el('div', { class: 'none' }, el('span', { class: 'ai mono', text: '✦ AI' }), ' Searching by meaning…'));
-  else if (!r.length) kids.unshift(el('div', { class: 'none' }, `No live product solves “${v}” yet. `, el('button', { type: 'button', text: 'Add yours →', onclick: () => { results.hidden = true; startSubmit(null); } })));
+  else if (!r.length) kids.unshift(el('div', { class: 'none' }, `No live product solves “${v}” yet. `, el('button',{type:'button',text:'Leave a need →',onclick:()=>openNeedForm(v)}),' · ', el('button', { type: 'button', text: 'Add yours →', onclick: () => { results.hidden = true; startSubmit(null); } })));
   results.replaceChildren(...kids); results.hidden = false;
+  observeProductCards();
   for (const sp of sps) trackSpon(sp, 'impression');
 }
 let aiT = 0;
@@ -1406,7 +1411,7 @@ function filtered() {
     && (!F.int.size || [...F.int].every(x => p.integrations.some(i => i.toLowerCase() === x))));
 }
 function card(p, why, source) {
-  return el('button', { class: 'card', style: '--c:' + CATS[p.category].color, onclick: () => openProduct(p, source ? { source } : undefined) },
+  return el('button', { class: 'card', 'data-exposure':p.slug, 'data-source':source|| (listQ?'search':'list'), style: '--c:' + CATS[p.category].color, onclick: () => openProduct(p, source ? { source } : undefined) },
     el('div', { class: 'top' }, el('b', { text: p.name }), p.verified_at ? el('span', { class: 'ver', title: 'Verified domain', text: '✓' }) : null, isFollowed(p.slug) ? el('span', { class: 'fol', title: 'You follow this', text: '★' }) : null,
       p.upvotes ? el('span', { class: 'votes' + (VOTED[p.slug] ? ' on' : ''), title: plural(p.upvotes, 'upvote', 'upvotes'), text: '▲ ' + fmt(p.upvotes) }) : null),
     el('p', { text: p.tagline }),
@@ -1447,13 +1452,28 @@ function renderList() {
     cardsEl.replaceChildren(el('div', { class: 'empty' },
       el('h3', { text: none ? 'The universe is wide open.' : listQ ? `Nothing solves “${listQ}” yet.` : 'No products match these filters.' }),
       el('p', { text: none ? 'No products are live yet. Every maker can add a free profile under the same review rules.' : 'Know a product that does? Its maker can add it in a couple of minutes.' }),
-      el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), none ? el('button', { class: 'btn btn-ghost btn-sm', text: 'See the demo universe', onclick: () => { setView('map'); $('#demoHero').click(); } }) : null)));
+      el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), listQ ? el('button',{class:'btn btn-ghost btn-sm',text:'I need a tool that…',onclick:()=>openNeedForm(listQ)}):null, none ? el('button', { class: 'btn btn-ghost btn-sm', text: 'See the demo universe', onclick: () => { setView('map'); $('#demoHero').click(); } }) : null)));
     return;
   }
   const sps = sponsoredFor(listQ, ranked, base);
   cardsEl.replaceChildren(...sps.map(sponCard), ...rows.map(r => card(r.p, r.why)));
+  observeProductCards();
   for (const sp of sps) trackSpon(sp, 'impression');
 }
+
+const exposed=new Set(),exposureTimers=new Map();let exposureObserver;
+function observeProductCards(){
+  if(!window.IntersectionObserver||navigator.webdriver)return;
+  if(!exposureObserver)exposureObserver=new IntersectionObserver(entries=>{for(const e of entries){const node=e.target;clearTimeout(exposureTimers.get(node));exposureTimers.delete(node);if(!e.isIntersecting||e.intersectionRatio<.6)continue;
+    exposureTimers.set(node,setTimeout(()=>{exposureTimers.delete(node);const slug=node.dataset.exposure,source=node.dataset.source,key=slug+':'+source;
+      if(!node.isConnected||document.hidden||topModal()||demo||OWNED[slug]||exposed.has(key)||node.closest('[hidden]')||!['home','search','list'].includes(source)||!BY_SLUG.has(slug))return;
+      if(source==='home'&&(ui!=='none'||app.classList.contains('explore')||view==='list'))return;
+      if(source!=='home'&&ui!=='none')return;
+      exposed.add(key);rpc('track_exposure',{p_slug:slug,p_source:source},{keepalive:true}).catch(()=>{});
+    },1000));}}, {threshold:[0,.6,1]});
+  for(const node of document.querySelectorAll('[data-exposure]'))exposureObserver.observe(node);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const timer of exposureTimers.values())clearTimeout(timer);exposureTimers.clear();}else if(exposureObserver){exposureObserver.disconnect();observeProductCards();}});
 
 /* ================= PRODUCT FORM (used by "add" and by the owner panel) ================= */
 function normUrl(v) {
@@ -1854,7 +1874,7 @@ async function openManage(slug, tab) {
   renderManage();
   openPanel(manageEl, 'manage'); markExplore();
   const it = ITEMS.find(i => i.slug === slug); if (it) { sel = it; centerOn(it); }
-  try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: own.key }); own.name = OWNDATA[slug].name; saveOwned(); if (mSlug === slug) renderManage(); }
+  try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: own.key }); kitCache.delete(slug); own.name = OWNDATA[slug].name; saveOwned(); if (mSlug === slug) renderManage(); }
   catch (e) { if (errCode(e) === 'bad_key') { delete OWNED[slug]; saveOwned(); closeUI(); toast('That key no longer works. Sign in again with your email, or use “Lost your key?”.', 5000); } }
 }
 function renderManage() {
@@ -1872,32 +1892,33 @@ function renderManage() {
   if (mTab === 'edit' && o.slug) mform.set(o);
   if (mTab === 'verify') renderVerify(o);
   if (mTab === 'share') renderShare(o);
+  if (mTab === 'needs') renderMakerNeeds(o);
   if (mTab === 'promote') renderPromote(o);
   if (mTab === 'placement') renderMapPlacement(o);
   if (mTab === 'key') renderKey(o);
 }
 $('#mTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; mTab = b.dataset.tab; renderManage(); });
 async function renderStats(o) {
-  const box = $('#mStats');
-  if (o.status !== 'approved') { box.replaceChildren(el('p', { class: 'fine', text: 'Stats start counting when your product is live. We count profile views and clicks to your site and demo — once per visitor per day, without cookies, and without your own visits or known bots.' })); return; }
-  box.replaceChildren(el('p', { class: 'fine', text: 'Loading…' }));
-  let s, sources = []; const statsSlug=mSlug; try { [s,sources] = await Promise.all([rpc('owner_stats', { p_slug: mSlug, p_key: OWNED[mSlug].key }),rpc('owner_discovery_stats',{p_slug:mSlug,p_key:OWNED[mSlug].key}).catch(()=>[])]); } catch (e) { box.replaceChildren(el('p', { class: 'fine', text: "Couldn't load stats right now." })); return; }
-  if (mTab !== 'stats' || mSlug!==statsSlug) return;
-  const days = s.days || [], sum = k => days.reduce((a, d) => a + (d[k] || 0), 0);
-  const views = sum('view'), visits = sum('visit'), demos = sum('demo'), max = Math.max(1, ...days.map(d => d.view || 0), ...days.map(d => (d.visit || 0) + (d.demo || 0)));
-  box.replaceChildren(
-    el('div', { class: 'kpis' },
-      el('div', { class: 'kpi' }, el('b', { text: fmt(views) }), el('small', { text: 'profile views · 30 days' })),
-      el('div', { class: 'kpi' }, el('b', { text: fmt(visits) }), el('small', { text: 'clicks to your site' })),
-      el('div', { class: 'kpi' }, el('b', { text: fmt(demos) }), el('small', { text: 'demo clicks' })),
-      el('div', { class: 'kpi' }, el('b', { text: views ? Math.round((visits + demos) / views * 100) + '%' : '—' }), el('small', { text: 'of viewers clicked through' }))),
-    el('div', { class: 'chart', role: 'img', 'aria-label': `Daily profile views and clicks for the last 30 days: ${views} views, ${visits + demos} clicks.` },
-      days.map(d => el('div', { class: 'd', title: `${d.d}: ${d.view} views, ${d.visit + d.demo} clicks` }, el('div', { class: 'v', style: `height:${(d.view || 0) / max * 100}%` }), el('div', { class: 'c', style: `height:${((d.visit || 0) + (d.demo || 0)) / max * 100}%` })))),
-    el('div', { class: 'chart-legend' }, el('span', null, el('i', { style: 'background:rgba(94,225,255,.55)' }), 'Profile views'), el('span', null, el('i', { style: 'background:var(--lime)' }), 'Clicks')),
-    el('p', { class: 'fine', text: 'Unique visitors per day. Counted without cookies; your own visits on days you open this panel and known bots are left out, as far as we can tell.' }));
-  const labels={map:'Map exploration',search:'Search',list:'Product list',shared:'Direct / saved product links',sponsored:'Sponsored card',home:'Home page'};
-  box.append(el('div',{class:'source-stats'},el('h4',{class:'mono',text:'Where discovery happens · 30 days'}),sources.length?sources.map(row=>el('div',{class:'source-row'},el('span',{text:labels[row.source]||row.source}),el('b',{text:`${fmt(row.views)} views · ${fmt(Number(row.visits)+Number(row.demos))} clicks`}))):el('p',{class:'fine',text:'No attributed visits yet. New visits will show here as people discover your product.'}),el('p',{class:'fine',text:'One visitor can use several sources. These counts started with this update; older visits have no recorded source.'})));
+  const box=$('#mStats'),slug=mSlug;
+  if(o.status!=='approved'){fill(box,el('p',{class:'fine',text:'Statistics start when your product is live.'}));return;}
+  fill(box,el('p',{class:'fine',text:'Loading…'}));
+  try {
+    const s=await rpc('owner_acquisition_stats',{p_slug:slug,p_key:OWNED[slug].key});
+    if(mSlug!==slug||mTab!=='stats')return;
+    const t=s.totals||{},kpi=(value,label)=>el('div',{class:'kpi'},el('b',{text:fmt(value)}),el('small',{text:label}));
+    const labels={map:'Map',search:'Need search',list:'Product list',shared:'Direct / saved links',sponsored:'Sponsored',home:'Home page'};
+    const table=(head,rows)=>el('table',{class:'source-table'},el('thead',null,el('tr',null,head.map(text=>el('th',{scope:'col',text})))),el('tbody',null,rows));
+    fill(box,el('h3',{text:'Discovery → profile → your website'}),el('p',{class:'fine',text:'Last 30 days · daily unique visitors, not page loads.'}),
+      el('div',{class:'kpis'},kpi(t.impressions,'measured card impressions'),kpi(t.views,'profile opens'),kpi(t.visits,'clicks to your website'),kpi(t.demos,'demo clicks')),
+      el('p',{class:'note',text:Number(t.views)>=20?Math.round(Number(t.matched_visits||0)/Number(t.views)*100)+'% of profile viewers clicked to your website on the same day.':'Not enough data for a click-through rate yet. We need at least 20 daily unique profile opens.'}),
+      el('p',{class:'fine',text:'Verified product purchases: not connected. Expanse measures outbound clicks; it cannot infer a sale on your website.'}),
+      table(['How people found you','Impressions','Profile','Website'],(s.sources||[]).map(r=>el('tr',null,el('th',{scope:'row',text:labels[r.source]||r.source}),el('td',{text:r.impressions===null?'Not measured':fmt(r.impressions)}),el('td',{text:fmt(r.views)}),el('td',{text:fmt(r.visits)})))),
+      el('p',{class:'fine',text:'An impression means at least 60% of a real product card was visible for one second in an active tab. Map and direct-link impressions are not measured. Coverage began with this release; a zero is no recorded activity in the measured period. One visitor can appear in several sources.'}),
+      el('h4',{text:'Your sharing kit'}),s.campaigns?.length?table(['Channel','Profile opens','Website clicks'],s.campaigns.map(r=>el('tr',null,el('th',{scope:'row',text:r.channel}),el('td',{text:fmt(r.views)}),el('td',{text:fmt(r.visits)})))):el('p',{class:'fine',text:'0 tracked profile opens · 0 website clicks from your sharing kit. Use its campaign link when you post.'}),
+      el('p',{class:'fine',text:'No cookies. Known bots and your own visits on days you open the owner panel are excluded. Sources and campaign links describe recorded attribution, not proof that a post caused a sale.'}));
+  }catch{if(mSlug===slug&&mTab==='stats')fill(box,el('p',{class:'fine',text:'Statistics are unavailable right now. No figures have been estimated.'}),el('button',{class:'btn btn-ghost btn-sm',text:'Try again',onclick:()=>renderStats(o)}));}
 }
+
 function checksBox(o) {
   const c = o.checks || {}, row = (label, at, fails, status, okText) => el('li', { class: !at ? '' : fails ? 's-bad' : 's-up' },
     el('b', { text: label + ': ' + (!at ? 'not checked yet' : fails ? `didn’t load on the last ${fails === 1 ? 'check' : fails + ' checks'}` : okText) }),
@@ -1968,14 +1989,26 @@ function repoBox(o) {
     el('p', { class: 'c-text', style: 'font-size:13.5px;margin-top:0', text: 'Connect your public repo: new releases show on your profile and in the updates of everyone who follows you.' }),
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Repository' }), inp), status, el('div', { class: 'c-row' }, btn));
 }
-function renderShare(o) {
-  const box = $('#mShare'), live = o.status === 'approved', url = productUrl(mSlug);
-  box.replaceChildren(
-    el('p', { class: 'c-text', text: live ? 'Your product page:' : 'Your page goes live after review. This will be its link:' }),
-    el('div', { class: 'codeblock', text: url }),
-    el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: live ? 'Share link ↗' : 'Copy link', onclick: () => shareUrl(url, o.name + ' on Expanse', `${o.name} — ${o.tagline}`, 'Link copied.') }), el('button', { class: 'btn btn-ghost btn-sm', text: 'Share card', onclick: () => shareCard(mSlug) })),
-    el('p', { class: 'fine', text: 'Share your page wherever it helps people understand your product. Every maker follows the same listing, pricing and ranking rules.' }));
+async function renderShare(o) {
+  const box=$('#mShare'),slug=mSlug,url=productUrl(slug);
+  if(o.status!=='approved'){fill(box,el('p',{class:'fine',text:'Your sharing kit is prepared when your product goes live. Your future profile link:'}),el('div',{class:'codeblock',text:url}));return;}
+  fill(box,el('p',{class:'fine',text:'Loading your prepared sharing kit…'}));
+  try {
+    const kit=await preparedKit(slug);if(mSlug!==slug||mTab!=='share')return;
+    const draftKey='expanse.post.v1.'+slug+'.'+kit.revision,local=store.get(draftKey)||{};
+    const channel=el('select',{'aria-label':'Where you will share'},marketing.channels.map(v=>el('option',{value:v,text:({x:'X',linkedin:'LinkedIn',newsletter:'Newsletter',other:'Other'})[v]})));channel.value=marketing.channels.includes(local.channel)?local.channel:'x';
+    const text=el('textarea',{rows:6,maxlength:3000,'aria-label':'Editable post',value:typeof local.text==='string'?local.text:kit.post_text});
+    const link=el('input',{type:'url',readonly:true,'aria-label':'Trackable product link'});
+    const update=()=>{link.value=marketing.link(slug,kit.campaign,channel.value);store.set(draftKey,{text:text.value,channel:channel.value});};channel.onchange=update;text.oninput=update;update();
+    const original='/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision;
+    const save=el('button',{class:'btn btn-primary btn-sm',text:'Download PNG',onclick:async()=>{save.disabled=true;try{download(slug+'-expanse.png',await marketing.png(slug,kit));toast('Image saved.');}catch{toast('PNG conversion failed. Use Download original image, or copy your post and link.',5000);}finally{save.disabled=false;}}});
+    fill(box,el('h3',{text:'Your ready-to-share kit'}),el('p',{class:'fine',text:'Prepared from your public profile on '+dateStr(kit.prepared_at)+'. Reused until your public profile changes. Edit the post, choose your channel, then publish it yourself.'}),
+      el('div',{class:'kit-layout'},el('div',null,el('img',{class:'kit-preview',src:original,alt:o.name+' — prepared Expanse share card',width:1080,height:1350}),el('a',{class:'linkbtn',href:original,download:slug+'-expanse.svg',style:'display:block;margin-top:10px',text:'Download original image'})),
+      el('div',null,el('label',{class:'field'},el('span',{text:'Channel'}),channel),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>toast(await copy(marketing.post(text.value,link.value))?'Post and link copied.':'Select your post and link to copy.')}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
+      el('p',{class:'fine',text:'The link records the chosen channel and campaign, never who clicks it. The image contains only public profile details. Post drafts and cached PNGs stay in this browser. We do not post to your accounts.'}));
+  }catch{if(mSlug===slug&&mTab==='share')fill(box,el('p',{class:'fine',text:'The prepared kit is unavailable right now. Your product page still works:'}),el('div',{class:'codeblock',text:url}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy profile link',onclick:()=>copy(url)}),el('button',{class:'btn btn-ghost btn-sm',text:'Try again',onclick:()=>{kitCache.delete(slug);renderShare(o);}}));}
 }
+
 function renderKey(o) {
   const slug = mSlug, own = OWNED[slug], key = own.key, viaEmail = own.via === 'email', code = el('code', { text: '•'.repeat(24) });
   const others = Math.max(0, (o.devices || 0) - (viaEmail ? 1 : 0));
@@ -2090,6 +2123,7 @@ $('#eSave').onclick = async () => {
   try {
     const before = OWNDATA[mSlug] && OWNDATA[mSlug].status;
     OWNDATA[mSlug] = await rpc('owner_update', { p_slug: mSlug, p_key: OWNED[mSlug].key, p: mform.get() });
+    kitCache.delete(mSlug);
     OWNED[mSlug].name = OWNDATA[mSlug].name; saveOwned();
     await refreshAll(); renderManage();
     toast(before === 'approved' && OWNDATA[mSlug].status === 'pending' ? 'Saved. Your new link or images go to review before they show.' : before === 'rejected' ? 'Saved and sent for review again.' : 'Saved.', 4500);
@@ -2296,6 +2330,53 @@ function openReport(p) {
     el('p', { class: 'fine', text: 'Reports are anonymous. We check them by hand.' }));
 }
 
+/* ================= VOLUNTARY NEEDS PILOT ================= */
+const NEED_RECEIPTS_KEY='expanse.needs.v1';
+const savedNeedReceipts=store.get(NEED_RECEIPTS_KEY);
+const NEED_RECEIPTS=(Array.isArray(savedNeedReceipts)?savedNeedReceipts:[]).filter(r=>r&&typeof r.id==='string'&&typeof r.key==='string'&&Date.parse(r.expires_at)>Date.now()).slice(0,20);
+if(savedNeedReceipts)store.set(NEED_RECEIPTS_KEY,NEED_RECEIPTS);
+function needMatchList(matches){
+  return el('div',{class:'need-matches'},matches?.length?matches.map(m=>el('article',{class:'mission-step'},el('b',{text:m.name}),el('p',{class:'fine',text:m.reason}),el('button',{class:'btn btn-ghost btn-sm',text:'Check product',onclick:()=>{const p=BY_SLUG.get(m.slug);if(p)openProduct(p,{source:'search'});else toast('This product is no longer public.');}}))):el('p',{class:'fine',text:'No clear match in the live catalog yet. We will show a match here if a published product’s profile shares enough relevant terms. A match is a starting point, not a compatibility guarantee.'}));
+}
+function openNeedForm(initial=''){
+  closeSheet();closeUI();results.hidden=true;
+  const input=el('textarea',{rows:4,maxlength:600,minlength:18,required:true,placeholder:'I need a tool that checks failed deployments and explains the errors…','aria-label':'The problem you need a tool for',value:String(initial).slice(0,600)});
+  const consent=el('input',{type:'checkbox',id:'needConsent'}),status=el('p',{class:'fine',role:'status','aria-live':'polite'}),submit=el('button',{class:'btn btn-primary',type:'submit',text:'Find matches & save need'});
+  const form=el('form',{class:'need-form'},el('label',{class:'field'},el('span',{text:'I need a tool that…'}),input),el('p',{class:'fine',text:'Describe the job and the constraints, in English for this pilot. No names, emails, phone numbers, links or confidential information.'}),el('label',{class:'check',style:'display:flex;align-items:flex-start;gap:10px'},consent,el('span',{text:'I agree to share an anonymized version publicly and with relevant makers, after review. Optional; leave unchecked to keep it private.'})),el('p',{class:'fine',text:'No contact details are collected. Makers can see only approved anonymized needs. No emails are sent. You can withdraw sharing in My space. Needs expire after 90 days. Up to 200 active needs in this pilot. '}),el('a',{href:'/privacy',target:'_blank',rel:'noopener',text:'How needs are handled'}),el('div',{class:'c-row'},submit));
+  form.onsubmit=async e=>{e.preventDefault();if(!form.reportValidity())return;submit.disabled=true;status.textContent='Checking the real catalog…';try{
+    const r=await rpc('submit_tool_need',{p_text:input.value.replace(/\s+/g,' ').trim(),p_share:consent.checked});
+    if(!r?.id||!r.key)throw Error('unavailable');
+    NEED_RECEIPTS.unshift({id:r.id,key:r.key,expires_at:r.expires_at});NEED_RECEIPTS.splice(20);store.set(NEED_RECEIPTS_KEY,NEED_RECEIPTS);
+    const stored=store.get(NEED_RECEIPTS_KEY)?.some(x=>x.id===r.id);
+    const receipt=JSON.stringify({service:'Expanse needs pilot',id:r.id,key:r.key,expires_at:r.expires_at},null,2);
+    openDlg(el('div',{class:'mono kick',text:'Need saved'}),el('h2',{class:'display',text:r.state==='pending'?'Saved. Review before sharing.':'Saved privately.'}),el('p',{class:'fine',text:stored?'Your private management key is saved in this browser. Open My space → Needs to see matches or withdraw.':'Browser saving is blocked. Download your private receipt now so you can reopen or withdraw this need.'}),needMatchList(r.matches),el('div',{class:'c-row'},el('button',{class:'btn btn-primary btn-sm',text:'Download private receipt',onclick:()=>download('expanse-need-'+r.id+'.json',new Blob([receipt],{type:'application/json'}))}),el('button',{class:'btn btn-ghost btn-sm',text:'My needs',onclick:()=>openMySpace('needs')})),el('p',{class:'fine',text:'Keep the receipt private. It controls this need; it is not a payment receipt.'}));
+  }catch(err){const code=errCode(err);status.textContent=code.includes('invalid:need')?'Use 18–600 characters without contact details, links or phone numbers.':code.includes('slow_down')?'You have saved several needs recently. Please try later.':code.includes('pilot_full')?'The pilot is full right now. You can still search and build a stack.':'Your need could not be saved. Try again; nothing has been published.';}finally{submit.disabled=false;}};
+  openDlg(el('div',{class:'mono kick',text:'Needs pilot · voluntary'}),el('h2',{class:'display',text:'What tool is missing?'}),el('p',{class:'fine',text:'Start with a real problem. We match published product descriptions and explain the overlap. Payment does not affect matching.'}),form,status);
+}
+async function openNeedBoard(){
+  closeUI();openDlg(el('div',{class:'mono kick',text:'Needs pilot'}),el('h2',{class:'display',text:'Real needs. Small products.'}),el('p',{class:'fine',text:'Voluntarily shared, anonymized and reviewed. These are requests for tools, not verified buyers or promised sales.'}),el('div',{class:'c-row'},el('button',{class:'btn btn-primary btn-sm',text:'I need a tool that…',onclick:()=>openNeedForm()}),el('button',{class:'btn btn-ghost btn-sm',text:'My needs',onclick:()=>openMySpace('needs')})),el('div',{id:'needsBoardRows'},el('p',{class:'fine',text:'Loading…'})));
+  const box=$('#needsBoardRows');try{const rows=await rpc('public_tool_needs');if(!box.isConnected)return;fill(box,rows.length?rows.map(n=>el('article',{class:'mission-step'},el('p',{text:n.text}),el('p',{class:'fine',text:'Shared '+dateStr(n.posted)+' · anonymized after review'}),needMatchList(n.matches))):el('p',{class:'note',text:'No reviewed needs have been shared yet. We only show real submissions with permission.'}));}catch{if(box.isConnected)fill(box,el('p',{class:'fine',text:'The needs board is unavailable. Try again later.'}));}
+}
+async function renderMyNeeds(panel){
+  panel.append(el('p',{class:'fine',text:'Private management receipts from this browser. Requests expire after 90 days. Only the anonymized text you agreed to share can appear publicly.'}),el('div',{class:'c-row'},el('button',{class:'btn btn-primary btn-sm',text:'Add a need',onclick:()=>openNeedForm()}),el('button',{class:'btn btn-ghost btn-sm',text:'Open reviewed needs',onclick:()=>openNeedBoard()})));
+  if(!NEED_RECEIPTS.length)panel.append(el('p',{class:'fine',text:'No saved needs in this browser.'}));
+  const id=el('input',{'aria-label':'Need ID',placeholder:'Need ID from your receipt'}),key=el('input',{type:'password','aria-label':'Private need key',placeholder:'Private key from your receipt',autocomplete:'off'});
+  panel.append(el('details',{class:'sec'},el('summary',{text:'Open a need from a private receipt'}),el('label',{class:'field'},el('span',{text:'Need ID'}),id),el('label',{class:'field'},el('span',{text:'Private key'}),key),el('button',{class:'btn btn-ghost btn-sm',text:'Open private need',onclick:async()=>{try{const r=await rpc('tool_need_status',{p_id:id.value.trim(),p_key:key.value.trim()});NEED_RECEIPTS.unshift({id:r.id,key:key.value.trim(),expires_at:r.expires_at});const unique=new Map(NEED_RECEIPTS.map(x=>[x.id,x]));NEED_RECEIPTS.splice(0,NEED_RECEIPTS.length,...[...unique.values()].slice(0,20));store.set(NEED_RECEIPTS_KEY,NEED_RECEIPTS);openMySpace('needs');}catch{toast('That receipt is invalid or the need has expired.');}}})));
+  for(const receipt of NEED_RECEIPTS){const row=el('article',{class:'mission-step'},el('p',{class:'fine',text:'Loading your need…'}));panel.append(row);try{const n=await rpc('tool_need_status',{p_id:receipt.id,p_key:receipt.key});if(!panel.isConnected)return;
+    fill(row,el('b',{text:({private:'Private',pending:'Waiting for anonymization review',approved:'Shared with permission',declined:'Kept private after review',withdrawn:'Withdrawn'})[n.state]||n.state}),el('p',{text:n.text}),n.public_text?el('p',{class:'fine',text:'Public version: '+n.public_text}):null,el('p',{class:'fine',text:'Expires '+dateStr(n.expires_at)}),needMatchList(n.matches),n.state!=='withdrawn'?el('button',{class:'btn btn-ghost btn-sm',text:'Withdraw and remove shared text',onclick:async e=>{e.currentTarget.disabled=true;try{await rpc('withdraw_tool_need',{p_id:receipt.id,p_key:receipt.key});openMySpace('needs');}catch{toast('Could not withdraw right now. Try again.');e.currentTarget.disabled=false;}}}):null);
+  }catch{fill(row,el('p',{class:'fine',text:'This need is unavailable, expired, or its key no longer works.'}),el('button',{class:'linkbtn',text:'Forget this receipt',onclick:()=>{NEED_RECEIPTS.splice(NEED_RECEIPTS.indexOf(receipt),1);store.set(NEED_RECEIPTS_KEY,NEED_RECEIPTS);openMySpace('needs');}}));}}
+}
+async function renderMakerNeeds(o){
+  const box=$('#mNeeds'),slug=mSlug;if(o.status!=='approved'){fill(box,el('p',{class:'fine',text:'Relevant need matching becomes available when your product is live.'}));return;}
+  fill(box,el('p',{class:'fine',text:'Loading…'}));
+  try{const prefs=await rpc('owner_need_preferences',{p_slug:slug,p_key:OWNED[slug].key});if(slug!==mSlug||mTab!=='needs')return;
+    const opt=el('input',{type:'checkbox',checked:prefs.enabled,'aria-label':'Receive relevant needs in this panel'}),feed=el('div');
+    fill(box,el('h3',{text:'Needs that may fit your product'}),el('p',{class:'fine',text:'Opt in to relevant, reviewed requests in this panel. No email is sent and no contact information is shared. These are needs, not qualified leads or guaranteed sales.'}),el('label',{class:'check',style:'display:flex;gap:10px;align-items:flex-start'},opt,el('span',{text:'Show relevant needs here · optional'})),feed);
+    const load=async()=>{if(!opt.checked){fill(feed,el('p',{class:'fine',text:'Matching is off. You can enable it whenever you want.'}));return;}fill(feed,el('p',{class:'fine',text:'Checking reviewed needs…'}));try{const rows=await rpc('owner_need_matches',{p_slug:slug,p_key:OWNED[slug].key});if(!feed.isConnected)return;fill(feed,rows.length?rows.map(n=>el('article',{class:'mission-step'},el('p',{text:n.text}),el('p',{class:'fine',text:n.reason}),el('small',{text:'Shared '+dateStr(n.posted)}))):el('p',{class:'note',text:'0 relevant shared needs so far. Keep the problems your product solves accurate; matching uses published profile text and never paid placement.'}));}catch{fill(feed,el('p',{class:'fine',text:'Could not load matches. Try again later.'}));}};
+    opt.onchange=async()=>{opt.disabled=true;try{await rpc('owner_need_preferences',{p_slug:slug,p_key:OWNED[slug].key,p_enabled:opt.checked});await load();}catch{opt.checked=!opt.checked;toast('Could not save your preference.');}finally{opt.disabled=false;}};await load();
+  }catch{if(slug===mSlug&&mTab==='needs')fill(box,el('p',{class:'fine',text:'Need matching is unavailable right now.'}));}
+}
+
 /* ================= MY SPACE: private, local collections and activity ================= */
 const isSaved = slug => SAVED.some(p => p.slug === slug);
 const activityCount = key => ACTIVITY.reduce((n,p) => n + Math.max(0, Math.min(1000000,Number(p[key]) || 0)),0);
@@ -2347,12 +2428,12 @@ function spaceItem(slug, fallback, tab) {
   return row;
 }
 function openMySpace(tab='saved',focusTab=false) {
-  if(!['saved','stacks','following','upvoted','history','owned'].includes(tab))tab='saved';
+  if(!['saved','stacks','following','upvoted','history','owned','needs'].includes(tab))tab='saved';
   const opener = topModal() ? null : document.activeElement;
   closeSheet();closeUI();
   const counter=(n,label)=>el('div',null,el('b',{text:fmt(n)}),el('small',{text:label}));
   const tabs=el('div',{class:'space-tabs',role:'tablist','aria-label':'My space collections'});
-  const choices=[['saved','Saved',SAVED.length],['stacks','Stacks',STACKS.length],['following','Following',Object.keys(FOLLOW.slugs).filter(isSlug).length],['upvoted','Upvoted',Object.keys(VOTED).filter(isSlug).length],['history','History',ACTIVITY.length],['owned','My products',Object.keys(OWNED).filter(isSlug).length]];
+  const choices=[['saved','Saved',SAVED.length],['stacks','Stacks',STACKS.length],['needs','Needs',NEED_RECEIPTS.length],['following','Following',Object.keys(FOLLOW.slugs).filter(isSlug).length],['upvoted','Upvoted',Object.keys(VOTED).filter(isSlug).length],['history','History',ACTIVITY.length],['owned','My products',Object.keys(OWNED).filter(isSlug).length]];
   for(const [id,label,count]of choices){
     const button=el('button',{type:'button',class:'chip-btn',role:'tab',id:'space-tab-'+id,'data-space-tab':id,'aria-controls':'space-content','aria-selected':String(tab===id),tabindex:tab===id?'0':'-1',text:`${label} (${count})`,onclick:()=>openMySpace(id,true)});
     button.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();let i=choices.findIndex(x=>x[0]===id);i=e.key==='Home'?0:e.key==='End'?choices.length-1:(i+(e.key==='ArrowRight'?1:-1)+choices.length)%choices.length;openMySpace(choices[i][0],true);});tabs.append(button);
@@ -2365,7 +2446,8 @@ function openMySpace(tab='saved',focusTab=false) {
   if(tab==='history')entries=ACTIVITY.map(p=>[p.slug,p]);
   if(tab==='owned')entries=Object.keys(OWNED).filter(isSlug).slice(0,20).map(s=>[s]);
   const empty={saved:'Save a product with ◇ Save to keep it here. Saving is private and does not affect rankings.',following:'Follow a product to keep up with its launches and releases.',upvoted:'Your successful upvotes from this browser will appear here. Saving and following do not cast a vote.',history:'The profiles you open and website/demo links you click will appear here.',owned:'Your own products and their statistics appear here when this browser has an owner key. Sign in with your email or owner key.'};
-  if(tab==='stacks') {
+  if(tab==='needs'){renderMyNeeds(panel);}
+  else if(tab==='stacks') {
     if(!STACKS.length)panel.append(el('p',{class:'fine',text:'Build a stack for a goal, or add products to a stack from their profiles. Compare them, save a collection and share it with a link.'}));
     for(const stack of STACKS)panel.append(el('article',{class:'stack-saved'},el('b',{text:stack.title}),el('p',{class:'fine',text:stack.slugs.length+' products · stored in this browser'}),el('div',{class:'c-row'},el('button',{class:'chip-btn',text:'Open & compare',onclick:()=>openStack(stack)}),el('button',{class:'chip-btn',text:'Share',onclick:()=>shareStack(stack)}),el('button',{class:'linkbtn','aria-label':'Delete stack '+stack.title,text:'Delete',onclick:()=>{STACKS.splice(STACKS.indexOf(stack),1);persistPersonal(STACK_KEY,STACKS);openMySpace('stacks');}}))));
     panel.append(el('button',{class:'btn btn-ghost btn-sm',text:'Build a new stack',onclick:()=>openMission()}));
@@ -2497,6 +2579,7 @@ function openFollowing() {
   FOLLOW.seen = new Date(Math.max(Date.now(), ...UPDATES.map(u => Date.parse(u.at) || 0))).toISOString(); saveFollow();
 }
 $('#followBtn').onclick = () => openMySpace();
+$('#needsBoard').onclick=()=>openNeedBoard();
 
 /* ================= INFO SHEET ================= */
 function openSheet() { hideTip(); openModal(sheet, sheet.querySelector('.sheet-in')); }
@@ -2507,8 +2590,9 @@ sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closes
 /* ================= LIVE: COUNTER + FEED (real data only; demo items are labelled) ================= */
 function renderLive() {
   const live = STATS ? STATS.live | 0 : PRODUCTS.length, held = STATS ? STATS.reserved | 0 : 0, left = Math.max(0, FOUNDING_LIMIT - held);
-  $('#heroLive').textContent = 'Free to list · map spots from €1 / 12 months';
-  const hp = $('#heroProducts'); hp.replaceChildren(...PRODUCTS.slice().sort((a,b) => dayRot(a.slug) - dayRot(b.slug)).slice(0, 3).map(p => el('button', { type: 'button', onclick: () => openProduct(p, { source: 'home' }) }, el('i', { style: '--pc:' + (CATS[p.category] || CATS.other).color }), p.name, p.verified_at ? ' ✓' : '')));
+  $('#heroLive').textContent = 'Open to every maker · search is not for sale';
+  const hp = $('#heroProducts'); hp.replaceChildren(...PRODUCTS.slice().sort((a,b) => dayRot(a.slug) - dayRot(b.slug)).slice(0, 3).map(p => el('button', { type: 'button', 'data-exposure':p.slug, 'data-source':'home', onclick: () => openProduct(p, { source: 'home' }) }, el('i', { style: '--pc:' + (CATS[p.category] || CATS.other).color }), p.name, p.verified_at ? ' ✓' : '')));
+  observeProductCards();
   const hc = $('#heroCounts'); hc.replaceChildren();
   if (live) hc.append(el('b', { text: fmt(live) }), live === 1 ? ' product live' : ' products live', ' · listing is ', el('b', { text: 'free' }));
   else hc.append('Open to every maker · ', el('b', { text: 'same rules for everyone' }));
@@ -2603,6 +2687,8 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
   } else if (location.pathname === '/stack') {
     let shared;try{if(location.hash.length<=3000){const payload=JSON.parse(decodeURIComponent(location.hash.slice(1)));if(payload.v===1)shared=cleanStack(payload);}}catch{}
     if(shared)openStack(shared);else{openMission();toast('That stack link is incomplete. Build a new stack below.');}
+  } else if (location.pathname === '/needs') {
+    openNeedBoard();
   } else if (location.pathname === '/me') {
     openMySpace();
   } else if (location.pathname === '/browse') {
