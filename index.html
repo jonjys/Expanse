@@ -570,6 +570,7 @@ a{color:inherit;text-decoration:none}
 @media(max-width:760px){.stack-dock{bottom:64px;padding:10px 12px;gap:8px}.stack-dock span{font-size:11px}.stack-dock .btn{font-size:12px}.mission-step{padding:14px}.mission-dialog .dlg-box{width:100%}.hero .ctas{flex-wrap:wrap}}
 .sheet.small.mission-dialog .sheet-in{width:min(850px,100%)}.sheet.mission-dialog .mission-step h3{font-size:18px;margin:10px 0}.sheet.mission-dialog .mission-gaps h3{font-size:14px;margin:0 0 8px}.sheet.mission-dialog .mission-step p{margin:8px 0}.sheet.mission-dialog .stack-saved p{margin:0 0 12px}.sheet.mission-dialog .stack-toolbar{margin-top:18px}
 @media(max-width:760px){.sheet.small.mission-dialog .sheet-in{width:100%}.views #missionBtn{padding-inline:9px;font-size:11px}}
+.mission-icon{display:none}@media(max-width:1060px){.mission-label{display:none}.mission-icon{display:inline}}@media(max-width:600px){.logo .word{display:none}.bar-r{gap:5px}.bar{gap:6px}}@media(max-width:370px){#infoBtn{display:none}.views button{padding-inline:7px}}
 </style>
 </head>
 <body>
@@ -582,7 +583,7 @@ a{color:inherit;text-decoration:none}
     <div class="views glass" role="group" aria-label="View">
       <button id="vMap" aria-pressed="true">Galaxy</button>
       <button id="vList" aria-pressed="false">List</button>
-      <button id="missionBtn" aria-label="Build a tool stack for your goal">Build a stack</button>
+      <button id="missionBtn" aria-label="Build a tool stack for your goal" title="Build a tool stack"><span class="mission-label">Build a stack</span><span class="mission-icon" aria-hidden="true">✦</span></button>
     </div>
     <div class="search" id="search">
       <form id="searchForm" class="glass" role="search">
