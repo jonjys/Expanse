@@ -2406,7 +2406,12 @@ function stackLink(stack) {
   const safe=cleanStack(stack);if(!safe)return null;
   return SITE+'/stack#'+encodeURIComponent(JSON.stringify({v:1,title:safe.title,slugs:safe.slugs}));
 }
-function shareStack(stack) {const url=stackLink(stack);if(url)shareUrl(url,stack.title,'A tool stack on Expanse','Stack link copied.');}
+function shareStack(stack) {
+  const url=stackLink(stack);if(!url)return;
+  $('#stackShareLink')?.parentElement.remove();
+  dlgBody.append(el('label',{class:'field',style:'margin-top:16px'},el('span',{class:'mono',text:'Your stack link'}),el('input',{id:'stackShareLink',value:url,readonly:true,'aria-label':'Your stack link',onclick:e=>e.target.select()})));
+  shareUrl(url,stack.title,'A tool stack on Expanse','Stack link copied.');
+}
 function saveStack(stack,status) {
   const safe=cleanStack(stack);if(!safe){status.textContent='Add at least one product first.';return;}
   const i=STACKS.findIndex(x=>x.id&&x.id===safe.id);
