@@ -97,7 +97,7 @@ function sellerPanel(s) {
 
 /* ---------- shell ---------- */
 let tab = 'queue';
-const TABS = { withdrawals: renderWithdrawals, 'map-purchases': renderMapPurchases, queue: renderQueue, reports: renderReports, placements: renderPlacements, products: renderProducts, overview: renderOverview, settings: renderSettings };
+const TABS = { needs: renderToolNeeds, withdrawals: renderWithdrawals, 'map-purchases': renderMapPurchases, queue: renderQueue, reports: renderReports, placements: renderPlacements, products: renderProducts, overview: renderOverview, settings: renderSettings };
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab); });
 $('#refresh').onclick = () => { go(tab); counts(); };
 function go(t) {
@@ -451,6 +451,19 @@ async function renderSettings(main) {
 if (KEY) {
   rpc('admin_settings').then(start).catch(err => { if (err.message !== 'bad_admin') { start(); } });
 } else showLogin();
+/* Needs stay private until consent and explicit anonymization review. */
+async function renderToolNeeds(main){
+ const rows=await rpc('admin_tool_needs');
+ main.replaceChildren(el('h2',{text:'Needs pilot · review before sharing'}),el('p',{class:'fine',text:'Only consented requests enter this queue. Remove names, organizations that identify the requester, contact details and confidential details. Do not invent demand or strengthen a request. No email or outreach is sent.'}));
+ if(!rows.length){main.append(el('p',{class:'empty',text:'No consented needs awaiting review or published.'}));return;}
+ for(const n of rows){
+  const text=el('textarea',{rows:4,maxlength:600,'aria-label':'Anonymized public need'});text.value=n.public_text||n.raw_text;
+  const ack=el('input',{type:'checkbox','aria-label':'I checked this text is anonymized'}),status=el('p',{class:'fine',role:'status'});
+  const card=el('section',{class:'card'},el('h3',{text:n.state==='pending'?'Awaiting review':'Published · can be revised or withdrawn'}),el('p',{class:'fine',text:'Private original (never public):'}),el('p',{text:n.raw_text}),el('label',null,el('span',{text:'Public version'}),text),el('label',{style:'display:flex;gap:10px;margin:14px 0'},ack,el('span',{text:'I reviewed and anonymized this version, including names and contact details.'})),status);
+  const act=async approve=>{if(approve&&!ack.checked){status.textContent='Confirm the anonymization review before publishing.';return;}try{await rpc('admin_review_tool_need',{p_id:n.id,p_approve:approve,p_text:text.value.replace(/\s+/g,' ').trim(),p_anonymized:ack.checked});go('needs');}catch{status.textContent='Could not save. Public text must be 18–600 characters, with no links or contact details; the request must still have consent.';}};
+  card.append(el('div',{class:'actions'},el('button',{class:'btn primary',text:'Publish anonymized need',onclick:()=>act(true)}),el('button',{class:'btn',text:'Keep private / remove from board',onclick:()=>act(false)})));main.append(card);
+ }
+}
+
+
 })();
-
-

@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "test": "node --test test/*.test.cjs && node test/frontend-flow.cjs",
-    "check": "node --check app.js && node --check admin.js && node --check api/stripe-webhook.js && node --check api/p.js && node --check api/browse.js && node --check api/sitemap.js && node --check lib/public-pages.js && node --check api/legal.js && node --check lib/legal-pages.js && node --check legal.js && node --check api/ai.js && node --check lib/ai-assistant.js",
+    "check": "node --check marketing.js && node --check api/marketing-card.js && node --check app.js && node --check admin.js && node --check api/stripe-webhook.js && node --check api/p.js && node --check api/browse.js && node --check api/sitemap.js && node --check lib/public-pages.js && node --check api/legal.js && node --check lib/legal-pages.js && node --check legal.js && node --check api/ai.js && node --check lib/ai-assistant.js",
     "test:db": "node test/database.cjs"
   },
   "devDependencies": {
