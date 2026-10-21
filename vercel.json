@@ -14,6 +14,10 @@
   ],
   "rewrites": [
     {
+      "source": "/stack",
+      "destination": "/index.html"
+    },
+    {
       "source": "/terms",
       "destination": "/api/legal?kind=terms"
     },
@@ -55,6 +59,9 @@
     }
   ],
   "functions": {
+    "api/ai.js": {
+      "maxDuration": 60
+    },
     "api/p.js": {
       "includeFiles": "index.html"
     },
@@ -63,6 +70,19 @@
     }
   },
   "headers": [
+    {
+      "source": "/stack",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
     {
       "source": "/add",
       "headers": [

@@ -563,6 +563,13 @@ a{color:inherit;text-decoration:none}
 .plan-choice button:focus-visible,.zone-option:focus-visible,.hero-proof button:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
 @media(max-width:760px){.plan-choice{gap:8px}.plan-choice button{padding:13px 10px}.hero-proof{max-width:100%}.hero-proof button{max-width:100%}.claim .c-title{font-size:28px}}
 
+/* Mission builder, reviewable imports and portable stacks */
+.ai-import{padding:12px 14px;margin:2px 0 18px;border:1px solid rgba(179,156,255,.3);background:rgba(179,156,255,.05);border-radius:15px}.ai-import .fine{margin:8px 0 0;line-height:1.6}.ai-import .c-row{margin:0;flex-wrap:wrap}.ai-review{border-top:1px solid var(--line2);margin-top:12px;padding-top:12px}.ai-review h3{font-size:18px;margin:8px 0}.ai-review p{font-size:13px;line-height:1.6;color:var(--txt2)}.ai-review .c-row{margin-top:12px}.ai-status{font-size:12px;line-height:1.5;color:var(--violet);margin-top:8px}
+.mission-intro{font-size:15px;color:var(--txt2);line-height:1.7;margin:12px 0 22px}.mission-examples{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 20px}.mission-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:14px 0}.mission-controls label{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt2)}.mission-controls select{background:#0c1026;color:var(--txt);border:1px solid var(--line2);padding:8px;border-radius:10px;max-width:100%}.mission-status{color:var(--violet);font-size:13px;line-height:1.6;margin:12px 0}.mission-step{padding:18px;border:1px solid var(--line2);border-radius:18px;background:rgba(255,255,255,.025);margin-top:12px}.mission-step h3{font-size:16px;margin:0 0 12px}.mission-step p{font-size:13px;line-height:1.65;color:var(--txt2);margin:8px 0}.mission-step .c-row{flex-wrap:wrap;gap:8px}.mission-facts{display:flex;flex-wrap:wrap;gap:7px;font-size:11px;color:var(--muted);margin:12px 0}.mission-facts span{padding:5px 8px;border:1px solid var(--line);border-radius:7px}.mission-gaps{margin-top:20px;padding:16px;border:1px dashed rgba(255,207,74,.35);border-radius:16px}.mission-gaps h3{color:var(--amber);font-size:14px;margin:0 0 8px}.mission-gaps li{font-size:13px;color:var(--txt2);line-height:1.6;margin:7px 0}.mission-gaps ul{padding-left:18px;margin:0}
+.stack-dock{position:absolute;z-index:35;bottom:24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:12px 18px;border:1px solid rgba(200,255,61,.35);border-radius:18px;box-shadow:0 8px 40px #0008;max-width:calc(100% - 32px)}.stack-dock[hidden]{display:none}.stack-dock span{font-size:12px;white-space:nowrap}.stack-dock button{white-space:nowrap}.stack-selected{color:var(--lime);border-color:rgba(200,255,61,.5)}.stack-table-wrap{overflow-x:auto;margin-top:22px;border:1px solid var(--line2);border-radius:16px}.stack-table{border-collapse:collapse;width:100%;min-width:550px;text-align:left;font-size:13px}.stack-table th,.stack-table td{padding:14px;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.6;min-width:155px}.stack-table th:first-child{min-width:120px;color:var(--muted);font-size:11px;font-weight:400}.stack-table thead th{font-size:15px;color:var(--lime)}.stack-table button{margin-top:8px}.stack-toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.stack-saved{padding:15px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px}.stack-saved b{display:block;margin-bottom:8px}.stack-saved .c-row{flex-wrap:wrap;gap:8px}.stack-title{width:100%;font-size:19px;margin:14px 0 0!important}.mission-dialog .dlg-box{max-width:850px}.mission-dialog .dlg-body{max-width:100%}
+@media(max-width:760px){.stack-dock{bottom:64px;padding:10px 12px;gap:8px}.stack-dock span{font-size:11px}.stack-dock .btn{font-size:12px}.mission-step{padding:14px}.mission-dialog .dlg-box{width:100%}.hero .ctas{flex-wrap:wrap}}
+.sheet.small.mission-dialog .sheet-in{width:min(850px,100%)}.sheet.mission-dialog .mission-step h3{font-size:18px;margin:10px 0}.sheet.mission-dialog .mission-gaps h3{font-size:14px;margin:0 0 8px}.sheet.mission-dialog .mission-step p{margin:8px 0}.sheet.mission-dialog .stack-saved p{margin:0 0 12px}.sheet.mission-dialog .stack-toolbar{margin-top:18px}
+@media(max-width:760px){.sheet.small.mission-dialog .sheet-in{width:100%}.views #missionBtn{padding-inline:9px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -575,6 +582,7 @@ a{color:inherit;text-decoration:none}
     <div class="views glass" role="group" aria-label="View">
       <button id="vMap" aria-pressed="true">Galaxy</button>
       <button id="vList" aria-pressed="false">List</button>
+      <button id="missionBtn" aria-label="Build a tool stack for your goal">Build a stack</button>
     </div>
     <div class="search" id="search">
       <form id="searchForm" class="glass" role="search">
@@ -600,9 +608,10 @@ a{color:inherit;text-decoration:none}
   <section class="hero" id="hero" aria-labelledby="heroTitle">
     <div class="eyebrow mono"><span class="dot"></span><span id="heroLive">Free to list · map spots from €1</span></div>
     <h1 class="display" id="heroTitle">The internet,<br><span class="grad">as a universe.</span></h1>
-    <p class="sub">Find tools by what you need. Every glowing square is a real product, placed by the people who make it. Your product gets a searchable page, a link to your website and visits you can measure. List for free, or choose a map spot from €1 for 12 months.</p>
+    <p class="sub">Describe what you want to do. Build a stack from real indie tools, see what fits and what’s missing, then compare and share your shortlist. Make something yourself? Get a searchable product page for free, or choose a map spot from €1 for 12 months.</p>
     <div class="ctas">
-      <button class="btn btn-primary" data-add>Add your product</button>
+      <button class="btn btn-primary" id="heroMission">Build my stack <span aria-hidden="true">↗</span></button>
+      <button class="btn btn-ghost" data-add>Add your product</button>
       <a class="btn btn-ghost" href="/browse" data-list>Browse products</a>
     </div>
     <div class="hero-proof" id="heroProducts" aria-label="Live products"></div>
@@ -659,6 +668,12 @@ a{color:inherit;text-decoration:none}
       <h2 class="display c-title">Give your product a home.</h2>
       <p class="c-text">Your own page, a link to your website and measurable visits. Free to list. The same rules for every maker.</p>
       <div id="fBasics"></div>
+      <section class="ai-import" id="cAiImport" aria-label="Optional website import">
+        <div class="c-row"><button type="button" class="btn btn-ghost btn-sm" id="cAiDraft">✦ Draft from website</button></div>
+        <p class="fine">Optional. The public page text is sent to Anthropic to suggest your profile. You review it first. <a href="/privacy" target="_blank" rel="noopener">Privacy</a></p>
+        <p id="cAiStatus" class="ai-status" role="status" aria-live="polite"></p>
+        <div id="cAiReview" class="ai-review" hidden></div>
+      </section>
       <details class="profile-extra" id="cExtras"><summary>Add more detail <span>optional · you can do this later</span></summary><div id="fFit"></div><div id="fStory"></div></details>
       <div class="c-row"><button class="btn btn-primary" id="cNext2">Choose your place →</button></div>
     </div>
@@ -758,7 +773,7 @@ a{color:inherit;text-decoration:none}
             <li>Three-step registration with a free profile by default; optional map placement from €1 for 12 months, paid securely through Stripe after approval.</li>
             <li>Product profiles: what it solves, who it's for, price, platforms, integrations, images, demo and link.</li>
             <li>Search by need, with filters for category, price, platform and integrations.</li>
-            <li>AI search that matches what you describe in your own words, with a reason for every result — and the matches light up in the galaxy.</li>
+            <li>Search by a problem, or build a starting tool stack from a goal. Stack suggestions explain the fit and show uncovered needs. Compare maker-provided facts, save collections and share them with a link.</li>
             <li>Upvotes: one per product per browser, no account. They lift a product in search and count towards the Spotlight.</li>
             <li>A list view next to the galaxy, and a page with a share link for every product.</li>
             <li>An owner key to edit your profile and see profile views and clicks to your site — or sign in with your email and a one-time code.</li>
@@ -814,7 +829,7 @@ a{color:inherit;text-decoration:none}
         <details><summary>Who gets the middle of the map?</summary><p>The products people use most. The 8 places in the core — the Spotlight — go to live products with a verified domain and a working website, ranked by the share of visitors who click through or upvote over the last 30 days. 2 places are kept for products that went live in the last 30 days. Nobody is invited and you can't buy a place.</p></details>
         <details><summary>Can big names or money buy their way up?</summary><p>No. Rankings use the share of visitors who like a product, not the number of visitors, so a big audience doesn't win by size. New products start at the average, not at zero, newcomers always get 2 places in the Spotlight, and ties rotate every day instead of going to whoever came first. Payment can buy a chosen map placement or a card marked Sponsored under the same published terms for everyone. It never buys search ranking or Spotlight. Available map positions are first come, first served; payment never changes search relevance. Our own products follow exactly the same rules.</p></details>
         <details><summary>Does it cost anything?</summary><p>Listing is free, including a 1×1 Edge spot. You can optionally pay once for 12 months of chosen map placement, from €1, after your product is approved. Sponsored cards are a separate paid option. Both follow the same terms for everyone.</p></details>
-        <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and IP addresses are never stored. Known bots are left out, and so are your own visits on days you open your owner panel. Upvotes work without an account too: your browser keeps a random ID and we store only a scrambled version of it, so each browser has one vote per product.</p></details>
+        <details><summary>How do you count visits?</summary><p>Without cookies. Each visit is counted once per day with an anonymous code that changes every day, and our event tables do not store raw IP addresses. Hosting providers may process network addresses in security logs. Known bots are left out, and so are your own visits on days you open your owner panel. Upvotes work without an account too: your browser keeps a random ID and we store only a scrambled version of it, so each browser has one vote per product.</p></details>
         <details><summary>What do you do with my email?</summary><p>We use it for your listing, sign-in codes and support. Listing data is stored in the EU (Stockholm). Your email is never shown publicly or sold; our service providers are described below. Take your listing down from the owner panel and its contact email is wiped.</p></details>
         <details><summary>I lost my owner key.</summary><p>Open your product, choose “I make this”, then “Sign in with email” — we send a code to the address you added the product with. No access to that inbox? Choose “Lost your key?” and publish the code we give you on your site: that proves the product is yours and gives you a new key.</p></details>
         <details><summary>What gets turned down in review?</summary><p>Spam, scams, anything illegal or adult, and profiles that don't match the product they link to. If yours is turned down, you'll see why in your owner panel, and you can edit it and send it again.</p></details>
@@ -823,7 +838,7 @@ a{color:inherit;text-decoration:none}
       <div class="terms">
         <div><b>Who runs Expanse</b><p>Expanse is made by NyttoLabs in Sweden. Questions, a data request or anything else: use the contact form below and we answer by email.</p></div>
         <div><b>What we store</b><p>Product profiles (public), the maker's email (private, only for messages about the listing and sign-in codes), daily visit counts using salted hashes rather than storing raw IP addresses in event tables, upvotes (linked only to a scrambled random ID from your browser), and reports. Saved products, followed products, your vote list, your owner key and your personal activity history stay in your own browser. My space does not create a public profile or sync across devices. You can clear local activity from its History tab; clearing browser storage also removes local collections.</p></div>
-        <div><b>Who helps us run it</b><p>Supabase stores listing data in Stockholm, Vercel serves the site, Resend sends listing emails and Stripe processes optional payments. Their logs and subprocessors may involve international processing; see the privacy notice. Card details stay with Stripe and are never stored by Expanse. Nothing is sold, and there are no ad trackers.</p></div>
+        <div><b>Who helps us run it</b><p>Supabase stores listing data in Stockholm, Vercel serves the site, Anthropic generates optional profile drafts and stack suggestions, Resend sends listing emails and Stripe processes optional payments. Their logs and subprocessors may involve international processing; see the privacy notice. Card details stay with Stripe and are never stored by Expanse. Nothing is sold, and there are no ad trackers.</p></div>
         <div><b>The rules</b><p>Listings are for real software and tools, added by the people who make or represent them. Spam, scams, illegal or adult content and profiles that don't match their product are turned down or removed. You can edit or take down your listing anytime, and taking it down wipes your email.</p></div>
       </div>
       <div class="c-row" style="margin-top:14px"><button class="btn btn-ghost btn-sm" data-contact>Contact us</button></div>

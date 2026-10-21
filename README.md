@@ -39,6 +39,43 @@ with the closest stated need. The browser merges both result sets and shows why 
 invoices · Free plan · On iOS"); it also reads simple hints from the query (free, a platform, an integration).
 Embeddings are made by the worker's `embed` job when a product is approved or its text changes.
 
+## Optional Claude assistance and portable stacks
+
+`api/ai.js` / `lib/ai-assistant.js` use the existing server-only `ANTHROPIC_SECRET_KEY`
+(`ANTHROPIC_API_KEY` also supported) for two explicit actions. Ordinary search still uses
+`gte-small`, and comparison, saving and sharing require no AI calls.
+
+- **Draft from website:** public HTTPS page → bounded text → Claude Haiku 4.5 → separate review.
+  Clicking Use this draft fills empty fields; replacing existing edits is opt-in. Nothing is submitted automatically.
+- **Build my stack:** goal + optional free-plan/platform filters → at most 60 relevant real catalog
+  entries → up to 4 workflow picks and visible gaps. Only catalog IDs survive validation. Price,
+  zone, sponsorship and popularity are not sent to the model as ranking signals.
+- **Compare & save:** up to 8 tools, maker-provided facts and dated independent checks, up to
+  20 browser-local stacks. `/stack#<encoded JSON>` carries only a name and product IDs. Opening
+  a shared stack never auto-saves it. Missing/unpublished products are marked unavailable.
+
+`EXPANSE_AI_TOKEN` is an independent production-only random server credential, stored only
+as a SHA-256 hash in `expanse_private.ai_config`. It authenticates the quota RPC; the
+publishable Supabase key cannot spend the quota by itself. Enable AI only after installing the
+migration and configuring this credential. Never reuse a payment or owner credential.
+
+The database serializes quotas across instances: 3 requests/hour per daily keyed network hash,
+10/day per hash, and 100/day globally by default. Both successful and failed reserved attempts
+count. No automatic retries. Each Claude call caps output at 1,600 tokens; imported text caps
+at 18,000 characters and public-page responses at 512 KiB. The server fails closed if quota
+storage is unavailable. Optional `ANTHROPIC_MODEL` overrides the pinned Haiku model.
+
+Imports reject IP literals, private/reserved IPv4, credentials, non-HTTPS and nonstandard ports;
+validate every redirect; pin the checked DNS address to the connection; and forward no query
+parameters, cookies or auth. IPv6-only sites are not supported by the importer. JavaScript-only
+or blocked pages can be filled in manually. Page content is untrusted data, not AI instructions.
+The API returns no provider error bodies or credentials. It does not persist briefs, page text or
+AI results in the database. Quota hashes are purged daily and during requests after two UTC days.
+
+Local checks cover SSRF/redirects, DNS pinning, bounded structured output, catalog grounding,
+fail-closed quotas, profile review, edit preservation, stale requests, safe sharing and persistence.
+CI additionally runs `test/ai.sql` in the disposable database with rollback.
+
 ## Zones and founding prices
 
 Per cell; a 2×2 is four cells and an 8×8 landmark sixty-four.

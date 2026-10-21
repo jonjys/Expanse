@@ -79,3 +79,13 @@ policy, not a claim that all business purchases have statutory withdrawal rights
 ## Keyboard access
 
 Information and product-action dialogs have accessible titles, keep Tab and Shift+Tab inside the active dialog, and restore focus on Escape or close. Replacing dialog content preserves its opener. Global search shortcuts do not steal focus from an open dialog. DOM regression checks cover these interactions.
+
+## Claude assistance
+
+Production uses the existing ANTHROPIC_SECRET_KEY and an independent EXPANSE_AI_TOKEN.
+Quota defaults: 3 requests/hour per daily network hash, 10/day, 100/day globally; 1,600 output
+tokens per generation. Failed reserved attempts count. No automatic retries or background AI.
+Pause AI with `update expanse_private.ai_config set enabled=false where singleton;` in the
+authorized database console. This does not affect registration, search, payments or stacks.
+Monitor aggregate counters without selecting visitor hashes. Retention job: expanse-ai-retention.
+Never expose or rotate the payment callback credential as part of AI operations.
