@@ -166,6 +166,16 @@
       "version": "20261021071141",
       "name": "ai_profile_draft_limits",
       "sha256": "52cf2c5ac36d8c5380696aeff244f21e780266448d98f96e2db4ba7943e45316"
+    },
+    {
+      "version": "20261021185448",
+      "name": "marketing_kit_and_acquisition",
+      "sha256": "100d6b1459466c6772c7b5d80235e4d461e6f6b338daebbb628d6ffed752ab3d"
+    },
+    {
+      "version": "20261021190346",
+      "name": "needs_matching_pilot",
+      "sha256": "65fa6e539ab9729b9e8459706977b197053aa7a2408f74464dee64a0683109af"
     }
   ]
 }
