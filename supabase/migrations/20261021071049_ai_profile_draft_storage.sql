@@ -16,3 +16,4 @@ alter table expanse_private.ai_config enable row level security;
 alter table expanse_private.ai_usage enable row level security;
 revoke all on expanse_private.ai_config,expanse_private.ai_usage from public,anon,authenticated;
 
+

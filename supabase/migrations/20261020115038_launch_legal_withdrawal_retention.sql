@@ -149,3 +149,4 @@ select cron.schedule('expanse-retention','31 3 * * *',$$select expanse_private.p
 revoke all on function public.public_seller(),public.admin_seller(text),public.admin_save_seller(text,jsonb),public.owner_map_checkout(text,text,text),public.owner_purchase_history(text,text),public.submit_withdrawal(text,text,text,text),public.admin_withdrawals(text),public.admin_resolve_withdrawal(text,uuid,text) from public,anon,authenticated;
 grant execute on function public.public_seller(),public.admin_seller(text),public.admin_save_seller(text,jsonb),public.owner_map_checkout(text,text,text),public.owner_purchase_history(text,text),public.submit_withdrawal(text,text,text,text),public.admin_withdrawals(text),public.admin_resolve_withdrawal(text,uuid,text) to anon,authenticated;
 notify pgrst,'reload schema';
+

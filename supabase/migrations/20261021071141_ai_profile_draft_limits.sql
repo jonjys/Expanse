@@ -23,3 +23,4 @@ revoke all on function public.reserve_ai_request(text,text) from public,anon,aut
 grant execute on function public.reserve_ai_request(text,text) to anon,authenticated;
 comment on function public.reserve_ai_request(text,text) is 'Server-token authenticated AI quota; denies by default. Independent of payments and owner access.';
 select cron.schedule('expanse-ai-retention','41 3 * * *', $$delete from expanse_private.ai_usage where bucket < (date_trunc('day',now() at time zone 'utc') at time zone 'utc')-interval '2 days'$$);
+
