@@ -35,8 +35,8 @@ test('Claude request is one bounded call with a fixed endpoint and validated str
 });
 test('mission filters run before AI and invented or duplicate products are removed',async()=>{
  const catalog=ai.missionCatalog([live,{...live,slug:'paid-tool',pricing:'paid'},{...live,slug:'phone-tool',platforms:['ios']}],'fix deployment',{free:true,platform:'web'});assert.deepEqual(catalog.map(p=>p.slug),['real-tool']);
- const mission=await ai.generateMission('fix deployment',catalog,{env,fetcher:async()=>({ok:true,json:async()=>({stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify({title:'Ship a working app',steps:[{task:'Fix build',slug:'real-tool',reason:'Explains build logs'},{task:'More of the same',slug:'real-tool',reason:'duplicate'},{task:'Get customers',slug:'invented',reason:'fake'}],gaps:[]})}]})})});
- assert.equal(mission.steps.length,1);assert.match(mission.gaps[0],/no matching product/);
+ const mission=await ai.generateMission('fix deployment',catalog,{env,fetcher:async()=>({ok:true,json:async()=>({stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify({title:'Ship a working app',steps:[{task:'Fix build',slug:'real-tool',reason:'Explains build logs and identifies the supplied product’s documented causes of deployment errors. '+('More explanation without a new fact. ').repeat(20)},{task:'More of the same',slug:'real-tool',reason:'duplicate'},{task:'Get customers',slug:'invented',reason:'fake'}],gaps:[]})}]})})});
+ assert.equal(mission.steps.length,1);assert.match(mission.gaps[0],/no matching product/);assert.ok(mission.steps[0].reason.length<=220);assert.match(mission.steps[0].reason,/\.$/,'long reasons end at a sentence instead of a broken word');
  const empty=await ai.generateMission('anything',[],{fetcher:()=>{throw Error('must not spend');}});assert.equal(empty.steps.length,0);
 });
 test('API rejects cross-site and malformed requests before consuming quota or fetching',async()=>{
