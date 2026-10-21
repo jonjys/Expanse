@@ -43,3 +43,4 @@ revoke all on function expanse_private.purchase_receipt() from public,anon,authe
 revoke all on function expanse_private.contract_terms() from public,anon,authenticated;
 revoke execute on function public.owner_map_checkout(text,text,text),public.public_commerce() from public,anon,authenticated;
 grant execute on function public.owner_map_checkout(text,text,text),public.public_commerce() to anon,authenticated;
+

@@ -89,3 +89,18 @@ Pause AI with `update expanse_private.ai_config set enabled=false where singleto
 authorized database console. This does not affect registration, search, payments or stacks.
 Monitor aggregate counters without selecting visitor hashes. Retention job: expanse-ai-retention.
 Never expose or rotate the payment callback credential as part of AI operations.
+
+## Migration history
+
+The migration filename version must match `supabase_migrations.schema_migrations`,
+including changes applied through MCP. After applying a migration, read its actual recorded
+version and statements, restore that exact filename/SQL in the repository, and refresh
+`supabase/migration-history.json` from read-only history before merging. Do not repair or reset
+the production history to match a locally generated timestamp. Supabase Preview checks this
+history separately from our application and disposable-database tests.
+
+The history regression test checks recorded names, versions and SQL hashes. The only existing
+replay exception is 20261013220355: production had an unrecorded temporary `probe_headers()`
+debugging helper. The repository conditionally revokes it so fresh databases can replay the
+migration. The test reconstructs and hashes the original final statement, allowing only that
+specific guard; it never creates the debugging endpoint or changes production privileges.
