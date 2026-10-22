@@ -208,7 +208,8 @@ const SAVED = (() => { const v = store.get(SAVED_KEY); return Array.isArray(v) ?
 const ACTIVITY = (() => { const v = store.get(ACTIVITY_KEY); return Array.isArray(v) ? v.filter(x => x && isSlug(x.slug)).slice(0,100) : []; })();
 let HL = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
-const priceOf = (x, y, size) => zoneOf(x, y, size).price * size * size;
+const paidTotal = (zone, size) => zone.reserved ? 0 : Math.max(3, zone.price * size * size);
+const priceOf = (x, y, size) => paidTotal(zoneOf(x, y, size), size);
 const isFree = (x, y, w, h) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (occ.has(K(x + i, y + j))) return false; return true; };
 function addItem(it) {
   if (!isFree(it.x, it.y, it.size, it.size)) return null;
@@ -689,7 +690,7 @@ function draw(T) {
   for (const zz of ZONES) {
     const r = (isFinite(zz.r) ? zz.r : WORLD_R + 8) * cp; if (r < (zz.reserved ? 40 : 70) || r > Math.max(W, H) * 2.2) continue;
     const y = c0.y - r; if (y < 70 || y > H - 20 || c0.x < -200 || c0.x > W + 200) continue;
-    const label = zz.reserved ? 'SPOTLIGHT · EARNED, NOT SOLD' : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL`;
+    const label = zz.reserved ? 'SPOTLIGHT · EARNED, NOT SOLD' : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL · €3 MIN`;
     const tw = ctx.measureText(label).width + 20;
     ctx.globalAlpha = .92; ctx.fillStyle = 'rgba(4,6,22,.88)'; rrect(ctx, c0.x - tw / 2, y - 11, tw, 22, 11); ctx.fill();
     ctx.strokeStyle = zz.color; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.stroke();
@@ -816,7 +817,7 @@ function hover(m) {
     if (d > MAX_R) { hideTip(); return; }
     const z = ZONES.find(zz => d < zz.r);
     cv.classList.add('dive');
-    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `${eur(z.price)} per cell / 12 months · click to zoom in`, z.reserved ? '#ffcf4a' : z.color);
+    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `${eur(z.price)} per cell / 12 months · €3 minimum · click to zoom in`, z.reserved ? '#ffcf4a' : z.color);
     return;
   }
   const q = demoAt(m);
@@ -1627,21 +1628,21 @@ function describe() {
   sub.zone = z.id;
   $('#cZone').textContent = z.label; $('#cZone').style.background = z.color;
   $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells unoccupied`;
-  $('#cPrice').textContent = sub.plan === 'free' ? '€0' : eur(z.price * sub.size * sub.size);
-  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
+  $('#cPrice').textContent = sub.plan === 'free' ? '€0' : eur(paidTotal(z, sub.size));
+  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · €3 minimum · one payment for 12 months · tax included where applicable`;
   $('#cPaidOptions').hidden = sub.plan === 'free';
   $('#cPlans').querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.plan === sub.plan)));
   $('#cZoneValue').textContent = 'Every zone includes your own page, website link and stats. Map position changes where you appear while exploring; it never buys search ranking or Spotlight. No traffic or sales are guaranteed.';
   $('#cZones').replaceChildren(...ZONES.filter(z => !z.reserved).slice().reverse().map(item => {
     const f = zoneFree(item.id);
     return el('button', { type: 'button', class: 'zone-option', style: '--zc:' + item.color, 'aria-pressed': String(item.id === sub.zone), onclick: () => chooseZone(item.id) },
-      el('b', { text: item.label }), el('strong', { text: eur(item.price) + ' / cell' }),
+      el('b', { text: item.label }), el('strong', { text: eur(item.price) + ' / cell · €3 minimum' }),
       el('small', { text: `${fmt(f.free)} of ${fmt(f.cap)} cells unoccupied · ${item.line}` }));
   }));
   claimEl.querySelectorAll('[data-s]').forEach(b => {
     const sz = +b.dataset.s, candidate = zoneSpot(sub.zone, sz);
     b.disabled = !candidate; b.setAttribute('aria-pressed', String(sz === sub.size));
-    b.querySelector('small').textContent = candidate ? eur(z.price * sz * sz) : 'Unavailable';
+    b.querySelector('small').textContent = candidate ? eur(paidTotal(z, sz)) : 'Unavailable';
   });
   $('#cMoveHint').textContent = sub.plan === 'free' ? 'Your free 1×1 place is on the Edge. You can explore paid placement after review.' : (coarse ? 'Tap' : 'Click') + ' the map to move your spot. Held during review and for 7 days after approval. Pay then to keep it for 12 months.';
 }
@@ -1678,7 +1679,7 @@ function renderSummary() {
   const d = wiz.get(), s = sub.spot, z = zoneOf(s.x, s.y, sub.size), cat = CATS[d.category] || CATS.other;
   $('#cSummary').style.setProperty('--c', cat.color);
   $('#sName').textContent = d.name; $('#sWhere').textContent = `${cat.label} · ${z.label} · ${sub.size}×${sub.size}`;
-  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' ? 'free profile' : `${eur(z.price * sub.size * sub.size)} / 12 months after review`);
+  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' ? 'free profile' : `${eur(paidTotal(z, sub.size))} / 12 months after review`);
   $('#cReviewTerms').textContent = sub.plan === 'free' ? 'Every product is reviewed under the same rules. Your free profile, search listing and stats have no expiry. No payment required.' : 'Every product is reviewed under the same rules. Your spot is held free during review and for 7 days after approval. Once approved, you can pay once for 12 months of placement. No automatic renewal. Payment never buys approval, search ranking or Spotlight.';
 }
 $('#cSubmit').addEventListener('submit', async e => {

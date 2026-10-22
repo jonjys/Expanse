@@ -9,7 +9,7 @@ begin
  if not (public.public_commerce()->>'enabled')::boolean then raise exception 'FAIL seller publication changes commerce availability';end if;checks:=checks+1;
  if public.public_seller()->>'legal_name'<>'' or public.public_seller()->>'email'<>'' then raise exception 'FAIL private seller exposed';end if;checks:=checks+1;
  order_data:=public.owner_map_checkout(slug_fixture,k,'2026-10-20');
- if (order_data->>'amount_cents')::int<>100 then raise exception 'FAIL private seller blocks server-priced checkout';end if;checks:=checks+1;
+ if (order_data->>'amount_cents')::int<>300 then raise exception 'FAIL private seller blocks server-priced checkout';end if;checks:=checks+1;
  if exists(select 1 from expanse_private.map_purchases where id=(order_data->>'id')::uuid and (contract_text like '%PRIVATE FIXTURE%' or contract_text like '%PRIVATE-FIXTURE-ID%' or contract_text like '%private-fixture@%')) then raise exception 'FAIL private seller leaked into contract';end if;checks:=checks+1;
  if not exists(select 1 from expanse_private.map_purchases where id=(order_data->>'id')::uuid and contract_text like '%NyttoLabs%' and accepted_at is not null and terms_version='2026-10-20') then raise exception 'FAIL accepted contract missing';end if;checks:=checks+1;
  update expanse_private.commerce_config set enabled=false;
