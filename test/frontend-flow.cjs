@@ -16,7 +16,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  }
 
  const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
- w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
+ w.URL.createObjectURL=()=> 'blob:fixture-only';w.URL.revokeObjectURL=()=>{};w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
  w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
  const defaults={public_seller:{ready:true,legal_name:'Fixture <seller>',registration_number:'TEST-ONLY',address:'Test street\nSweden',email:'support@example.invalid',phone:'TEST-PHONE'},public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:300},owner_acquisition_stats:{totals:{impressions:0,views:0,visits:0,demos:0,verified_purchases:null},sources:[{source:'list',impressions:0,views:0,visits:0}],campaigns:[]},owner_marketing_kit:{revision:'a'.repeat(20),campaign:'mk-123456abcdef',svg:'<svg xmlns="http://www.w3.org/2000/svg"/>',post_text:'Maker post from public profile',prepared_at:'2026-10-21T12:00:00Z'},owner_need_preferences:{enabled:false},owner_need_matches:[],public_tool_needs:[],submit_tool_need:{id:'c3edd38a-1299-4000-8888-555555555555',key:'fixture-private-receipt-key',state:'private',expires_at:'2099-01-01T00:00:00Z',matches:[]},tool_need_status:{id:'c3edd38a-1299-4000-8888-555555555555',text:'I need to explain failed deployment errors',state:'private',expires_at:'2099-01-01T00:00:00Z',matches:[{slug:'fixture',name:'Real Fixture',reason:'Shared terms in the product profile: deployment, errors.'}]},owner_discovery_stats:[],owner_stats:{days:[{view:3,visit:2,demo:1}]}};
  if(method==='ai'){
@@ -28,14 +28,15 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  if((method==='owner_marketing_kit'&&scenario.failKit)||(method==='submit_tool_need'&&scenario.failNeed))return {ok:false,status:503,text:async()=>JSON.stringify({message:'unavailable'})};
  if(method==='upvote' && scenario.failVote)return {ok:false,status:429,text:async()=>JSON.stringify({message:'slow_down'})};
  if(method==='upvote')r={upvotes:body.p_on?1:0};
+ else if(method==='owner_create_campaign')r={campaign:'mk-abcdef123456',name:body.p_name,kind:body.p_kind};
  else if(method==='submit_product')r={...product,...body.p,slug:'new-fixture',key:'fixture-owner-key',status:'pending',number:2};
  else if(method==='owner_map_checkout')r={id:'fixture-order',url:'https://buy.stripe.com/fixture?client_reference_id=fixture-order',amount_cents:300};
  else r=defaults[method]??[];
  return {ok:true,status:200,text:async()=>JSON.stringify(r),json:async()=>r};};
  if(blockStorage)Object.defineProperty(w,'localStorage',{get(){throw new Error('blocked')}});
  for(const [key,value] of Object.entries(storage))w.localStorage.setItem(key,value);
- const source=fs.readFileSync(root+'app.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testObserve=()=>observeProductCards();window.testOwner=(slug,tab)=>openManage(slug,tab);window.testMapPick = spot => startSubmit(spot,true);})();');
- w.eval(fs.readFileSync(root+'marketing.js','utf8'));w.eval(source);return dom;
+ const source=fs.readFileSync(root+'app.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testRank=(q,ps)=>rankAll(q,ps.map(prepProduct));window.testObserve=()=>observeProductCards();window.testOwner=(slug,tab)=>openManage(slug,tab);window.testMapPick = spot => startSubmit(spot,true);})();');
+ w.eval(fs.readFileSync(root+'growth.js','utf8'));w.eval(fs.readFileSync(root+'marketing.js','utf8'));w.eval(source);return dom;
 }
 const tick=()=>new Promise(r=>setTimeout(r,20));
 (async()=>{
@@ -130,11 +131,14 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  assert.equal(attributed.window.location.search,'');assert.equal(calls.filter(x=>x.method==='track_campaign').length,priorCampaign+1);
  const outbound=at.querySelector('.pact a');assert.match(outbound.href,/utm_campaign=mk-123456abcdef/);outbound.click();await tick();
  const recorded=calls.filter(x=>x.method==='track_campaign').slice(priorCampaign);assert.deepEqual(recorded.map(x=>x.body.p_kind),['view','visit']);assert.ok(recorded.every(x=>x.body.p_channel==='linkedin'&&x.body.p_slug==='fixture'));attributed.window.close();
+ const ranked=w.testRank('fix failed vercel deployment errors',[{...product,slug:'relevant',name:'Deploy helper',tagline:'Fix failed Vercel deployment errors',needs:['fix failed vercel deployment errors'],pop:0},{...product,slug:'famous',name:'Famous',tagline:'Errors in invoices',needs:['invoices'],pop:100}]);assert.equal(ranked[0].p.slug,'relevant');assert.ok(ranked.every(x=>x.p.slug!=='famous'),'weak popular match excluded');
  const makerStorage={'expanse.owned.v1':JSON.stringify({fixture:{name:'Real Fixture',key:'test-owner-key'}})};
  const maker=boot(false,undefined,undefined,makerStorage);await tick();maker.window.testOwner('fixture','stats');await tick();const mk=maker.window.document;
- assert.match(mk.querySelector('#mStats').textContent,/Not enough data/);assert.match(mk.querySelector('#mStats').textContent,/purchases: not connected/);assert.match(mk.querySelector('#mStats').textContent,/0 tracked profile opens/);
+ assert.match(mk.querySelector('#mStats').textContent,/Not enough data/);assert.match(mk.querySelector('#mStats').textContent,/purchases: not connected/);assert.match(mk.querySelector('#mStats').textContent,/No recorded campaign traffic/);
  maker.window.testOwner('fixture','share');await tick();assert.match(mk.querySelector('#mShare').textContent,/ready-to-share kit/);const post=mk.querySelector('#mShare textarea');post.value='A post I wrote myself';post.dispatchEvent(new maker.window.Event('input'));
- const channel=mk.querySelector('#mShare select');channel.value='newsletter';channel.dispatchEvent(new maker.window.Event('change'));assert.match(mk.querySelector('#mShare input[readonly]').value,/channel=newsletter/);
+ const channel=mk.querySelector('#mShare select[aria-label="Where you will share"]');channel.value='newsletter';channel.dispatchEvent(new maker.window.Event('change'));assert.match(mk.querySelector('#mShare input[readonly]').value,/channel=newsletter/);
+ const purpose=mk.querySelector('select[aria-label="Campaign purpose"]');purpose.value='black-friday';purpose.dispatchEvent(new maker.window.Event('change'));mk.querySelector('input[aria-label="New campaign name"]').value='BFCM launch';[...mk.querySelectorAll('#mShare button')].find(b=>b.textContent==='Create tracked campaign').click();await tick();assert.match(mk.querySelector('#mShare input[readonly]').value,/mk-abcdef123456/);assert.equal(calls.filter(x=>x.method==='owner_create_campaign').at(-1).body.p_kind,'black-friday');
+ const imageFormat=mk.querySelector('select[aria-label="Image format"]');imageFormat.value='story';imageFormat.dispatchEvent(new maker.window.Event('change'));assert.equal(mk.querySelector('.kit-preview').height,1920);
  const beforeKit=calls.filter(x=>x.method==='owner_marketing_kit').length;mk.querySelector('#mTabs [data-tab="stats"]').click();await tick();mk.querySelector('#mTabs [data-tab="share"]').click();await tick();assert.equal(calls.filter(x=>x.method==='owner_marketing_kit').length,beforeKit,'prepared kit reused');assert.equal(mk.querySelector('#mShare textarea').value,'A post I wrote myself');
  mk.querySelector('#mTabs [data-tab="needs"]').click();await tick();assert.equal(mk.querySelector('#mNeeds input[type=checkbox]').checked,false,'maker opt-in off by default');assert.match(mk.querySelector('#mNeeds').textContent,/Matching is off/);maker.window.close();
  const kitFailure=boot(false,undefined,undefined,makerStorage,{failKit:true});await tick();kitFailure.window.testOwner('fixture','share');await tick();assert.match(kitFailure.window.document.querySelector('#mShare').textContent,/unavailable right now/);assert.match(kitFailure.window.document.querySelector('#mShare').textContent,/https:\/\/expanse.nyttolabs.com\/p\/fixture/);kitFailure.window.close();

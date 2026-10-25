@@ -72,3 +72,15 @@ I'm interested in whether the spatial view helps you discover anything you'd mis
 
 Notera: HN säger att listor inte är Show HN. Detta är ett villkorat utkast, inte ett godkänt publiceringsförslag. Använd vanlig submission om den interaktiva funktionen inte räcker för Show HN.
 
+
+## Growth Studio 2.0 announcement (maker publishes manually)
+
+Expanse now helps you do more with a product listing.
+
+Discover tools by the problem you need to solve. As a maker, get a private Growth Studio with real profile visits and website clicks, prepared social assets, named campaign links and practical next steps based on the data available.
+
+Listing and basic analytics are free. Optional map placement starts at €3 for 12 months. Payment never buys organic search ranking or Spotlight.
+
+The catalog is early. We show real products and real observations, including zero traffic and gaps in coverage. No promised sales.
+
+Explore or add your product: https://expanse.nyttolabs.com/
