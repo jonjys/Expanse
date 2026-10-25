@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Expanse — Put your product where people look for solutions</title>
+<title>Expanse — Discover products. Promote your work. Grow smarter.</title>
 <meta name="description" content="Find tools by what you need. Expanse is a living map of real products — search by the problem you have, compare them in a list, and add your own product to the universe.">
 <meta name="theme-color" content="#02030c">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Expanse">
-<meta property="og:title" content="Expanse — Put your product where people look for solutions">
+<meta property="og:title" content="Expanse — Discover products. Promote your work. Grow smarter.">
 <meta property="og:description" content="Discover real tools by what you need. List your product for free, or choose map placement from €3 for 12 months. Search ranking and Spotlight cannot be bought.">
 <meta property="og:image" content="https://expanse.nyttolabs.com/og.jpg">
 <meta property="og:image:width" content="1200">
@@ -579,6 +579,7 @@ a{color:inherit;text-decoration:none}
 @media(max-width:760px){.hero h1{font-size:clamp(34px,8.8vw,48px)}.hero .sub{font-size:15px}.hero .ctas{gap:8px}.hero .ctas .btn{font-size:13px}.hero-benefits{font-size:12px;gap:6px 12px}.kit-layout{grid-template-columns:1fr}.kit-preview{max-width:180px}.source-table{font-size:11px}}
 @media(max-height:700px) and (max-width:760px){.hero h1{font-size:32px}.hero .eyebrow{margin-bottom:10px;height:26px;font-size:9px}.hero .sub,.hero-benefits,.hero .ctas,.hero-proof,.hero .meta{margin-top:10px}.hero .ctas .btn{height:40px}.hero-proof button{padding:5px 10px}.hero .meta{font-size:9px}}
 </style>
+<link rel="stylesheet" href="/growth.css?v=20261025">
 </head>
 <body>
 <div id="app">
@@ -615,7 +616,7 @@ a{color:inherit;text-decoration:none}
 
   <section class="hero" id="hero" aria-labelledby="heroTitle">
     <div class="eyebrow mono"><span class="dot"></span><span id="heroLive">Free to list · map spots from €3</span></div>
-    <h1 class="display" id="heroTitle">Put your product<br><span class="grad">where people look<br>for solutions.</span></h1>
+    <h1 class="display" id="heroTitle">Get discovered.<br><span class="grad">Understand your traffic.<br>Find your next customers.</span></h1>
     <p class="sub">Free to list. Optional map spots from €3/year.</p>
     <div class="ctas">
       <button class="btn btn-primary" data-add>Add your product <span aria-hidden="true">↗</span></button>
@@ -624,7 +625,7 @@ a{color:inherit;text-decoration:none}
     </div>
     <div class="hero-benefits"><span>✓ Product profile</span><span>✓ Search by need</span><span>✓ Sharing kit</span><span>✓ Visit statistics</span></div>
     <div class="hero-proof" id="heroProducts" aria-label="Live products"></div>
-    <div class="meta mono"><span id="heroCounts">Listing is <b>free</b></span><button id="needsBoard">See real needs</button><button id="demoHero">See a full universe (demo)</button></div>
+    <div class="meta mono"><span id="heroCounts">Listing is <b>free</b></span><button id="seasonalBrowse">Seasonal offers</button><button id="needsBoard">See real needs</button><button id="demoHero">See a full universe (demo)</button></div>
   </section>
 
   <div class="dock glass" id="dock"><span id="dockTxt">Free profile · optional map placement from €3 / 12 months</span><button class="btn btn-primary btn-sm" data-add>Add your product</button></div>
@@ -745,10 +746,10 @@ a{color:inherit;text-decoration:none}
     <div class="mhead"><div class="pbadges" id="mBadges"></div><h2 class="display" id="mName"></h2></div>
     <div id="mNote"></div>
     <div class="tabs" role="tablist" id="mTabs">
-      <button role="tab" data-tab="stats" aria-selected="true">Stats</button>
+      <button role="tab" data-tab="stats" aria-selected="true">Growth Studio</button>
       <button role="tab" data-tab="edit" aria-selected="false">Edit</button>
       <button role="tab" data-tab="verify" aria-selected="false">Verify</button>
-      <button role="tab" data-tab="share" aria-selected="false">Sharing kit</button>
+      <button role="tab" data-tab="share" aria-selected="false">Marketing kit</button>
       <button role="tab" data-tab="needs" aria-selected="false">Needs pilot</button>
       <button role="tab" data-tab="placement" aria-selected="false">Map spot</button>
       <button role="tab" data-tab="promote" aria-selected="false">Promote</button>
@@ -877,6 +878,7 @@ a{color:inherit;text-decoration:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 <noscript><p style="padding:24px;color:#fff;font-family:system-ui">Expanse is a living map of real products. It needs JavaScript to fly through.</p></noscript>
+<script src="/growth.js?v=20261025" defer></script>
 <script src="/marketing.js?v=20261021" defer></script>
 <script src="/app.js?v=launch-20261020-brand" defer></script>
 </body>
