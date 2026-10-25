@@ -1016,6 +1016,7 @@ function openProduct(p, opts) {
   fill(popBody,
     el('div', { class: 'pbadges' }, catBadge(cat), spotRank(p.slug) ? badge('b-star', '★ Spotlight #' + spotRank(p.slug)) : null, p.verified_at ? badge('b-ver', '✓ Verified domain', null) : null, p.sponsored ? badge('b-spon', 'Sponsored') : null, it && it.owned ? badge('b-st live', 'Yours') : null),
     el('h2', { class: 'display pname', text: p.name }),
+    p.slug==='deploydoctor'?el('button',{class:'linkbtn',type:'button',text:'A NyttoLabs product · about the operator',onclick:openAboutNytto}):null,
     el('p', { class: 'ptag', text: p.tagline }),
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
     imgs,
@@ -1104,6 +1105,16 @@ function releasesSec(p) {
     el('h4', { class: 'mono' }, 'Releases · ', el('a', { href: 'https://github.com/' + p.repo, target: '_blank', rel: 'noopener nofollow', style: 'text-transform:none;letter-spacing:.02em;text-decoration:underline', text: 'github.com/' + p.repo })),
     p.release ? box : el('p', { class: 'fine', style: 'margin-top:0', text: 'No releases published on GitHub yet.' }));
 }
+/* The operator relationship is disclosed; it never enters ranking or eligibility. */
+function openAboutNytto() {
+  closeSheet();
+  openDlg(el('div',{class:'mono kick',text:'The studio behind Expanse'}),el('h2',{class:'display',text:'Made by NyttoLabs.'}),
+    el('p',{style:'margin-top:16px',text:'NyttoLabs is an independent software studio in Sweden. We build and maintain Expanse and DeployDoctor.'}),
+    el('p',{style:'margin-top:12px',text:'Expanse is open to every maker. Our own products follow the same listing, verification and discovery rules as everyone else. Being made by NyttoLabs does not buy search ranking or a reserved Spotlight place.'}),
+    el('p',{class:'fine',text:'The 8 Spotlight places follow published eligibility and ranking rules. When fewer than 8 products qualify, all of them can appear. In an early catalog, a Spotlight place is not evidence of a large audience or proven sales.'}),
+    el('div',{class:'c-row'},el('a',{class:'btn btn-primary btn-sm',href:'https://nyttolabs.com',target:'_blank',rel:'noopener',text:'Visit NyttoLabs ↗'}),el('button',{class:'btn btn-ghost btn-sm',text:'How Spotlight works',onclick:openSpotlightInfo}),el('button',{class:'btn btn-ghost btn-sm',text:'Close',onclick:closeDlg})));
+}
+document.querySelectorAll('[data-about-nytto]').forEach(b=>b.addEventListener('click',openAboutNytto));
 /* What the Spotlight is, who is in it now, and how to get there. */
 function openSpotlightInfo() {
   const picks = SPOTLIGHT.picks.map(x => BY_SLUG.get(x.slug)).filter(Boolean);
@@ -1115,6 +1126,7 @@ function openSpotlightInfo() {
       el('li', null, el('b', { text: 'How it ranks: ' }), 'how many of the people who look at a product go on to click through to its site or upvote it, over the last 30 days — not how many visitors it has, so a big audience or a famous name doesn’t buy the middle. New products start at the average, not at zero. The maker’s own visits and votes don’t count.'),
       el('li', null, el('b', { text: 'Room for newcomers: ' }), '2 of the 8 places always go to the best products that went live in the last 30 days, and ties rotate every day instead of going to whoever came first.'),
       el('li', null, el('b', { text: 'When it changes: ' }), 'every hour. While fewer than 8 products qualify, every product that does gets a place.')),
+    el('p',{class:'fine',text:'Expanse and DeployDoctor are made by NyttoLabs. Our products use the same eligibility and ranking rules; their places are not reserved. With fewer than 8 eligible products, being in Spotlight is not a claim of high traffic.'}),
     picks.length ? el('div', { class: 'spl' }, el('span', { class: 'mono', text: 'In the Spotlight now' }), el('div', null, picks.map((p, i) => el('button', { type: 'button', onclick: () => { closeDlg(); openProduct(p); } }, el('b', { text: '#' + (i + 1) }), ' ' + p.name))))
       : el('p', { class: 'fine', text: 'All 8 places are open right now. The first verified products to arrive take them.' }),
     el('div', { class: 'c-row' },
