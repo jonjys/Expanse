@@ -265,11 +265,13 @@ a separate second payment or mismatch is flagged for review in **Admin → Map p
 end the paid term; partial refunds do not automatically remove it. `expanse-map-terms` runs daily in Postgres to move
 expired terms to a free 1×1 Edge cell, preserving the product page and stats. Legacy holds are unaffected.
 
+See [`.env.example`](.env.example) for a credential-free configuration template. Keep real credentials in Vercel; the example file does not prove that hosting variables are configured.
+
 Required Vercel **production** environment variables (never commit their values):
 
 - `STRIPE_WEBHOOK_SECRET`: signing secret for this project's Stripe endpoint.
 - `EXPANSE_PAYMENT_CALLBACK_TOKEN`: independent random 256-bit credential; only its SHA-256 is stored in the database.
-- `STRIPE_ACCOUNT_ID`: the account owning the Payment Links.
+- Optional `STRIPE_ACCOUNT_ID`: overrides the existing Nytto Labs account used by the webhook. Leave it unset to keep the current account.
 
 The catalog, orders, webhook audit and attribution are in `expanse_private`, with table privileges revoked and RLS
 on. The public API exposes only deliberate RPCs with owner/admin key checks, visitor limits or the callback credential.

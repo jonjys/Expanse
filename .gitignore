@@ -1,5 +1,6 @@
 node_modules/
 .env*
+!.env.example
 supabase/.temp/
 .vercel/
 test-results/
