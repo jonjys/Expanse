@@ -108,3 +108,65 @@ begin
 
  raise notice '% payment lifecycle assertions passed', checks;
 end $$;
+
+-- Review findings on the first version of these fixes.
+do $$
+declare a jsonb; b jsonb; o jsonb; out text; adm text; checks int:=0; h timestamptz;
+begin
+ adm:=public._admin_issue();
+ -- A refunded product that later chooses a new spot keeps that spot while its hold runs.
+ a:=pg_temp.lc_mk('Review Alpha',90,50,2);
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_rv_a_paid','checkout.session.completed',o->>'id','cs_rv_a',1600,'outer',2,'pi_rv_a'));
+ perform pg_temp.lc_pay('{"id":"evt_rv_a_refund","type":"charge.refunded","livemode":true,"payment_intent":"pi_rv_a","fully_refunded":true}');
+ update expanse_private.map_purchases set ends_at=ends_at-interval '25 hours', created_at=created_at-interval '25 hours' where id=(o->>'id')::uuid;
+ -- A day after the refund, a new checkout at the same spot is refused and does not keep the spot.
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
+ if out<>'hold_expired' then raise exception 'FAIL checkout after the renewal window: %',out; end if; checks:=checks+1;
+ perform expanse_private.release_expired_map_spots();
+ if (select zone||size from public.products where id=(a->>'id')::bigint)<>'edge1' then raise exception 'FAIL refunded spot released'; end if;
+ out:=pg_temp.lc_err(format('select public.owner_choose_map_spot(%L,%L,90,55,2)',a->>'slug',a->>'key'));
+ perform expanse_private.release_expired_map_spots();
+ if out<>'ok' or (select x||','||y||','||size from public.products where id=(a->>'id')::bigint)<>'90,55,2' then raise exception 'FAIL new hold after a refund respected: %',out; end if; checks:=checks+1;
+ -- A payment arriving on the refunded order leaves it refunded.
+ out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_rv_a_late','checkout.session.completed',o->>'id','cs_rv_a2',1600,'outer',2,'pi_rv_a2'));
+ if out<>'needs_review' or (select state||payment_intent from expanse_private.map_purchases where id=(o->>'id')::uuid)<>'refundedpi_rv_a' then raise exception 'FAIL refunded order rewritten'; end if; checks:=checks+1;
+
+ -- Moving within a lapsed hold does not revive it; the product is released.
+ b:=pg_temp.lc_mk('Review Bravo',25,-25,2);
+ update public.products set map_hold_until=now()-interval '1 hour' where id=(b->>'id')::bigint;
+ perform public.owner_choose_map_spot(b->>'slug',b->>'key',26,-25,2);
+ h:=(select map_hold_until from public.products where id=(b->>'id')::bigint);
+ perform expanse_private.release_expired_map_spots();
+ if h>now() or (select zone||size from public.products where id=(b->>'id')::bigint)<>'edge1' then raise exception 'FAIL lapsed hold revived by a move'; end if; checks:=checks+1;
+ -- From the free spot a new choice gets a fresh hold; moving within it keeps the deadline.
+ perform public.owner_choose_map_spot(b->>'slug',b->>'key',25,-25,2);
+ h:=(select map_hold_until from public.products where id=(b->>'id')::bigint);
+ perform public.owner_choose_map_spot(b->>'slug',b->>'key',26,-25,2);
+ if h<now()+interval '6 days' or (select map_hold_until from public.products where id=(b->>'id')::bigint)<>h then raise exception 'FAIL hold kept on move'; end if; checks:=checks+1;
+
+ -- An order is reused for 12 hours only.
+ o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-20')::jsonb;
+ update expanse_private.map_purchases set created_at=now()-interval '13 hours' where id=(o->>'id')::uuid;
+ if (public.owner_map_checkout(b->>'slug',b->>'key','2026-10-20')::jsonb->>'id')=o->>'id' then raise exception 'FAIL old order reused'; end if; checks:=checks+1;
+
+ -- Rejected -> hidden -> approved also moves a product off cells taken meanwhile.
+ a:=pg_temp.lc_mk('Review Charlie',-30,60,2);
+ perform public.admin_set_status(adm,a->>'slug','rejected','Fixture');
+ b:=pg_temp.lc_mk('Review Delta',-145,30,1);
+ perform public.owner_choose_map_spot(b->>'slug',b->>'key',-30,60,2);
+ perform public.admin_set_status(adm,a->>'slug','hidden','Fixture');
+ if (select zone||size from public.products where id=(a->>'id')::bigint)<>'edge1' then raise exception 'FAIL hidden path overlaps'; end if; checks:=checks+1;
+
+ -- A paying product returning from review is never the one moved.
+ a:=pg_temp.lc_mk('Review Echo',-60,-40,2);
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_rv_e_paid','checkout.session.completed',o->>'id','cs_rv_e',3600,'belt',2,'pi_rv_e'));
+ perform public.admin_set_status(adm,a->>'slug','rejected','Fixture');
+ b:=pg_temp.lc_mk('Review Foxtrot',-140,-30,1);
+ update public.products set x=-60,y=-40,size=2,zone='belt' where id=(b->>'id')::bigint;  -- an overlap left by older code
+ out:=pg_temp.lc_err(format('select public.admin_set_status(%L,%L,%L,%L)',adm,a->>'slug','approved',''));
+ if out<>'spot_taken' or (select x||','||y from public.products where id=(a->>'id')::bigint)<>'-60,-40' then raise exception 'FAIL paying product moved: %',out; end if; checks:=checks+1;
+
+ raise notice '% payment review regression assertions passed', checks;
+end $$;

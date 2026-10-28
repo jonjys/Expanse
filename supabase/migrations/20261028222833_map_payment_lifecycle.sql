@@ -3,14 +3,18 @@
 --  1. A paid session is accepted even when a sibling session on the same order expired or failed.
 --  2. A payment that needs review is never silent: Stripe ids are kept, the admin gets an email,
 --     and a refund of that payment is recorded.
---  3. The nightly job leaves a product alone while a checkout for its spot can still be paid,
---     never moves a product that already sits on a free Edge 1x1 cell, and keeps refunded and
---     disputed states.
+--  3. The nightly job leaves a product alone while a checkout opened in time for its spot can
+--     still be paid, respects a running hold, only counts an ended term at the product's current
+--     spot, never moves a product that already sits on a free Edge 1x1 cell, and keeps refunded
+--     and disputed states. A renewal checkout is possible for 24 hours after a term ends.
 --  4. An unpaid checkout lapses after 48 hours, the same window in which its sessions can be paid,
---     and the spot can be changed after that.
+--     and the spot can be changed after that. An order is reused for 12 hours, so every session
+--     opened from a returned link is inside the 24-hour acceptance window.
 --  5. A rejected product keeps its cells while its paid term runs, and a product coming back from
---     review is moved to a free Edge cell when its old cells were taken.
+--     review is moved to a free Edge cell when its old cells were taken, never a paying one.
 --  6. A withdrawal notice is linked to its order whenever the reference contains the order id.
+--  7. A hold is armed on the first approval and on a move from the free spot or from no hold;
+--     moving or re-approval never extends a running hold or revives a lapsed one.
 -- Owner, admin and webhook credential checks, server-side prices and terms acceptance are unchanged.
 
 alter table expanse_private.stripe_events add column if not exists payment_intent text;
@@ -55,10 +59,14 @@ create or replace function expanse_private.unreject_spot() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare point record;
 begin
- if old.status = 'rejected' and new.status in ('pending','approved') then
+ if old.status = 'rejected' and new.status in ('pending','approved','hidden') then
+   -- Same map lock as every other writer of product positions.
+   perform pg_advisory_xact_lock(4242);
    begin
      perform public._assert_free(new.x, new.y, new.size, new.id, null);
    exception when others then
+     -- A product with an active paid term keeps the cells it paid for; the admin resolves the conflict.
+     if exists(select 1 from expanse_private.map_purchases b where b.product_id=new.id and b.state='paid' and b.ends_at>now()) then raise exception 'spot_taken'; end if;
      select * into point from expanse_private.free_edge_cell(new.id);
      if point.x is null then raise exception 'spot_taken'; end if;
      new.x := point.x; new.y := point.y; new.size := 1; new.zone := 'edge'; new.price_eur := 1; new.map_hold_until := null;
@@ -131,8 +139,9 @@ begin
    -- The reservation hold has done its job; it must not block a renewal at the same spot later.
    update public.products set map_hold_until=null where id=r.id and map_hold_until is not null;
  elsif v_out='needs_review' then
-   -- Never remove an already-paid placement for a duplicate second checkout.
-   if b.state<>'paid' then
+   -- Only an order still waiting for its payment is rewritten. A paid, refunded, disputed or expired order keeps
+   -- its state; this payment's ids are on its review event, which a refund or dispute of it is matched against.
+   if b.state in ('pending','failed') then
      update expanse_private.map_purchases set state='needs_review',issue='Payment needs manual review. Contact support before paying again.',
        session_id=case when v_session is not null and not exists(select 1 from expanse_private.map_purchases q where q.session_id=v_session and q.id<>b.id) then v_session else session_id end,
        payment_intent=coalesce(v_pi,payment_intent) where id=b.id;
@@ -171,11 +180,18 @@ begin
  perform pg_advisory_xact_lock(4242);
  for r in select p.* from public.products p where p.status in ('pending','approved','hidden','rejected')
  and not (p.zone='edge' and p.size=1)
- and (exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state in ('paid','refunded','disputed') and b.ends_at<=now()) or (p.status='approved' and p.map_hold_until<=now()))
+ and (p.map_hold_until is null or p.map_hold_until<=now())
+ and (exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state in ('paid','refunded','disputed') and b.ends_at<=now()
+        and b.x=p.x and b.y=p.y and b.size=p.size)
+      or (p.status='approved' and p.map_hold_until<=now()))
  and not exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state='paid' and b.ends_at>now())
- -- A checkout opened for this spot can be paid for up to 48 hours (a session lives 24 hours and is accepted when opened within 24 hours of the order).
+ -- A checkout opened for this spot can be paid for up to 48 hours (a session lives 24 hours and is accepted when opened within
+ -- 24 hours of the order). Only a checkout opened before the spot fell due, or within the 24-hour renewal window after it,
+ -- counts, so opening new checkouts cannot keep a spot.
  and not exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state in ('pending','failed') and b.created_at>now()-interval '48 hours'
-   and b.x=p.x and b.y=p.y and b.size=p.size)
+   and b.x=p.x and b.y=p.y and b.size=p.size
+   and b.created_at<=coalesce(p.map_hold_until,(select max(e.ends_at) from expanse_private.map_purchases e where e.product_id=p.id
+       and e.state in ('paid','refunded','disputed') and e.x=p.x and e.y=p.y and e.size=p.size))+interval '24 hours')
  loop
    select * into point from expanse_private.free_edge_cell(r.id);
    if point.x is not null then
@@ -207,13 +223,16 @@ begin
      and not exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='paid' and ends_at>now()));
 end $$;
 
--- Checkout: unchanged except that it is restated next to the lapse rules it relies on.
+-- Checkout: a renewal at the same spot is possible for 24 hours after a term ends; an order is reused for 12 hours.
 create or replace function expanse_private.owner_map_checkout(p_slug text,p_key text) returns json
 language plpgsql volatile security definer set search_path = '' as $$
 declare r public.products := public._owned(p_slug,p_key); m expanse_private.map_catalog; b expanse_private.map_purchases;
 begin
  if r.status <> 'approved' then raise exception 'review_required'; end if;
- if r.map_hold_until is not null and r.map_hold_until<=now() then raise exception 'hold_expired'; end if;
+ if r.map_hold_until is not null and r.map_hold_until<=now() and not (r.zone='edge' and r.size=1) then raise exception 'hold_expired'; end if;
+ if r.map_hold_until is null and not (r.zone='edge' and r.size=1)
+   and (select max(e.ends_at) from expanse_private.map_purchases e where e.product_id=r.id and e.state in ('paid','refunded','disputed','expired')
+        and e.ends_at<=now() and e.x=r.x and e.y=r.y and e.size=r.size)+interval '24 hours'<now() then raise exception 'hold_expired'; end if;
  if not (select enabled from expanse_private.commerce_config where singleton) then raise exception 'payments_paused'; end if;
  perform pg_advisory_xact_lock(4242);
  select * into r from public.products where id=r.id for update;
@@ -221,7 +240,7 @@ begin
  select * into m from expanse_private.map_catalog where zone=r.zone and size=r.size;
  if m.zone is null or m.amount_cents <> public.map_price_cents(r.zone,r.size) then raise exception 'payments_paused'; end if;
  select * into b from expanse_private.map_purchases where product_id=r.id and state='pending' and x=r.x and y=r.y and size=r.size
- and payment_link=m.payment_link and amount_cents=m.amount_cents and created_at>now()-interval '24 hours' order by created_at desc limit 1;
+ and payment_link=m.payment_link and amount_cents=m.amount_cents and created_at>now()-interval '12 hours' order by created_at desc limit 1;
  if b.id is null then
    if (select count(*) from expanse_private.map_purchases where product_id=r.id and created_at>now()-interval '1 hour')>=5 then raise exception 'too_many'; end if;
    insert into expanse_private.map_purchases(product_id,x,y,size,zone,amount_cents,payment_link)
@@ -260,3 +279,24 @@ end $$;
 revoke execute on function expanse_private.withdrawal_link() from public, anon, authenticated;
 drop trigger if exists withdrawal_link on expanse_private.withdrawals;
 create trigger withdrawal_link before insert on expanse_private.withdrawals for each row execute function expanse_private.withdrawal_link();
+
+-- 7. Holds: armed on the first approval and on a move from the free spot or from no hold. A move or a re-approval
+-- never extends a running hold or revives a lapsed one, so shuffling between cells or editing the listing cannot keep a
+-- premium spot for free.
+create or replace function expanse_private.map_hold() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+ if tg_op='INSERT' then
+   if new.zone<>'edge' or new.size<>1 then new.map_hold_until:=now()+interval '7 days'; end if;
+ elsif new.x is distinct from old.x or new.y is distinct from old.y or new.size is distinct from old.size then
+   new.map_hold_until:=case
+     when old.map_hold_until>now() then old.map_hold_until               -- a running hold keeps its deadline
+     when new.zone='edge' and new.size=1 then null                        -- the free spot needs no hold
+     when (old.zone='edge' and old.size=1) or old.map_hold_until is null then now()+interval '7 days'
+     else old.map_hold_until end;                                         -- a lapsed hold stays lapsed until the product is released
+ elsif old.status<>'approved' and new.status='approved' and old.map_hold_until is not null and old.approved_at is null then
+   new.map_hold_until:=now()+interval '7 days';
+ end if;
+ return new;
+end $$;
+revoke execute on function expanse_private.map_hold() from public, anon, authenticated;
