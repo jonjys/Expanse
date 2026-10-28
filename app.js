@@ -315,12 +315,13 @@ async function loadSpots() {
   try { const s = await rpc('public_spots'); if (Array.isArray(s)) SPOTS = s.filter(v => v && Number.isInteger(v.x) && Number.isInteger(v.y) && [1, 2, 4, 8].includes(v.size) && Math.hypot(v.x + v.size / 2, v.y + v.size / 2) < MAX_R); } catch (e) {}
 }
 async function loadOwned() {
-  const slugs = Object.keys(OWNED).filter(isSlug);
+  const slugs = Object.keys(OWNED).filter(isSlug), lost = [];
   await Promise.all(slugs.map(async slug => {
     try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: OWNED[slug].key }); OWNED[slug].name = OWNDATA[slug].name; }
-    catch (e) { if (errCode(e) === 'bad_key') { delete OWNED[slug]; delete OWNDATA[slug]; } }
+    catch (e) { if (errCode(e) === 'bad_key') { lost.push(OWNED[slug].name || slug); delete OWNED[slug]; delete OWNDATA[slug]; } }
   }));
   store.set(OWNED_KEY, OWNED); updateMine();
+  if (lost.length) toast(`${lost.join(', ')} is no longer signed in on this device. Sign in again with your email, or use “Lost your key?”.`, 6000);
 }
 async function loadPlacements() {
   try { const l = await rpc('public_placements'); PLACEMENTS = Array.isArray(l) ? l.filter(x => x && Number.isInteger(x.id) && isSlug(x.slug)) : []; } catch (e) { PLACEMENTS = []; }
@@ -957,6 +958,15 @@ function download(name, blob) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
+/* On phones, open the share sheet so the image can go to Photos or straight into an app; otherwise download it. */
+async function saveImage(name, blob) {
+  let file = null; try { file = new File([blob], name, { type: blob.type || 'image/png' }); } catch (e) {}
+  if (coarse && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return 'shared'; }
+    catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
+  }
+  download(name, blob); return 'downloaded';
+}
 function setPath(path) { try { if (location.protocol.startsWith('http') && location.pathname + location.search !== path) history.replaceState(null, '', path); } catch (e) {} }
 
 /* 1080×1350 share card: the product's square in its corner of the galaxy. */
@@ -978,8 +988,12 @@ function setUI(v) {
   if (v !== 'manage') manageEl.classList.remove('open');
   kick();
 }
+let sheetHist = false;
+function pushSheetHistory() { try { if (!sheetHist && history.state?.expanse !== 'sheet') { history.pushState({ expanse: 'sheet' }, ''); sheetHist = true; } } catch (e) {} }
+window.addEventListener('popstate', () => { if (!sheetHist) return; sheetHist = false; if (ui !== 'none') closeUI(); });
 function closeUI() {
   const wasPop = ui === 'pop';
+  if (sheetHist && history.state?.expanse === 'sheet') { sheetHist = false; try { history.back(); } catch (e) {} }
   setUI('none'); sel = null;
   if (wasPop) setPath('/');
   if (view !== 'list') cv.focus({ preventScroll: true });
@@ -1554,7 +1568,10 @@ function makeForm() {
 /* ================= ADD YOUR PRODUCT ================= */
 const sub = { step: 0, spot: null, size: 1, plan: 'free', zone: 'edge', name: '', cat: '', result: null };
 const wiz = makeForm();
-$('#fBasics').append(wiz.groups.basics[1],$('#cAiImport'),wiz.groups.basics[0],wiz.groups.basics[2]); $('#fFit').append(wiz.groups.basics[3], ...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
+$('#fBasics').append(wiz.groups.basics[1],$('#cAiImport'),wiz.groups.basics[0],wiz.groups.basics[2]);
+{ const seq = ['url', 'name', 'tagline'].map(k => $(`#fBasics [data-f="${k}"] input`)).filter(Boolean);
+  seq.forEach((inp, i) => { inp.enterKeyHint = i < seq.length - 1 ? 'next' : 'go';
+    inp.addEventListener('keydown', e => { if (e.key !== 'Enter' || e.isComposing) return; e.preventDefault(); if (i < seq.length - 1) seq[i + 1].focus(); else $('#cNext2').click(); }); }); } $('#fFit').append(wiz.groups.basics[3], ...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
 async function aiRequest(body) {
   const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(55000)});
   let result;try{result=await r.json();}catch{throw new Error('ai_unavailable');}
@@ -1586,7 +1603,7 @@ $('#cAiDraft').onclick=async()=>{
   }catch(e){status.textContent=aiMessage(e);}finally{button.disabled=false;}
 };
 let draftT = 0;
-wiz.onChange(() => { const d = wiz.get(); sub.name = d.name; sub.cat = d.category; kick(); clearTimeout(draftT); draftT = setTimeout(() => store.set(DRAFT_KEY, Object.assign(d, { size: sub.size, plan: sub.plan, zone: sub.zone })), 400); });
+wiz.onChange(() => { const d = wiz.get(); sub.name = d.name; sub.cat = d.category; kick(); clearTimeout(draftT); draftT = setTimeout(saveDraft, 400); });
 const STEP_OF = { basics: 2, fit: 2, story: 2 };
 const FLOW = [2, 1, 5, 6];
 function setStep(n) {
@@ -1596,6 +1613,7 @@ function setStep(n) {
   claimEl.querySelector('.steps').hidden = n === 6;
   if (n === 5) renderSummary();
   if (n === 1 && sub.spot) { describe(); if (prev !== 1) centerOnSpot(true); }
+  if (prev !== n) { const h = $('#cStep' + n + ' .c-title'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
   claimEl.scrollTop = 0; kick();
 }
 function placementSpotOk(x,y,size) {
@@ -1635,12 +1653,13 @@ function startSubmit(spot, fromMap) {
   }
   // Map previews offer a 2×2 block: keep that exact size when entering the product-first form.
   if (spot) { sub.plan = 'paid'; sub.size = [1,2,4,8].includes(spot.size) ? spot.size : 2; sub.zone = zoneOf(spot.x, spot.y, sub.size).id; }
-  openPanel(claimEl, 'claim'); markExplore();
+  openPanel(claimEl, 'claim'); markExplore(); pushSheetHistory();
   const candidate = spot || zoneSpot(sub.zone, sub.size);
   if (candidate) { sub.spot = { x: candidate.x, y: candidate.y }; describe(); }
   setStep(2);
   if (!coarse) requestAnimationFrame(() => wiz.groups.basics[0].querySelector('input').focus({ preventScroll: true }));
 }
+function saveDraft() { if (sub.moving || sub.step === 6 || !sub.step) return; store.set(DRAFT_KEY, Object.assign(wiz.get(), { size: sub.size, plan: sub.plan, zone: sub.zone })); }
 function describe() {
   if (!sub.spot) return;
   const z = zoneOf(sub.spot.x, sub.spot.y, sub.size), zf = zoneFree(z.id);
@@ -1825,7 +1844,7 @@ async function renderPurchaseHistory(box,slug) {
 }
 
 /* ================= OWNER PANEL ================= */
-const mform = makeForm();
+const mform = makeForm(); let mDirty = false; mform.onChange(() => { mDirty = true; });
 $('#eBasics').append(...mform.groups.basics); $('#eFit').append(...mform.groups.fit); $('#eStory').append(...mform.groups.story);
 let mSlug = null, mTab = 'stats';
 function updateMine() {
@@ -1842,6 +1861,7 @@ $('#mineBtn').onclick = () => {
 async function openManage(slug, tab) {
   const own = OWNED[slug]; if (!own) { openOwnerLogin(slug); return; }
   closeSheet(); closeDlg(); if (view === 'list') setView('map');
+  if (slug !== mSlug) mDirty = false;
   mSlug = slug; mTab = tab || (OWNDATA[slug] && OWNDATA[slug].status === 'approved' ? 'stats' : 'verify');
   renderManage();
   openPanel(manageEl, 'manage'); markExplore();
@@ -1861,7 +1881,7 @@ function renderManage() {
   $('#mTabs').querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === mTab)));
   manageEl.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== mTab);
   if (mTab === 'stats') renderStats(o);
-  if (mTab === 'edit' && o.slug) mform.set(o);
+  if (mTab === 'edit' && o.slug && !mDirty) mform.set(o);
   if (mTab === 'verify') renderVerify(o);
   if (mTab === 'share') renderShare(o);
   if (mTab === 'needs') renderMakerNeeds(o);
@@ -1986,11 +2006,11 @@ async function renderShare(o) {
  const text=el('textarea',{rows:6,maxlength:3000,'aria-label':'Editable post',value:typeof local.text==='string'?local.text:kit.post_text}),link=el('input',{type:'url',readonly:true,'aria-label':'Trackable product link'}),preview=el('img',{class:'kit-preview',src:'/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision,alt:o.name+' — prepared Expanse share card',width:1080,height:1350}),performance=el('p',{class:'fine'});let activeKit=kit,previewUrl;
  const currentLink=()=>marketing.link(slug,campaign.value,channel.value);
  const update=()=>{link.value=currentLink();store.set(draftKey,{text:text.value,channel:channel.value});const row=campaignRows.find(r=>r.campaign===campaign.value);performance.textContent=row?`${row.views} profile opens · ${row.visits} website clicks · last 30 days, all channels. Not sales.`:'No campaign observations available.';};
- const image=()=>{if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}if(format.value==='prepared'){activeKit=kit;preview.src='/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision;}else{const compare=BY_SLUG.get(other.value),svg=G.asset(o,kind.value,format.value,compare);activeKit={...kit,svg,revision:kit.revision+':'+kind.value+':'+format.value+':'+(compare?.slug||'')+':'+(compare?.tagline||'')};previewUrl=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));preview.src=previewUrl;}const dims=format.value==='prepared'?[1080,1350]:G.formats[format.value];preview.width=dims[0];preview.height=dims[1];};
+ const image=()=>{if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}if(format.value==='prepared'){activeKit=kit;preview.src='/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision;}else{const compare=BY_SLUG.get(other.value),svg=G.asset(o,kind.value,format.value,compare);activeKit={...kit,svg,revision:kit.revision+':'+kind.value+':'+format.value+':'+(compare?.slug||'')+':'+(compare?.tagline||'')};previewUrl=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));preview.src=previewUrl;}const dims=format.value==='prepared'?[1080,1350]:G.formats[format.value];preview.width=dims[0];preview.height=dims[1];warm();};const warm=()=>{marketing.png(slug,activeKit).catch(()=>{});};
  const generate=()=>{text.value=G.copy(o,kind.value,channel.value,BY_SLUG.get(other.value));update();};
- channel.onchange=update;text.oninput=update;campaign.onchange=()=>{const row=campaignRows.find(r=>r.campaign===campaign.value);if(row)kind.value=row.kind;update();};kind.onchange=image;format.onchange=image;other.onchange=image;update();
+ channel.onchange=update;text.oninput=update;campaign.onchange=()=>{const row=campaignRows.find(r=>r.campaign===campaign.value);if(row&&kind.value!==row.kind){kind.value=row.kind;image();}update();};kind.onchange=image;format.onchange=image;other.onchange=image;update();
  const name=el('input',{maxlength:60,placeholder:'e.g. Black Friday launch','aria-label':'New campaign name'}),create=el('button',{class:'btn btn-ghost btn-sm',text:'Create tracked campaign',onclick:async()=>{create.disabled=true;try{const row=await rpc('owner_create_campaign',{p_slug:slug,p_key:OWNED[slug].key,p_name:name.value.trim(),p_kind:kind.value});if(!campaignRows.some(x=>x.campaign===row.campaign)){campaignRows.unshift({...row,views:0,visits:0});campaign.append(el('option',{value:row.campaign,text:row.name}));}campaign.value=row.campaign;update();toast('Campaign link ready. Publish it yourself.');}catch(e){toast(errCode(e).includes('slow_down')?'Campaign limit reached for this hour. Try later.':'Could not create campaign. Use a name of 2–60 characters, or reuse an existing campaign.');}finally{create.disabled=false;}}});
- const save=el('button',{class:'btn btn-primary btn-sm',text:'Download PNG',onclick:async()=>{save.disabled=true;try{download(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));studioEvent(slug,'download');toast('Image saved.');}catch{toast('PNG conversion failed. Download original image (SVG) instead.',5000);}finally{save.disabled=false;}}});
+ const save=el('button',{class:'btn btn-primary btn-sm',text:coarse?'Save or share image':'Download PNG',onclick:async()=>{save.disabled=true;try{const done=await saveImage(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));if(done!=='cancelled')studioEvent(slug,'download');if(done==='downloaded')toast(coarse?'Download started. Find the image in your Downloads.':'Image downloaded.');}catch{toast('PNG conversion failed. Download original image (SVG) instead.',5000);}finally{save.disabled=false;}}});warm();
  fill(box,el('h3',{text:'Your ready-to-share kit · 2.0'}),el('p',{class:'fine',text:'Prepared from approved public facts. Choose a campaign and format; edit before publishing. Feature-update copy describes listed capabilities, not an invented release. Seasonal templates do not claim a discount.'}),
  el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
  el('p',{class:'fine',text:'Campaign IDs are generated and validated by Expanse. Names stay in your private studio. Legacy links continue working. Profile views are attributed to the link, not proof of a customer or sale. Cached images and post drafts stay in this browser. No automatic posting.'}),
@@ -2130,7 +2150,7 @@ $('#eSave').onclick = async () => {
   try {
     const before = OWNDATA[mSlug] && OWNDATA[mSlug].status;
     OWNDATA[mSlug] = await rpc('owner_update', { p_slug: mSlug, p_key: OWNED[mSlug].key, p: mform.get() });
-    kitCache.delete(mSlug);
+    mDirty = false; kitCache.delete(mSlug);
     OWNED[mSlug].name = OWNDATA[mSlug].name; saveOwned();
     await refreshAll(); renderManage();
     toast(before === 'approved' && OWNDATA[mSlug].status === 'pending' ? 'Saved. Your new link or images go to review before they show.' : before === 'rejected' ? 'Saved and sent for review again.' : 'Saved.', 4500);
@@ -2182,7 +2202,7 @@ dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[
 function slugFrom(v) { v = String(v || '').trim(); const m = v.match(/\/p\/([a-z0-9-]+)/i); if (m) return m[1].toLowerCase(); return normQ(v).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48); }
 function openOwnerLogin(slug, name) {
   const slugIn = slug ? null : el('input', { placeholder: 'Product link or name', autocomplete: 'off', spellcheck: 'false' });
-  const keyIn = el('input', { placeholder: 'Your owner key', autocomplete: 'off', spellcheck: 'false', style: 'font-family:"IBM Plex Mono",monospace' });
+  const keyIn = el('input', { placeholder: 'Your owner key', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', style: 'font-family:"IBM Plex Mono",monospace' });
   const go = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Open owner panel' });
   const form = el('form', { onsubmit: async e => {
     e.preventDefault(); const s = slug || slugFrom(slugIn.value), k = keyIn.value.trim();
