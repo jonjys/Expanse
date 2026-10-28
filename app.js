@@ -1787,7 +1787,7 @@ function celebrate(q) {
 document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { closeSheet(); startSubmit(null); });
 
 /* Map purchases use the current reserved coordinates and a server-priced order. */
-let mapPoll = 0;
+let mapPoll = 0, mapPollSince = 0;
 async function renderMapPlacement(o) {
   const box=$('#mPlacement'),slug=mSlug; clearTimeout(mapPoll);
   if (!o.slug) { box.replaceChildren(el('p',{class:'fine',text:'Loading…'})); return; }
@@ -1824,14 +1824,18 @@ async function renderMapPlacement(o) {
     box.append(el('div',{class:'placement-total',text:`${eur(status.amount_cents/100)} / 12 months`}),el('p',{class:'fine',text:'One payment in euros. Tax included where applicable. No automatic renewal. Map placement is separate from Sponsored cards.'}));
     if(o.status!=='approved')box.append(el('p',{class:'note',text:'Your spot is held free while your product is reviewed. Payment opens after approval, under the same rules for every maker.'}));
     else if(!COMMERCE.enabled)box.append(el('p',{class:'note',text:'Payments are temporarily paused. Your free listing continues.'}));
+    else if(status.state==='pending'){
+      const resume=el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'I haven’t paid yet: resume checkout',onclick:()=>{resume.replaceWith(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);}});
+      box.append(el('p',{class:'note',text:'If you have paid, do not pay again. Confirmation usually takes a few minutes. If it has not appeared within an hour, contact support with your order details below.'}),resume);
+    }
     else if(status.state!=='needs_review')box.append(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);
     if(status.state!=='pending')box.append(change);
-    else box.append(el('p',{class:'fine',text:'If you have just paid, wait for confirmation before trying again. An unpaid checkout can be resumed with the button above.'}));
   }
   box.append(el('a',{class:'linkbtn',href:'/withdraw',text:'Withdraw from a contract / request a refund'}));
   renderPurchaseHistory(box,slug);
   if(status.state==='needs_review')box.append(el('button',{class:'linkbtn',text:'Contact support',onclick:()=>openContact('other')}));
-  if(status.state==='pending')mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);
+  if(status.state!=='pending')mapPollSince=0;
+  else{if(!mapPollSince)mapPollSince=Date.now();if(Date.now()-mapPollSince<10*60*1000)mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);}
 }
 
 async function renderPurchaseHistory(box,slug) {
@@ -2136,9 +2140,12 @@ function placementReport(r) {
     el('p', { class: 'fine', text: `Unique visitors per day; your own visits and known bots aren’t counted. “Before” is the same number of days just before the slot (${r.before.from === r.before.to ? dayFmt(r.before.from) : dayFmt(r.before.from) + ' – ' + dayFmt(r.before.to)}).` }));
 }
 function box_(b, ...kids) { b.replaceChildren(...kids); }
-function confirmRemove(o) {
+async function confirmRemove(o) {
+  let map = null; try { map = await rpc('owner_map_status', { p_slug: mSlug, p_key: OWNED[mSlug].key }); } catch (e) {}
+  const paidMap = map && map.state === 'paid' && Date.parse(map.ends_at) > Date.now();
   openDlg(el('div', { class: 'mono kick', style: 'color:#ff8a8a', text: 'Take listing down' }), el('h2', { class: 'display', text: `Remove ${o.name}?` }),
     el('p', { style: 'margin-top:12px', text: 'The profile disappears everywhere, the spot is released and your contact email is wiped. This can’t be undone.' }),
+    paidMap ? el('p', { class: 'note', text: `This product has a paid map placement until ${dateStr(map.ends_at)}. Taking the listing down ends it, and this owner key will no longer open your order details. First download your order details in the Map spot tab. To ask for a refund, use Withdraw / request a refund with your order reference.` }) : null,
     el('div', { class: 'c-row' }, el('button', { class: 'btn btn-danger', text: 'Yes, take it down', onclick: async e => {
       e.target.disabled = true;
       try { await rpc('owner_remove', { p_slug: mSlug, p_key: OWNED[mSlug].key }); delete OWNED[mSlug]; delete OWNDATA[mSlug]; saveOwned(); closeDlg(); closeUI(); await refreshAll(); loadStats(); toast('Your listing has been taken down.'); }

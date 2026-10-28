@@ -261,9 +261,16 @@ needed in the app: the account's Payment Links create Checkout Sessions, linked 
 Only live events for Expanse are accepted. `confirm_map_payment` independently checks a random callback credential,
 the stored order, payment link, currency, amount, zone, size and current product coordinates. Only a paid session
 starts the 12-month term. The return page never grants anything. Repeated events/session notifications are idempotent;
-a separate second payment or mismatch is flagged for review in **Admin → Map purchases**. Full refunds and disputes
-end the paid term; partial refunds do not automatically remove it. `expanse-map-terms` runs daily in Postgres to move
-expired terms to a free 1×1 Edge cell, preserving the product page and stats. Legacy holds are unaffected.
+a separate second payment or mismatch is flagged for review in **Admin → Map purchases**, keeps its Stripe session
+and payment ids, and emails the admin notification address. A session that expires or fails does not end the order:
+another session for the same order can still be paid. Full refunds and disputes end the paid term, also for a payment
+in review; partial refunds do not automatically remove it. `expanse-map-terms` runs daily in Postgres to move
+expired terms and lapsed holds to a free 1×1 Edge cell, preserving the product page and stats. It skips a spot while a
+checkout for it can still be paid (48 hours after the order), never moves a product already on a free 1×1 Edge cell,
+and keeps refunded and disputed states. An unpaid checkout lapses after those 48 hours and the spot can be changed again.
+A rejected product keeps
+its cells while its paid term runs, and a product returning from review onto taken cells moves to a free Edge cell.
+Legacy holds are unaffected.
 
 Required Vercel **production** environment variables (never commit their values):
 

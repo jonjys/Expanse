@@ -33,7 +33,7 @@ begin
  result:=public.confirm_map_payment('fixture-token-0123456789012345678901234567890123456789','{"id":"evt_fixture_refund","type":"charge.refunded","livemode":true,"payment_intent":"pi_fixture","fully_refunded":true}');
  if result->>'outcome'<>'refunded' then raise exception 'FAIL refund'; end if; checks:=checks+1;
  perform expanse_private.release_expired_map_spots();
- if (select size from public.products where products.slug=fixture_slug)<>1 or (public.owner_map_status(fixture_slug,k)->>'state')<>'expired' then raise exception 'FAIL free fallback'; end if; checks:=checks+1;
+ if (select size from public.products where products.slug=fixture_slug)<>1 or (public.owner_map_status(fixture_slug,k)->>'state')<>'refunded' then raise exception 'FAIL free fallback keeps the refund'; end if; checks:=checks+1;
  raise notice '% commerce assertions passed',checks;
 end $$;
 
