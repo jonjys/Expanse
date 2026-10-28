@@ -746,6 +746,7 @@ let running = !document.hidden, raf = 0, lastT = now(), idle = now();
 function tick(T) {
   raf = 0; if (!running) return;
   if (view === 'list' && !fly) return; // the list covers the map: stop drawing until it closes
+  if (ui === 'manage' && !fly && innerWidth <= 650) return; // on phones the owner sheet covers the map: setUI() kicks the loop again on close
   const dt = Math.min(50, T - lastT) / 1000; lastT = T;
   if (fly) {
     const k = clamp((T - fly.t0) / fly.ms, 0, 1), e = fly.e(k);
