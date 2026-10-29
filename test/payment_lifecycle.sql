@@ -215,3 +215,29 @@ begin
 
  raise notice '% payment journey assertions passed', checks;
 end $$;
+
+-- Delayed payments from the third review.
+do $$
+declare a jsonb; o jsonb; out text; checks int:=0;
+begin
+ -- A SEPA debit in one session keeps protecting the spot after a sibling session on the same order expires.
+ a:=pg_temp.lc_mk('Debit Alpha',-70,80,2);
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_db_a_unpaid','checkout.session.completed',o->>'id','cs_db_a2',1600,'outer',2,'pi_db_a2','unpaid'));
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_db_a_expired','checkout.session.expired',o->>'id','cs_db_a1',1600,'outer',2,null,'unpaid'));
+ update expanse_private.map_purchases set created_at=now()-interval '3 days' where id=(o->>'id')::uuid;
+ update expanse_private.stripe_events set created_at=now()-interval '3 days' where purchase_id=(o->>'id')::uuid;
+ update public.products set map_hold_until=now()-interval '2 days' where id=(a->>'id')::bigint;
+ perform expanse_private.release_expired_map_spots();
+ if (public.owner_map_status(a->>'slug',a->>'key')->>'state')<>'pending' or (select zone||size from public.products where id=(a->>'id')::bigint)<>'outer2' then raise exception 'FAIL sibling expiry ended the debit protection'; end if; checks:=checks+1;
+ out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_db_a_paid','checkout.session.async_payment_succeeded',o->>'id','cs_db_a2',1600,'outer',2,'pi_db_a2','paid',now()-interval '3 days'));
+ if out<>'paid' then raise exception 'FAIL debit paid after sibling expiry: %',out; end if; checks:=checks+1;
+
+ -- A processing session from another link or amount does not hold the spot.
+ a:=pg_temp.lc_mk('Debit Bravo',30,-70,2);
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_db_b_wrong','checkout.session.completed',o->>'id','cs_db_b',300,'edge',1,'pi_db_b','unpaid'));
+ if exists(select 1 from expanse_private.stripe_events where event_id='evt_db_b_wrong' and outcome='processing') then raise exception 'FAIL mismatched session counted as processing'; end if; checks:=checks+1;
+
+ raise notice '% delayed payment assertions passed', checks;
+end $$;

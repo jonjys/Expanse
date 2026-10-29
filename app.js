@@ -1569,7 +1569,7 @@ function makeForm() {
 }
 
 /* ================= ADD YOUR PRODUCT ================= */
-const sub = { step: 0, spot: null, size: 1, plan: 'free', zone: 'edge', name: '', cat: '', result: null };
+const sub = { step: 0, spot: null, size: 1, plan: 'free', zone: 'edge', name: '', cat: '', result: null, moving: null, moved: false };
 const wiz = makeForm();
 $('#fBasics').append(wiz.groups.basics[1],$('#cAiImport'),wiz.groups.basics[0],wiz.groups.basics[2]);
 { const seq = ['url', 'name', 'tagline'].map(k => $(`#fBasics [data-f="${k}"] input`)).filter(Boolean);
@@ -1644,11 +1644,12 @@ function chooseZone(id, size) {
   sub.zone = id; sub.size = size || sub.size; setSpot(next, true); return true;
 }
 function startSubmit(spot, fromMap) {
-  sub.moving = null; $('#cNext1').textContent = 'Review your listing →';
+  // After the owner move flow borrowed the wizard, start from the stored draft again instead of the borrowed state.
+  const reset = sub.step === 6 || !sub.step || sub.moved; sub.moving = null; sub.moved = false; $('#cNext1').textContent = 'Review your listing →';
   if (demo) setDemo(false);
   closeSheet(); closeDlg(); sel = null; if (view === 'list') setView('map');
-  if (sub.step === 6 || !sub.step) {
-    sub.result = null; const d = store.get(DRAFT_KEY); wiz.set(d);
+  if (reset) {
+    sub.step = 0; sub.result = null; const d = store.get(DRAFT_KEY); wiz.set(d);
     sub.plan = d && d.plan === 'paid' ? 'paid' : 'free';
     sub.size = sub.plan === 'paid' && d && [1, 2, 4, 8].includes(d.size) ? d.size : 1;
     sub.zone = sub.plan === 'paid' && d && ['inner','belt','outer','edge'].includes(d.zone) ? d.zone : 'edge';
@@ -1816,7 +1817,7 @@ async function renderMapPlacement(o) {
     }
   }});
   const change=el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'Choose another zone or size',onclick:()=>{
-    sub.moving=slug;sub.plan='paid';sub.size=o.size;sub.zone=o.zone;sub.spot={x:o.x,y:o.y};sub.name=o.name;sub.cat=o.category;
+    sub.moving=slug;sub.moved=true;sub.plan='paid';sub.size=o.size;sub.zone=o.zone;sub.spot={x:o.x,y:o.y};sub.name=o.name;sub.cat=o.category;
     openPanel(claimEl,'claim');setStep(1);$('#cNext1').textContent='Save this spot →';
   }});
   const consent=el('input',{type:'checkbox'});

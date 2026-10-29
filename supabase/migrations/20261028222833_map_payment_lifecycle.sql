@@ -85,7 +85,9 @@ create trigger unreject_spot before update of status on public.products for each
 -- A delayed payment method (e.g. SEPA Direct Debit) reported processing for this order within the last 14 days.
 create or replace function expanse_private.payment_processing(p_purchase uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
- select exists(select 1 from expanse_private.stripe_events e where e.purchase_id=p_purchase and e.outcome='processing' and e.created_at>now()-interval '14 days')
+ select exists(select 1 from expanse_private.stripe_events e where e.purchase_id=p_purchase and e.outcome='processing' and e.created_at>now()-interval '14 days'
+   -- a session that later failed or expired itself no longer counts; a sibling session ending does not stop this one
+   and not exists(select 1 from expanse_private.stripe_events f where f.purchase_id=e.purchase_id and f.session_id=e.session_id and f.outcome='failed'))
 $$;
 revoke execute on function expanse_private.payment_processing(uuid) from public, anon, authenticated;
 
@@ -126,7 +128,13 @@ begin
  if b.id is null then return json_build_object('outcome','unknown_order'); end if;
  if v_type='checkout.session.completed' and p_event->>'payment_status'<>'paid' then
    -- A delayed payment method is processing: remember it, so the order counts as open until it succeeds or fails.
-   insert into expanse_private.stripe_events(event_id,session_id,purchase_id,outcome,payment_intent) values(v_event,v_session,b.id,'processing',v_pi);
+   -- Only a session that matches the order exactly counts.
+   if b.state in ('pending','failed') and p_event->>'currency'='eur' and p_event->>'payment_link' is not distinct from b.payment_link
+     and (p_event->>'amount_total')::int is not distinct from b.amount_cents and p_event->>'zone' is not distinct from b.zone
+     and (p_event->>'size')::int is not distinct from b.size
+     and to_timestamp((p_event->>'session_created')::bigint)<=b.created_at+interval '24 hours' then
+     insert into expanse_private.stripe_events(event_id,session_id,purchase_id,outcome,payment_intent) values(v_event,v_session,b.id,'processing',v_pi);
+   end if;
    return json_build_object('outcome','awaiting_payment');
  end if;
  if v_type in ('checkout.session.async_payment_failed','checkout.session.expired') then
@@ -207,7 +215,7 @@ begin
    and b.x=p.x and b.y=p.y and b.size=p.size
    and b.created_at<=coalesce(p.map_hold_until,(select max(e.ends_at) from expanse_private.map_purchases e where e.product_id=p.id
        and e.state in ('paid','refunded','disputed') and e.x=p.x and e.y=p.y and e.size=p.size))+interval '24 hours')
- and not exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state='pending' and b.x=p.x and b.y=p.y and b.size=p.size
+ and not exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state in ('pending','failed') and b.x=p.x and b.y=p.y and b.size=p.size
    and expanse_private.payment_processing(b.id))
  -- A term that ended normally keeps its spot for the 24-hour renewal window. Refunds and disputes release at once.
  and not exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state='paid' and b.ends_at<=now() and b.ends_at>now()-interval '24 hours'
@@ -234,7 +242,8 @@ begin
  order by (state='paid' and ends_at>now()) desc,created_at desc limit 1;
  st:=case when b.state='paid' and b.ends_at<=now() then 'expired'
    -- An order whose sessions can no longer be paid is over; the owner can choose a spot again.
-   when b.state in ('pending','failed') and b.created_at<=now()-interval '48 hours' and not expanse_private.payment_processing(b.id) then 'free'
+   when b.state in ('pending','failed') and expanse_private.payment_processing(b.id) then 'pending'
+   when b.state in ('pending','failed') and b.created_at<=now()-interval '48 hours' then 'free'
    else coalesce(b.state,'free') end;
  return json_build_object('state',st,
    'hold_until',r.map_hold_until,'ends_at',b.ends_at,'paid_at',b.paid_at,'issue',case when st='free' then null else b.issue end,
@@ -280,8 +289,8 @@ begin
  perform pg_advisory_xact_lock(4242);
  perform 1 from public.products where id=r.id for update;
  if exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='paid' and ends_at>now()) then raise exception 'active_purchase'; end if;
- if exists(select 1 from expanse_private.map_purchases b where b.product_id=r.id and b.state='pending'
-   and (b.created_at>now()-interval '48 hours' or expanse_private.payment_processing(b.id))) then raise exception 'checkout_open'; end if;
+ if exists(select 1 from expanse_private.map_purchases b where b.product_id=r.id
+   and ((b.state='pending' and b.created_at>now()-interval '48 hours') or (b.state in ('pending','failed') and expanse_private.payment_processing(b.id)))) then raise exception 'checkout_open'; end if;
  perform public._assert_free(p_x,p_y,p_size,r.id,null);
  z := public.zone_of(p_x,p_y,p_size);
  update public.products set x=p_x,y=p_y,size=p_size,zone=z,price_eur=public.price_per_cell(z)*p_size*p_size where id=r.id returning * into r;
