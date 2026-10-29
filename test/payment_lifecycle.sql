@@ -170,3 +170,48 @@ begin
 
  raise notice '% payment review regression assertions passed', checks;
 end $$;
+
+-- Honest-maker journeys from the second review.
+do $$
+declare a jsonb; o jsonb; out text; adm text; checks int:=0;
+begin
+ adm:=public._admin_issue();
+ -- Re-approval after an edit leaves at least a day to pay, even if the hold ran out during review.
+ a:=pg_temp.lc_mk('Journey Alpha',60,-60,2);
+ perform public.owner_update(a->>'slug',a->>'key',jsonb_build_object('name','Journey Alpha','url','https://example.org/journey-alpha-new','tagline','Solves a lifecycle fixture problem','category','other','pricing','unspecified','needs','[]'::jsonb));
+ if (select status from public.products where id=(a->>'id')::bigint)<>'pending' then raise exception 'FAIL edit sends to review'; end if;
+ update public.products set map_hold_until=now()-interval '1 day' where id=(a->>'id')::bigint;
+ perform public.admin_set_status(adm,a->>'slug','approved','');
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
+ if out<>'ok' then raise exception 'FAIL checkout after re-approval: %',out; end if; checks:=checks+1;
+
+ -- An open order can be resumed after its hold ends and is still protected and payable.
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ update public.products set map_hold_until=now()-interval '1 hour' where id=(a->>'id')::bigint;
+ update expanse_private.map_purchases set created_at=now()-interval '3 hours' where id=(o->>'id')::uuid;
+ if (public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb->>'id')<>o->>'id' then raise exception 'FAIL resume after hold end'; end if;
+ perform expanse_private.release_expired_map_spots();
+ if (select zone||size from public.products where id=(a->>'id')::bigint)='edge1' then raise exception 'FAIL open order not protected'; end if;
+ out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_jr_a_paid','checkout.session.completed',o->>'id','cs_jr_a',1600,'outer',2,'pi_jr_a'));
+ if out<>'paid' then raise exception 'FAIL resumed order paid: %',out; end if; checks:=checks+1;
+
+ -- A term that ended normally keeps its spot for the renewal window, and a renewal can be bought.
+ update expanse_private.map_purchases set paid_at=paid_at-interval '12 months 1 hour', ends_at=now()-interval '1 hour', created_at=created_at-interval '12 months 2 hours' where id=(o->>'id')::uuid;
+ perform expanse_private.release_expired_map_spots();
+ if (select zone||size from public.products where id=(a->>'id')::bigint)<>'outer2' then raise exception 'FAIL renewal window not respected'; end if;
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
+ if out<>'ok' then raise exception 'FAIL renewal checkout: %',out; end if; checks:=checks+1;
+
+ -- A delayed debit that is still processing after 48 hours keeps the order open and the spot protected.
+ a:=pg_temp.lc_mk('Journey Bravo',-60,90,2);
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_jr_b_unpaid','checkout.session.completed',o->>'id','cs_jr_b',1600,'outer',2,'pi_jr_b','unpaid'));
+ update expanse_private.map_purchases set created_at=now()-interval '3 days' where id=(o->>'id')::uuid;
+ update public.products set map_hold_until=now()-interval '2 days' where id=(a->>'id')::bigint;
+ perform expanse_private.release_expired_map_spots();
+ if out<>'awaiting_payment' or (public.owner_map_status(a->>'slug',a->>'key')->>'state')<>'pending' or (select zone||size from public.products where id=(a->>'id')::bigint)<>'outer2' then raise exception 'FAIL processing debit keeps the order open'; end if;
+ out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_jr_b_paid','checkout.session.async_payment_succeeded',o->>'id','cs_jr_b',1600,'outer',2,'pi_jr_b','paid',now()-interval '3 days'));
+ if out<>'paid' then raise exception 'FAIL delayed debit paid: %',out; end if; checks:=checks+1;
+
+ raise notice '% payment journey assertions passed', checks;
+end $$;

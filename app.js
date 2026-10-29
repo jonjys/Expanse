@@ -354,6 +354,7 @@ function resize() {
   W = innerWidth; H = innerHeight; DPR = Math.min(2, devicePixelRatio || 1);
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   const f = focusTarget(); fp.x = f.x; fp.y = f.y;
+  if (ui === 'manage') draw(now()); // the paused loop would otherwise leave the visible strip blank
   kick();
 }
 const toS = (wx, wy) => ({ x: fp.x + (wx - cam.x) * CELL * cam.z, y: fp.y + (wy - cam.y) * CELL * cam.z });
@@ -746,7 +747,7 @@ let running = !document.hidden, raf = 0, lastT = now(), idle = now();
 function tick(T) {
   raf = 0; if (!running) return;
   if (view === 'list' && !fly) return; // the list covers the map: stop drawing until it closes
-  if (ui === 'manage' && !fly && innerWidth <= 650) return; // on phones the owner sheet covers the map: setUI() kicks the loop again on close
+  if (ui === 'manage' && !fly && !zAnim && !drag && !pinch && !vel.x && !vel.y && innerWidth <= 650) return; // the phone owner sheet covers most of the map; any interaction or setUI() kicks the loop again
   const dt = Math.min(50, T - lastT) / 1000; lastT = T;
   if (fly) {
     const k = clamp((T - fly.t0) / fly.ms, 0, 1), e = fly.e(k);
@@ -968,7 +969,7 @@ async function saveImage(name, blob) {
   }
   download(name, blob); return 'downloaded';
 }
-function setPath(path) { try { if (location.protocol.startsWith('http') && location.pathname + location.search !== path) history.replaceState(null, '', path); } catch (e) {} }
+function setPath(path) { try { if (location.protocol.startsWith('http') && location.pathname + location.search !== path) history.replaceState(history.state, '', path); } catch (e) {} }
 
 /* 1080×1350 share card: the product's square in its corner of the galaxy. */
 const kitCache = new Map();
@@ -990,11 +991,12 @@ function setUI(v) {
   kick();
 }
 let sheetHist = false;
-function pushSheetHistory() { try { if (!sheetHist && history.state?.expanse !== 'sheet') { history.pushState({ expanse: 'sheet' }, ''); sheetHist = true; } } catch (e) {} }
+function pushSheetHistory() { if (sheetHist) return; try { if (history.state?.expanse !== 'sheet') history.pushState({ expanse: 'sheet' }, ''); sheetHist = true; } catch (e) {} }
 window.addEventListener('popstate', () => { if (!sheetHist) return; sheetHist = false; if (ui !== 'none') closeUI(); });
 function closeUI() {
   const wasPop = ui === 'pop';
   if (sheetHist && history.state?.expanse === 'sheet') { sheetHist = false; try { history.back(); } catch (e) {} }
+  if (ui === 'manage') mDirty = false;
   setUI('none'); sel = null;
   if (wasPop) setPath('/');
   if (view !== 'list') cv.focus({ preventScroll: true });
@@ -1365,7 +1367,7 @@ function setView(v) {
   if (v === view) { if (v === 'list') renderList(); return; }
   view = v; app.classList.toggle('listing', v === 'list'); listEl.setAttribute('aria-hidden', String(v !== 'list'));
   $('#vMap').setAttribute('aria-pressed', String(v === 'map')); $('#vList').setAttribute('aria-pressed', String(v === 'list'));
-  if (v === 'list') { if (ui === 'claim' || ui === 'manage') setUI('none'); renderFilters(); renderList(); }
+  if (v === 'list') { if (ui === 'claim' || ui === 'manage') closeUI(); renderFilters(); renderList(); }
   else { listQ = ''; lSort.value = 'pop'; }
   kick();
 }
@@ -1683,6 +1685,7 @@ function describe() {
     b.disabled = !candidate; b.setAttribute('aria-pressed', String(sz === sub.size));
     b.querySelector('small').textContent = candidate ? eur(paidTotal(z, sz)) : 'Unavailable';
   });
+  saveDraft();
   $('#cMoveHint').textContent = sub.plan === 'free' ? 'Your free 1×1 place is on the Edge. You can explore paid placement after review.' : (coarse ? 'Tap' : 'Click') + ' the map to move your spot. Held during review and for 7 days after approval. Pay then to keep it for 12 months.';
 }
 function centerOnSpot(quick) { const s = sub.spot; if (!s) return; flyTo(s.x + sub.size / 2, s.y + sub.size / 2, clamp(Math.max(cam.z, (isMobile() ? 26 : 34) / CELL / Math.max(1, sub.size / 2)), ZMIN, ZMAX), quick ? 550 : 1300, easeInOut); }
@@ -1787,7 +1790,7 @@ function celebrate(q) {
 document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { closeSheet(); startSubmit(null); });
 
 /* Map purchases use the current reserved coordinates and a server-priced order. */
-let mapPoll = 0, mapPollSince = 0;
+let mapPoll = 0, mapPollSince = 0, mapPollSlug = null;
 async function renderMapPlacement(o) {
   const box=$('#mPlacement'),slug=mSlug; clearTimeout(mapPoll);
   if (!o.slug) { box.replaceChildren(el('p',{class:'fine',text:'Loading…'})); return; }
@@ -1825,7 +1828,7 @@ async function renderMapPlacement(o) {
     if(o.status!=='approved')box.append(el('p',{class:'note',text:'Your spot is held free while your product is reviewed. Payment opens after approval, under the same rules for every maker.'}));
     else if(!COMMERCE.enabled)box.append(el('p',{class:'note',text:'Payments are temporarily paused. Your free listing continues.'}));
     else if(status.state==='pending'){
-      const resume=el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'I haven’t paid yet: resume checkout',onclick:()=>{resume.replaceWith(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);}});
+      const resume=el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'I haven’t paid yet: resume checkout',onclick:()=>{clearTimeout(mapPoll);resume.replaceWith(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);}});
       box.append(el('p',{class:'note',text:'If you have paid, do not pay again. Confirmation usually takes a few minutes. If it has not appeared within an hour, contact support with your order details below.'}),resume);
     }
     else if(status.state!=='needs_review')box.append(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);
@@ -1834,8 +1837,8 @@ async function renderMapPlacement(o) {
   box.append(el('a',{class:'linkbtn',href:'/withdraw',text:'Withdraw from a contract / request a refund'}));
   renderPurchaseHistory(box,slug);
   if(status.state==='needs_review')box.append(el('button',{class:'linkbtn',text:'Contact support',onclick:()=>openContact('other')}));
-  if(status.state!=='pending')mapPollSince=0;
-  else{if(!mapPollSince)mapPollSince=Date.now();if(Date.now()-mapPollSince<10*60*1000)mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);}
+  if(status.state!=='pending'||mapPollSlug!==slug){mapPollSince=0;mapPollSlug=slug;}
+  if(status.state==='pending'){if(!mapPollSince)mapPollSince=Date.now();if(Date.now()-mapPollSince<10*60*1000)mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);}
 }
 
 async function renderPurchaseHistory(box,slug) {
@@ -1884,6 +1887,7 @@ function renderManage() {
   else if (o.status === 'hidden') note.append(el('div', { class: 'note' }, el('b', { text: 'Hidden. ' }), o.review_note || 'This product is hidden after reports, until it has been checked.'));
   else if (o.status === 'approved') note.append(el('div', { class: 'note ok' }, 'Live at ', el('a', { href: productUrl(mSlug), style: 'text-decoration:underline', onclick: e => { e.preventDefault(); const p = BY_SLUG.get(mSlug); if (p) openProduct(p); }, text: productUrl(mSlug).replace(/^https?:\/\//, '') })));
   $('#mTabs').querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === mTab)));
+  const selTab = $('#mTabs [aria-selected="true"]'); if (selTab && selTab.scrollIntoView) selTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   manageEl.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== mTab);
   if (mTab === 'stats') renderStats(o);
   if (mTab === 'edit' && o.slug && !mDirty) mform.set(o);
@@ -2141,14 +2145,17 @@ function placementReport(r) {
 }
 function box_(b, ...kids) { b.replaceChildren(...kids); }
 async function confirmRemove(o) {
-  let map = null; try { map = await rpc('owner_map_status', { p_slug: mSlug, p_key: OWNED[mSlug].key }); } catch (e) {}
+  const slug = mSlug, key = OWNED[slug] && OWNED[slug].key; if (!key) return;
+  let map = null, unknown = false; try { map = await rpc('owner_map_status', { p_slug: slug, p_key: key }); } catch (e) { unknown = true; }
+  if (mSlug !== slug || ui !== 'manage') return;
   const paidMap = map && map.state === 'paid' && Date.parse(map.ends_at) > Date.now();
   openDlg(el('div', { class: 'mono kick', style: 'color:#ff8a8a', text: 'Take listing down' }), el('h2', { class: 'display', text: `Remove ${o.name}?` }),
     el('p', { style: 'margin-top:12px', text: 'The profile disappears everywhere, the spot is released and your contact email is wiped. This can’t be undone.' }),
-    paidMap ? el('p', { class: 'note', text: `This product has a paid map placement until ${dateStr(map.ends_at)}. Taking the listing down ends it, and this owner key will no longer open your order details. First download your order details in the Map spot tab. To ask for a refund, use Withdraw / request a refund with your order reference.` }) : null,
+    paidMap ? el('p', { class: 'note', text: `This product has a paid map placement until ${dateStr(map.ends_at)}. Taking the listing down ends it, and this owner key will no longer open your order details. First download your order details in the Map spot tab. To ask for a refund, use Withdraw / request a refund with your order reference.` })
+      : unknown ? el('p', { class: 'note', text: 'We could not check for a paid map placement just now. If you paid for one, download your order details in the Map spot tab first.' }) : null,
     el('div', { class: 'c-row' }, el('button', { class: 'btn btn-danger', text: 'Yes, take it down', onclick: async e => {
       e.target.disabled = true;
-      try { await rpc('owner_remove', { p_slug: mSlug, p_key: OWNED[mSlug].key }); delete OWNED[mSlug]; delete OWNDATA[mSlug]; saveOwned(); closeDlg(); closeUI(); await refreshAll(); loadStats(); toast('Your listing has been taken down.'); }
+      try { await rpc('owner_remove', { p_slug: slug, p_key: key }); delete OWNED[slug]; delete OWNDATA[slug]; saveOwned(); closeDlg(); closeUI(); await refreshAll(); loadStats(); toast('Your listing has been taken down.'); }
       catch (err) { e.target.disabled = false; toast("Couldn't take it down right now — try again."); }
     } }), el('button', { class: 'btn btn-ghost btn-sm', text: 'Cancel', onclick: closeDlg })));
 }

@@ -14,7 +14,11 @@
 --     review is moved to a free Edge cell when its old cells were taken, never a paying one.
 --  6. A withdrawal notice is linked to its order whenever the reference contains the order id.
 --  7. A hold is armed on the first approval and on a move from the free spot or from no hold;
---     moving or re-approval never extends a running hold or revives a lapsed one.
+--     moving never extends a running hold or revives a lapsed one, and a re-approval after an edit
+--     leaves at least a day to pay.
+--  8. A delayed payment that is still processing keeps its checkout open for up to 14 days, and
+--     an open order can be resumed after its hold ends. A term that ended normally keeps its spot
+--     for the 24-hour renewal window. Status changes take the map lock before any row lock.
 -- Owner, admin and webhook credential checks, server-side prices and terms acceptance are unchanged.
 
 alter table expanse_private.stripe_events add column if not exists payment_intent text;
@@ -78,6 +82,13 @@ revoke execute on function expanse_private.unreject_spot() from public, anon, au
 drop trigger if exists unreject_spot on public.products;
 create trigger unreject_spot before update of status on public.products for each row execute function expanse_private.unreject_spot();
 
+-- A delayed payment method (e.g. SEPA Direct Debit) reported processing for this order within the last 14 days.
+create or replace function expanse_private.payment_processing(p_purchase uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+ select exists(select 1 from expanse_private.stripe_events e where e.purchase_id=p_purchase and e.outcome='processing' and e.created_at>now()-interval '14 days')
+$$;
+revoke execute on function expanse_private.payment_processing(uuid) from public, anon, authenticated;
+
 -- 1, 2. Webhook confirmation.
 create or replace function public.confirm_map_payment(p_token text,p_event jsonb) returns json
 language plpgsql volatile security definer set search_path = '' as $$
@@ -113,7 +124,11 @@ begin
  begin v_id:=(p_event->>'reference')::uuid; exception when others then return json_build_object('outcome','missing_reference'); end;
  select * into b from expanse_private.map_purchases where id=v_id for update;
  if b.id is null then return json_build_object('outcome','unknown_order'); end if;
- if v_type='checkout.session.completed' and p_event->>'payment_status'<>'paid' then return json_build_object('outcome','awaiting_payment'); end if;
+ if v_type='checkout.session.completed' and p_event->>'payment_status'<>'paid' then
+   -- A delayed payment method is processing: remember it, so the order counts as open until it succeeds or fails.
+   insert into expanse_private.stripe_events(event_id,session_id,purchase_id,outcome,payment_intent) values(v_event,v_session,b.id,'processing',v_pi);
+   return json_build_object('outcome','awaiting_payment');
+ end if;
  if v_type in ('checkout.session.async_payment_failed','checkout.session.expired') then
    -- One session ending unpaid does not end the order: the owner may have paid in another session.
    update expanse_private.map_purchases set state='failed' where id=b.id and state='pending';
@@ -192,6 +207,11 @@ begin
    and b.x=p.x and b.y=p.y and b.size=p.size
    and b.created_at<=coalesce(p.map_hold_until,(select max(e.ends_at) from expanse_private.map_purchases e where e.product_id=p.id
        and e.state in ('paid','refunded','disputed') and e.x=p.x and e.y=p.y and e.size=p.size))+interval '24 hours')
+ and not exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state='pending' and b.x=p.x and b.y=p.y and b.size=p.size
+   and expanse_private.payment_processing(b.id))
+ -- A term that ended normally keeps its spot for the 24-hour renewal window. Refunds and disputes release at once.
+ and not exists(select 1 from expanse_private.map_purchases b where b.product_id=p.id and b.state='paid' and b.ends_at<=now() and b.ends_at>now()-interval '24 hours'
+   and b.x=p.x and b.y=p.y and b.size=p.size)
  loop
    select * into point from expanse_private.free_edge_cell(r.id);
    if point.x is not null then
@@ -214,7 +234,7 @@ begin
  order by (state='paid' and ends_at>now()) desc,created_at desc limit 1;
  st:=case when b.state='paid' and b.ends_at<=now() then 'expired'
    -- An order whose sessions can no longer be paid is over; the owner can choose a spot again.
-   when b.state in ('pending','failed') and b.created_at<=now()-interval '48 hours' then 'free'
+   when b.state in ('pending','failed') and b.created_at<=now()-interval '48 hours' and not expanse_private.payment_processing(b.id) then 'free'
    else coalesce(b.state,'free') end;
  return json_build_object('state',st,
    'hold_until',r.map_hold_until,'ends_at',b.ends_at,'paid_at',b.paid_at,'issue',case when st='free' then null else b.issue end,
@@ -229,10 +249,6 @@ language plpgsql volatile security definer set search_path = '' as $$
 declare r public.products := public._owned(p_slug,p_key); m expanse_private.map_catalog; b expanse_private.map_purchases;
 begin
  if r.status <> 'approved' then raise exception 'review_required'; end if;
- if r.map_hold_until is not null and r.map_hold_until<=now() and not (r.zone='edge' and r.size=1) then raise exception 'hold_expired'; end if;
- if r.map_hold_until is null and not (r.zone='edge' and r.size=1)
-   and (select max(e.ends_at) from expanse_private.map_purchases e where e.product_id=r.id and e.state in ('paid','refunded','disputed','expired')
-        and e.ends_at<=now() and e.x=r.x and e.y=r.y and e.size=r.size)+interval '24 hours'<now() then raise exception 'hold_expired'; end if;
  if not (select enabled from expanse_private.commerce_config where singleton) then raise exception 'payments_paused'; end if;
  perform pg_advisory_xact_lock(4242);
  select * into r from public.products where id=r.id for update;
@@ -242,6 +258,11 @@ begin
  select * into b from expanse_private.map_purchases where product_id=r.id and state='pending' and x=r.x and y=r.y and size=r.size
  and payment_link=m.payment_link and amount_cents=m.amount_cents and created_at>now()-interval '12 hours' order by created_at desc limit 1;
  if b.id is null then
+   -- A new order needs a running hold, or a term at this spot that ended less than 24 hours ago.
+   if r.map_hold_until is not null and r.map_hold_until<=now() and not (r.zone='edge' and r.size=1) then raise exception 'hold_expired'; end if;
+   if r.map_hold_until is null and not (r.zone='edge' and r.size=1)
+     and (select max(e.ends_at) from expanse_private.map_purchases e where e.product_id=r.id and e.state in ('paid','refunded','disputed','expired')
+          and e.ends_at<=now() and e.x=r.x and e.y=r.y and e.size=r.size)+interval '24 hours'<now() then raise exception 'hold_expired'; end if;
    if (select count(*) from expanse_private.map_purchases where product_id=r.id and created_at>now()-interval '1 hour')>=5 then raise exception 'too_many'; end if;
    insert into expanse_private.map_purchases(product_id,x,y,size,zone,amount_cents,payment_link)
    values(r.id,r.x,r.y,r.size,r.zone,m.amount_cents,m.payment_link) returning * into b;
@@ -259,7 +280,8 @@ begin
  perform pg_advisory_xact_lock(4242);
  perform 1 from public.products where id=r.id for update;
  if exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='paid' and ends_at>now()) then raise exception 'active_purchase'; end if;
- if exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='pending' and created_at>now()-interval '48 hours') then raise exception 'checkout_open'; end if;
+ if exists(select 1 from expanse_private.map_purchases b where b.product_id=r.id and b.state='pending'
+   and (b.created_at>now()-interval '48 hours' or expanse_private.payment_processing(b.id))) then raise exception 'checkout_open'; end if;
  perform public._assert_free(p_x,p_y,p_size,r.id,null);
  z := public.zone_of(p_x,p_y,p_size);
  update public.products set x=p_x,y=p_y,size=p_size,zone=z,price_eur=public.price_per_cell(z)*p_size*p_size where id=r.id returning * into r;
@@ -294,9 +316,21 @@ begin
      when new.zone='edge' and new.size=1 then null                        -- the free spot needs no hold
      when (old.zone='edge' and old.size=1) or old.map_hold_until is null then now()+interval '7 days'
      else old.map_hold_until end;                                         -- a lapsed hold stays lapsed until the product is released
- elsif old.status<>'approved' and new.status='approved' and old.map_hold_until is not null and old.approved_at is null then
-   new.map_hold_until:=now()+interval '7 days';
+ elsif old.status<>'approved' and new.status='approved' and old.map_hold_until is not null then
+   -- The first approval starts the 7-day hold; a re-approval after an edit leaves at least a day to pay.
+   new.map_hold_until:=case when old.approved_at is null then now()+interval '7 days' else greatest(old.map_hold_until, now()+interval '24 hours') end;
  end if;
  return new;
 end $$;
 revoke execute on function expanse_private.map_hold() from public, anon, authenticated;
+
+-- Take the map lock before a status change locks any product row, in the same order as every other map writer.
+create or replace function expanse_private.map_lock_statement() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+ perform pg_advisory_xact_lock(4242);
+ return null;
+end $$;
+revoke execute on function expanse_private.map_lock_statement() from public, anon, authenticated;
+drop trigger if exists map_lock_statement on public.products;
+create trigger map_lock_statement before update of status on public.products for each statement execute function expanse_private.map_lock_statement();
