@@ -692,7 +692,7 @@ function draw(T) {
   for (const zz of ZONES) {
     const r = (isFinite(zz.r) ? zz.r : WORLD_R + 8) * cp; if (r < (zz.reserved ? 40 : 70) || r > Math.max(W, H) * 2.2) continue;
     const y = c0.y - r; if (y < 70 || y > H - 20 || c0.x < -200 || c0.x > W + 200) continue;
-    const label = zz.reserved ? 'SPOTLIGHT · EARNED, NOT SOLD' : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL · €3 MIN`;
+    const label = zz.reserved ? 'SPOTLIGHT · EARNED, NOT SOLD' : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL`;
     const tw = ctx.measureText(label).width + 20;
     ctx.globalAlpha = .92; ctx.fillStyle = 'rgba(4,6,22,.88)'; rrect(ctx, c0.x - tw / 2, y - 11, tw, 22, 11); ctx.fill();
     ctx.strokeStyle = zz.color; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.stroke();
@@ -820,7 +820,7 @@ function hover(m) {
     if (d > MAX_R) { hideTip(); return; }
     const z = ZONES.find(zz => d < zz.r);
     cv.classList.add('dive');
-    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `${eur(z.price)} per cell / 12 months · €3 minimum · click to zoom in`, z.reserved ? '#ffcf4a' : z.color);
+    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `${eur(z.price)} per cell / 12 months · click to zoom in`, z.reserved ? '#ffcf4a' : z.color);
     return;
   }
   const q = demoAt(m);
@@ -1472,13 +1472,27 @@ function normUrl(v) {
   return v;
 }
 const urlOk = v => /^https:\/\/(?!(?:[^\/?#]*@))[a-z0-9.-]+\.[a-z]{2,24}(:\d{2,5})?([\/?#]\S*)?$/i.test(v) && v.length <= 300;
+/* Field errors: shown next to the field and linked to it for screen readers, not only in a toast. */
+let errSeq = 0;
+function fieldError(w, msg) {
+  if (!w) return; w.classList.add('bad');
+  let e = w.querySelector(':scope > small.err');
+  if (!e) { e = el('small', { class: 'err', id: 'field-err-' + (++errSeq) }); w.append(e); }
+  if (msg) e.textContent = msg; else if (!e.textContent) e.textContent = 'Check this field.';
+  const i = w.querySelector('input,textarea'); if (i) { i.setAttribute('aria-invalid', 'true'); i.setAttribute('aria-describedby', e.id); }
+}
+function fieldOk(w) {
+  if (!w) return; w.classList.remove('bad');
+  const e = w.querySelector(':scope > small.err'); if (e) e.remove();
+  const i = w.querySelector('input,textarea'); if (i) { i.removeAttribute('aria-invalid'); i.removeAttribute('aria-describedby'); }
+}
 function makeForm() {
   const f = {}, data = { category: 'other', pricing: 'unspecified', needs: [], platforms: [], integrations: [] };
   const input = (name, label, attrs, hint) => { const i = el('input', Object.assign({ autocomplete: 'off', spellcheck: 'false' }, attrs)); const w = el('label', { class: 'field', 'data-f': name }, el('span', { class: 'mono' }, label), i, hint ? el('small', { class: 'hint', text: hint }) : null); f[name] = { w, i }; return w; };
   const opts = (name, label, entries, multi, colors) => {
     const box = el('div', { class: 'opts', role: 'group', 'aria-label': label });
     const paint = () => box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(multi ? data[name].includes(b.dataset.v) : data[name] === b.dataset.v)));
-    for (const [k, l] of entries) box.append(el('button', { type: 'button', 'data-v': k, 'aria-pressed': 'false', style: colors ? '--c:' + colors[k] : null, onclick: () => { if (multi) { const a = data[name]; const i = a.indexOf(k); i < 0 ? a.push(k) : a.splice(i, 1); } else data[name] = k; paint(); f[name].w.classList.remove('bad'); changed(); } }, colors ? el('i') : null, l));
+    for (const [k, l] of entries) box.append(el('button', { type: 'button', 'data-v': k, 'aria-pressed': 'false', style: colors ? '--c:' + colors[k] : null, onclick: () => { if (multi) { const a = data[name]; const i = a.indexOf(k); i < 0 ? a.push(k) : a.splice(i, 1); } else data[name] = k; paint(); fieldOk(f[name].w); changed(); } }, colors ? el('i') : null, l));
     const w = el('div', { class: 'field', 'data-f': name }, el('span', { class: 'mono', text: label }), box); f[name] = { w, paint }; return w;
   };
   const tags = (name, label, ph, max, maxLen, ideas, lower) => {
@@ -1489,7 +1503,7 @@ function makeForm() {
       box.replaceChildren(...data[name].map((t, i) => el('span', { class: 't' }, t, el('button', { type: 'button', 'aria-label': 'Remove ' + t, text: '×', onclick: e => { e.stopPropagation(); data[name].splice(i, 1); paint(); changed(); } }))), inp);
       if (ideaBox) ideaBox.replaceChildren(...ideas().filter(x => !data[name].includes(x)).slice(0, 8).map(x => el('button', { type: 'button', text: '+ ' + x, onclick: () => { add(x); inp.focus(); } })));
     };
-    const add = v => { v = String(v || '').replace(/\s+/g, ' ').trim().slice(0, maxLen); if (lower) v = v.toLowerCase(); if (v.length < (lower ? 2 : 1) || data[name].some(x => x.toLowerCase() === v.toLowerCase())) return; if (data[name].length >= max) { toast(`Up to ${max}.`); return; } data[name].push(v); paint(); f[name].w.classList.remove('bad'); changed(); };
+    const add = v => { v = String(v || '').replace(/\s+/g, ' ').trim().slice(0, maxLen); if (lower) v = v.toLowerCase(); if (v.length < (lower ? 2 : 1) || data[name].some(x => x.toLowerCase() === v.toLowerCase())) return; if (data[name].length >= max) { toast(`Up to ${max}.`); return; } data[name].push(v); paint(); fieldOk(f[name].w); changed(); };
     inp.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ',') && inp.value.trim()) { e.preventDefault(); add(inp.value); inp.value = ''; } else if (e.key === 'Backspace' && !inp.value && data[name].length) { data[name].pop(); paint(); changed(); } });
     inp.addEventListener('blur', () => { if (inp.value.trim()) { add(inp.value); inp.value = ''; } });
     const w = el('div', { class: 'field', 'data-f': name }, el('span', { class: 'mono' }, label), box, ideaBox);
@@ -1520,9 +1534,9 @@ function makeForm() {
     story: [f.description.w, input('demo_url', 'Demo link · optional', { type: 'url', inputmode: 'url', maxlength: '300', placeholder: 'A live demo, video or sandbox' }), f.images.w]
   };
   f.needs.w.querySelector('.mono').append(el('em', { text: 'what people would search for' }));
-  for (const k of ['name', 'url', 'tagline', 'audience', 'price_text', 'demo_url']) f[k].i.addEventListener('input', () => { f[k].w.classList.remove('bad'); changed(); });
-  desc.addEventListener('input', () => { f.description.w.classList.remove('bad'); changed(); });
-  imgs.addEventListener('input', () => { f.images.w.classList.remove('bad'); changed(); });
+  for (const k of ['name', 'url', 'tagline', 'audience', 'price_text', 'demo_url']) f[k].i.addEventListener('input', () => { fieldOk(f[k].w); changed(); });
+  desc.addEventListener('input', () => { fieldOk(f.description.w); changed(); });
+  imgs.addEventListener('input', () => { fieldOk(f.images.w); changed(); });
   function get() {
     return {
       name: f.name.i.value.replace(/\s+/g, ' ').trim(), url: normUrl(f.url.i.value), tagline: f.tagline.i.value.replace(/\s+/g, ' ').trim(),
@@ -1540,7 +1554,7 @@ function makeForm() {
     data.needs = (d.needs || []).slice(0, 6); data.platforms = (d.platforms || []).filter(x => PLATFORMS[x]); data.integrations = (d.integrations || []).slice(0, 12);
     f.category.paint(); f.pricing.paint(); f.platforms.paint(); f.needs.paint(); f.integrations.paint();
     counter.textContent = f.description.i.value.length + ' / 1200';
-    for (const k in f) f[k].w.classList.remove('bad');
+    for (const k in f) fieldOk(f[k].w);
   }
   const CHECKS = {
     name: d => d.name.length >= 2 || 'Give your product a name.',
@@ -1559,11 +1573,11 @@ function makeForm() {
     const d = get();
     for (const g of groupNames) for (const k of GROUP_FIELDS[g]) {
       const r = CHECKS[k](d);
-      if (r !== true) { bad(k); toast(r, 4000); return k; }
+      if (r !== true) { bad(k, r); toast(r, 4000); return k; }
     }
     return null;
   }
-  function bad(k) { const w = f[k] && f[k].w; if (!w) return; w.classList.add('bad'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake'); const i = w.querySelector('input,textarea'); if (i) i.focus({ preventScroll: false }); w.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' }); }
+  function bad(k, msg) { const w = f[k] && f[k].w; if (!w) return; fieldError(w, msg); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake'); const i = w.querySelector('input,textarea'); if (i) i.focus({ preventScroll: false }); w.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' }); }
   const groupOf = k => Object.keys(GROUP_FIELDS).find(g => GROUP_FIELDS[g].includes(k));
   return { groups, get, set, check, bad, groupOf, onChange: fn => { onChange = fn; } };
 }
@@ -1638,7 +1652,10 @@ function zoneSpot(id, size, preferred) {
   }
   return null;
 }
+// A 1×1 Edge cell is the free spot, so a paid placement on the Edge starts at 2×2.
+const paidEdgeOne = (id, size) => sub.plan === 'paid' && !sub.moving && id === 'edge' && size === 1;
 function chooseZone(id, size) {
+  if (paidEdgeOne(id, size || sub.size)) size = 2;
   const next = zoneSpot(id, size || sub.size, sub.zone === id ? sub.spot : null);
   if (!next) { toast('No free spot of this size in this zone. Try a smaller size or another zone.'); return false; }
   sub.zone = id; sub.size = size || sub.size; setSpot(next, true); return true;
@@ -1653,6 +1670,7 @@ function startSubmit(spot, fromMap) {
     sub.plan = d && d.plan === 'paid' ? 'paid' : 'free';
     sub.size = sub.plan === 'paid' && d && [1, 2, 4, 8].includes(d.size) ? d.size : 1;
     sub.zone = sub.plan === 'paid' && d && ['inner','belt','outer','edge'].includes(d.zone) ? d.zone : 'edge';
+    if (paidEdgeOne(sub.zone, sub.size)) sub.size = 2;
     sub.name = d ? d.name || '' : ''; sub.cat = d ? d.category || 'other' : 'other';
   }
   // Map previews offer a 2×2 block: keep that exact size when entering the product-first form.
@@ -1671,20 +1689,20 @@ function describe() {
   $('#cZone').textContent = z.label; $('#cZone').style.background = z.color;
   $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells unoccupied`;
   $('#cPrice').textContent = sub.plan === 'free' ? '€0' : eur(paidTotal(z, sub.size));
-  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · €3 minimum · one payment for 12 months · tax included where applicable`;
+  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
   $('#cPaidOptions').hidden = sub.plan === 'free';
   $('#cPlans').querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.plan === sub.plan)));
   $('#cZoneValue').textContent = 'Every zone includes your own page, website link and stats. Map position changes where you appear while exploring; it never buys search ranking or Spotlight. No traffic or sales are guaranteed.';
   $('#cZones').replaceChildren(...ZONES.filter(z => !z.reserved).slice().reverse().map(item => {
     const f = zoneFree(item.id);
     return el('button', { type: 'button', class: 'zone-option', style: '--zc:' + item.color, 'aria-pressed': String(item.id === sub.zone), onclick: () => chooseZone(item.id) },
-      el('b', { text: item.label }), el('strong', { text: eur(item.price) + ' / cell · €3 minimum' }),
+      el('b', { text: item.label }), el('strong', { text: eur(item.price) + (item.id === 'edge' ? ' / cell · from 2×2' : ' / cell') }),
       el('small', { text: `${fmt(f.free)} of ${fmt(f.cap)} cells unoccupied · ${item.line}` }));
   }));
   claimEl.querySelectorAll('[data-s]').forEach(b => {
-    const sz = +b.dataset.s, candidate = zoneSpot(sub.zone, sz);
+    const sz = +b.dataset.s, freeCell = paidEdgeOne(sub.zone, sz), candidate = !freeCell && zoneSpot(sub.zone, sz);
     b.disabled = !candidate; b.setAttribute('aria-pressed', String(sz === sub.size));
-    b.querySelector('small').textContent = candidate ? eur(paidTotal(z, sz)) : 'Unavailable';
+    b.querySelector('small').textContent = freeCell ? 'Free plan' : candidate ? eur(paidTotal(z, sz)) : 'Unavailable';
   });
   saveDraft();
   $('#cMoveHint').textContent = sub.plan === 'free' ? 'Your free 1×1 place is on the Edge. You can explore paid placement after review.' : (coarse ? 'Tap' : 'Click') + ' the map to move your spot. Held during review and for 7 days after approval. Pay then to keep it for 12 months.';
@@ -1694,8 +1712,10 @@ function setSpot(s, quick) { sub.spot = { x: s.x, y: s.y }; describe(); centerOn
 $('#cPlans').addEventListener('click', e => {
   const b = e.target.closest('[data-plan]'); if (!b) return;
   const plan = b.dataset.plan;
-  if (plan === 'free') { if (!chooseZone('edge', 1)) return; }
-  sub.plan = plan; describe();
+  if (plan === 'free') { const was = sub.plan; sub.plan = 'free'; if (!chooseZone('edge', 1)) { sub.plan = was; return; } }
+  sub.plan = plan;
+  if (paidEdgeOne(sub.zone, sub.size)) { if (!chooseZone('edge', 2)) chooseZone('outer', 1); return; }
+  describe();
 });
 $('#cSizes').addEventListener('click', e => {
   const b = e.target.closest('[data-s]'); if (!b || b.disabled) return;
@@ -1725,12 +1745,13 @@ function renderSummary() {
   $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' ? 'free profile' : `${eur(paidTotal(z, sub.size))} / 12 months after review`);
   $('#cReviewTerms').textContent = sub.plan === 'free' ? 'Every product is reviewed under the same rules. Your free profile, search listing and stats have no expiry. No payment required.' : 'Every product is reviewed under the same rules. Your spot is held free during review and for 7 days after approval. Once approved, you can pay once for 12 months of placement. No automatic renewal. Payment never buys approval, search ranking or Spotlight.';
 }
+$('#cMail').addEventListener('input', () => fieldOk($('#fMail')));
 $('#cSubmit').addEventListener('submit', async e => {
   e.preventDefault();
   if ($('#cWeb').value) return;
   const input = $('#cMail'), email = input.value.trim().toLowerCase();
-  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('#fMail').classList.add('bad'); input.focus(); toast('That email looks off.'); return; }
-  $('#fMail').classList.remove('bad');
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fieldError($('#fMail'), 'That email looks off. Check it, for example name@company.com.'); input.focus(); toast('That email looks off.'); return; }
+  fieldOk($('#fMail'));
   if (!$('#cOwn').checked) { toast('Please confirm that you make or represent this product.'); $('#cOwn').focus(); return; }
   const stepWithError = wiz.check(['basics', 'fit', 'story']); if (stepWithError) { setStep(2); $('#cExtras').open = true; wiz.bad(stepWithError); return; }
   const btn = $('#cSend'); btn.disabled = true; btn.textContent = 'Sending…';
@@ -1746,7 +1767,7 @@ $('#cSubmit').addEventListener('submit', async e => {
     const m = errCode(err);
     if (m.startsWith('invalid:')) {
       const k = m.slice(8);
-      if (k === 'email') { $('#fMail').classList.add('bad'); toast('That email looks off.'); }
+      if (k === 'email') { fieldError($('#fMail'), 'That email looks off.'); toast('That email looks off.'); }
       else if (k === 'spot') { setStep(1); toast('Pick your spot again.'); }
       else { const g = wiz.groupOf(k); if (g) { setStep(STEP_OF[g]); wiz.bad(k); } toast('Something in your profile needs a fix — check the highlighted field.', 4500); }
     } else if (m.includes('spot_taken')) {
@@ -1807,12 +1828,12 @@ async function renderMapPlacement(o) {
   const buy=el('button',{type:'button',class:'btn btn-primary',text:`Pay ${eur(status.amount_cents/100)} for 12 months ↗`,onclick:async()=>{
     buy.disabled=true;buy.textContent='Preparing secure payment…';
     try{
-      const order=await rpc('owner_map_checkout',{p_slug:slug,p_key:OWNED[slug].key,p_terms_version:'2026-10-20'});
+      const order=await rpc('owner_map_checkout',{p_slug:slug,p_key:OWNED[slug].key,p_terms_version:'2026-10-29'});
       const u=new URL(order.url);
       if(u.origin!=='https://buy.stripe.com'||!order.id)throw new Error('invalid_checkout');
       store.set('expanse.checkout.v1',{slug,id:order.id}); location.assign(u.href);
     }catch(err){
-      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':'Could not start payment. Nothing was charged. Please try again.',5000);
+      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':m==='free_spot'?'A 1×1 Edge spot is free. Choose another zone or a bigger size to buy a placement.':'Could not start payment. Nothing was charged. Please try again.',5000);
       buy.disabled=false;buy.textContent=`Pay ${eur(status.amount_cents/100)} for 12 months ↗`;
     }
   }});
@@ -1823,8 +1844,12 @@ async function renderMapPlacement(o) {
   const consent=el('input',{type:'checkbox'});
   const terms=el('label',{class:'check'},consent,el('span',{text:'I agree to the purchase terms and request placement to start when payment is confirmed. One payment for 12 months, no automatic renewal, no guaranteed traffic or sales, and no effect on search or Spotlight. I keep the 14-day full-refund right.'}));
   buy.disabled=true;consent.addEventListener('change',()=>buy.disabled=!consent.checked);
+  const freeSpot=o.zone==='edge'&&o.size===1;
   box.replaceChildren(el('h3',{class:'display',text:`${z.label} · ${o.size}×${o.size}`}),paid);
-  if(!active){
+  if(!active&&freeSpot&&status.state!=='pending'&&status.state!=='needs_review'){
+    box.append(el('p',{class:'note',text:'This 1×1 Edge spot is your free spot, so there is nothing to pay for here. A paid placement means another zone, or 2×2 or larger on the Edge, for 12 months.'}));
+    if(o.status==='approved')box.append(change);
+  }else if(!active){
     box.append(el('div',{class:'placement-total',text:`${eur(status.amount_cents/100)} / 12 months`}),el('p',{class:'fine',text:'One payment in euros. Tax included where applicable. No automatic renewal. Map placement is separate from Sponsored cards.'}));
     if(o.status!=='approved')box.append(el('p',{class:'note',text:'Your spot is held free while your product is reviewed. Payment opens after approval, under the same rules for every maker.'}));
     else if(!COMMERCE.enabled)box.append(el('p',{class:'note',text:'Payments are temporarily paused. Your free listing continues.'}));
@@ -2020,9 +2045,9 @@ async function renderShare(o) {
  const generate=()=>{text.value=G.copy(o,kind.value,channel.value,BY_SLUG.get(other.value));update();};
  channel.onchange=update;text.oninput=update;campaign.onchange=()=>{const row=campaignRows.find(r=>r.campaign===campaign.value);if(row&&kind.value!==row.kind){kind.value=row.kind;image();}update();};kind.onchange=image;format.onchange=image;other.onchange=image;update();
  const name=el('input',{maxlength:60,placeholder:'e.g. Black Friday launch','aria-label':'New campaign name'}),create=el('button',{class:'btn btn-ghost btn-sm',text:'Create tracked campaign',onclick:async()=>{create.disabled=true;try{const row=await rpc('owner_create_campaign',{p_slug:slug,p_key:OWNED[slug].key,p_name:name.value.trim(),p_kind:kind.value});if(!campaignRows.some(x=>x.campaign===row.campaign)){campaignRows.unshift({...row,views:0,visits:0});campaign.append(el('option',{value:row.campaign,text:row.name}));}campaign.value=row.campaign;update();toast('Campaign link ready. Publish it yourself.');}catch(e){toast(errCode(e).includes('slow_down')?'Campaign limit reached for this hour. Try later.':'Could not create campaign. Use a name of 2–60 characters, or reuse an existing campaign.');}finally{create.disabled=false;}}});
- const save=el('button',{class:'btn btn-primary btn-sm',text:coarse?'Save or share image':'Download PNG',onclick:async()=>{save.disabled=true;try{const done=await saveImage(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));if(done!=='cancelled')studioEvent(slug,'download');if(done==='downloaded')toast(coarse?'Download started. Find the image in your Downloads.':'Image downloaded.');}catch{toast('PNG conversion failed. Download original image (SVG) instead.',5000);}finally{save.disabled=false;}}});warm();
+ const save=el('button',{class:'btn btn-primary btn-sm',text:coarse?'Save or share image':'Download PNG',onclick:async()=>{save.disabled=true;try{const done=await saveImage(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));if(done!=='cancelled')studioEvent(slug,'download');if(done==='downloaded')toast(coarse?'Download started. Find the image in your Downloads.':'Image downloaded.');}catch{toast('PNG conversion failed. Try again, or take a screenshot of the preview. The SVG file is for design tools; social networks do not accept SVG.',6000);}finally{save.disabled=false;}}});warm();
  fill(box,el('h3',{text:'Your ready-to-share kit · 2.0'}),el('p',{class:'fine',text:'Prepared from approved public facts. Choose a campaign and format; edit before publishing. Feature-update copy describes listed capabilities, not an invented release. Seasonal templates do not claim a discount.'}),
- el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
+ el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image (SVG, for design tools)',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
  el('p',{class:'fine',text:'Campaign IDs are generated and validated by Expanse. Names stay in your private studio. Legacy links continue working. Profile views are attributed to the link, not proof of a customer or sale. Cached images and post drafts stay in this browser. No automatic posting.'}),
  el('div',{class:'growth-handoff'},el('h4',{text:'Create a campaign in MakeItReal'}),el('p',{class:'fine',text:'Review and copy your approved public product facts, then paste them into Campaign Studio. No accounts, private analytics or owner keys are shared.'}),el('button',{class:'btn btn-ghost btn-sm',text:'Review campaign brief →',onclick:()=>{const brief=G.brief(o,currentLink()),payload=JSON.stringify(brief,null,2);openDlg(el('h2',{class:'display',text:'Review your public campaign brief'}),el('pre',{class:'codeblock',text:payload}),el('p',{class:'fine',text:'Manual handoff: copy the one-sentence summary into “What is it?” and the website into “Website” in MakeItReal. Review and confirm the facts there. Return to Expanse → Growth Studio to review tracked link visits. No OAuth, automatic project import or sales synchronization is connected.'}),el('div',{class:'c-row'},el('button',{class:'btn btn-primary btn-sm',text:'Copy approved facts',onclick:()=>copy(payload)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy one-sentence summary',onclick:()=>copy(o.name+' — '+o.tagline)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy website',onclick:()=>copy(o.url)}),el('a',{class:'btn btn-ghost btn-sm',href:'https://makeit-real.vercel.app/en/launch.html',target:'_blank',rel:'noopener',text:'Open MakeItReal Campaign Studio ↗'}),el('button',{class:'btn btn-ghost btn-sm',text:'Back to Expanse',onclick:closeDlg})));}})));
  renderSeasonalForm(box,o);

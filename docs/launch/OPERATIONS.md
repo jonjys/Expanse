@@ -142,3 +142,16 @@ terms and 35% query coverage in real approved profiles, with the exact overlappi
 profile tagline shown. It is a conservative lexical pilot, not an assessment of capability or
 purchase intent; map payments and votes do not affect it. Needs expire after 90 days, rate
 hashes after seven, and withdrawn records within seven days via expanse-needs-retention.
+
+## Map payment lifecycle release (2026-10-29)
+
+Three migrations ship together and are applied by the Supabase GitHub production integration when the branch is merged
+to main: `20261028222833_map_payment_lifecycle`, `20261028223424_marketing_kit_text_fit` and
+`20261029175620_map_terms_2026_10_29`. After main is applied, read the recorded versions from
+`supabase_migrations.schema_migrations`, keep the filenames identical, and refresh `supabase/migration-history.json`
+from read-only history. The frontend sends terms version 2026-10-29, so deploy the site and the migrations together;
+an open page from before the release gets `terms_required` once and works after a reload.
+
+Payments in review now email the admin notification address (Admin → Settings). Set it before enabling checkout.
+Vercel logs show `stripe_webhook_confirmation_failed` when Stripe will retry an event and
+`stripe_webhook_ignored_paid_session` when a paid session lacked Expanse metadata; both carry Stripe ids only.

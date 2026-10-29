@@ -27,8 +27,8 @@ begin
 
  -- 1. Session A expires, session B on the same order is paid: the placement is granted.
  a:=pg_temp.lc_mk('Lifecycle Alpha',100,-30,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
- if (public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb->>'id')<>o->>'id' then raise exception 'FAIL resumed checkout reuses the order'; end if;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
+ if (public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb->>'id')<>o->>'id' then raise exception 'FAIL resumed checkout reuses the order'; end if;
  if pg_temp.lc_pay(pg_temp.lc_ev('evt_lc_a_expired','checkout.session.expired',o->>'id','cs_lc_a1',1600,'outer',2,null,'unpaid'))<>'failed' then raise exception 'FAIL expiry recorded'; end if;
  out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_lc_a_paid','checkout.session.completed',o->>'id','cs_lc_a2',1600,'outer',2,'pi_lc_a2'));
  if out<>'paid' or (public.owner_map_status(a->>'slug',a->>'key')->>'state')<>'paid' then raise exception 'FAIL paid sibling session after expiry: %',out; end if; checks:=checks+1;
@@ -36,7 +36,7 @@ begin
 
  -- 2. The hold ends while a checkout is open: the nightly job waits, the payment is granted, the spot stays protected.
  b:=pg_temp.lc_mk('Lifecycle Bravo',100,30,2);
- o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-29')::jsonb;
  update public.products set map_hold_until=now()-interval '1 minute' where id=(b->>'id')::bigint;
  perform expanse_private.release_expired_map_spots();
  if (select size from public.products where id=(b->>'id')::bigint)<>2 then raise exception 'FAIL release moved a product with an open checkout'; end if; checks:=checks+1;
@@ -52,7 +52,7 @@ begin
  adm:=public._admin_issue();
  -- 4. An abandoned checkout lapses after 48 hours: status is free and the spot can be changed; before that it is locked.
  a:=pg_temp.lc_mk('Lifecycle Echo',-100,-30,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  update expanse_private.map_purchases set created_at=now()-interval '30 hours' where id=(o->>'id')::uuid;
  if (public.owner_map_status(a->>'slug',a->>'key')->>'state')<>'pending' then raise exception 'FAIL open checkout status'; end if;
  out:=pg_temp.lc_err(format('select public.owner_choose_map_spot(%L,%L,-100,-40,2)',a->>'slug',a->>'key'));
@@ -62,18 +62,26 @@ begin
  out:=pg_temp.lc_err(format('select public.owner_choose_map_spot(%L,%L,-100,-40,2)',a->>'slug',a->>'key'));
  if out<>'ok' then raise exception 'FAIL lapsed checkout still blocks: %',out; end if; checks:=checks+1;
 
- -- 2. A payment that needs review keeps its Stripe ids, alerts the admin and can be refunded.
+ -- 2. A payment through another link or amount goes to review without touching the order, alerts the admin,
+ -- and its refund is recorded.
  b:=pg_temp.lc_mk('Lifecycle Foxtrot',60,40,2);
- o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-29')::jsonb;
  select count(*) into mails from public.outbox where kind='map_review' and to_email='lifecycle-admin@example.invalid';
  out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_lc_f_wrong','checkout.session.completed',o->>'id','cs_lc_f',9999,'belt',2,'pi_lc_f'));
  if out<>'needs_review' then raise exception 'FAIL amount mismatch accepted'; end if;
- if not exists(select 1 from expanse_private.map_purchases where id=(o->>'id')::uuid and state='needs_review' and session_id='cs_lc_f' and payment_intent='pi_lc_f') then raise exception 'FAIL review keeps Stripe ids'; end if; checks:=checks+1;
+ if (select state from expanse_private.map_purchases where id=(o->>'id')::uuid)<>'pending'
+   or not exists(select 1 from expanse_private.stripe_events where event_id='evt_lc_f_wrong' and outcome='needs_review' and session_id='cs_lc_f' and payment_intent='pi_lc_f') then raise exception 'FAIL foreign payment changed the order or lost its ids'; end if; checks:=checks+1;
  if (select count(*) from public.outbox where kind='map_review' and to_email='lifecycle-admin@example.invalid')<>mails+1 then raise exception 'FAIL admin not told about review'; end if; checks:=checks+1;
  out:=pg_temp.lc_pay('{"id":"evt_lc_f_refund","type":"charge.refunded","livemode":true,"payment_intent":"pi_lc_f","fully_refunded":true}');
+ if out<>'review_refunded' then raise exception 'FAIL refund of foreign payment: %',out; end if;
+ -- A payment for this order that cannot be granted (session opened too late) marks the order, keeps its ids and can be refunded.
+ update expanse_private.map_purchases set created_at=now()-interval '30 hours' where id=(o->>'id')::uuid;
+ out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_lc_f_late','checkout.session.completed',o->>'id','cs_lc_fl',3600,'belt',2,'pi_lc_fl'));
+ if out<>'needs_review' or not exists(select 1 from expanse_private.map_purchases where id=(o->>'id')::uuid and state='needs_review' and session_id='cs_lc_fl' and payment_intent='pi_lc_fl') then raise exception 'FAIL review keeps Stripe ids'; end if;
+ out:=pg_temp.lc_pay('{"id":"evt_lc_fl_refund","type":"charge.refunded","livemode":true,"payment_intent":"pi_lc_fl","fully_refunded":true}');
  if out<>'refunded' or not exists(select 1 from expanse_private.map_purchases where id=(o->>'id')::uuid and state='refunded') then raise exception 'FAIL refund of reviewed payment: %',out; end if; checks:=checks+1;
  -- A second payment on an order that is already paid is reviewed, and its refund is recorded against it.
- o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-29')::jsonb;
  if pg_temp.lc_pay(pg_temp.lc_ev('evt_lc_f_paid','checkout.session.completed',o->>'id','cs_lc_f2',3600,'belt',2,'pi_lc_f2'))<>'paid' then raise exception 'FAIL retry after review'; end if;
  out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_lc_f_twice','checkout.session.completed',o->>'id','cs_lc_f3',3600,'belt',2,'pi_lc_f3'));
  if out<>'needs_review' then raise exception 'FAIL second payment reviewed: %',out; end if;
@@ -93,7 +101,7 @@ begin
 
  -- 3. Refunds keep their state through the nightly job, which moves the product once.
  a:=pg_temp.lc_mk('Lifecycle India',90,-60,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  perform pg_temp.lc_pay(pg_temp.lc_ev('evt_lc_i_paid','checkout.session.completed',o->>'id','cs_lc_i',1600,'outer',2,'pi_lc_i'));
  perform pg_temp.lc_pay('{"id":"evt_lc_i_refund","type":"charge.refunded","livemode":true,"payment_intent":"pi_lc_i","fully_refunded":true}');
  perform expanse_private.release_expired_map_spots();
@@ -116,12 +124,12 @@ begin
  adm:=public._admin_issue();
  -- A refunded product that later chooses a new spot keeps that spot while its hold runs.
  a:=pg_temp.lc_mk('Review Alpha',90,50,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  perform pg_temp.lc_pay(pg_temp.lc_ev('evt_rv_a_paid','checkout.session.completed',o->>'id','cs_rv_a',1600,'outer',2,'pi_rv_a'));
  perform pg_temp.lc_pay('{"id":"evt_rv_a_refund","type":"charge.refunded","livemode":true,"payment_intent":"pi_rv_a","fully_refunded":true}');
  update expanse_private.map_purchases set ends_at=ends_at-interval '25 hours', created_at=created_at-interval '25 hours' where id=(o->>'id')::uuid;
  -- A day after the refund, a new checkout at the same spot is refused and does not keep the spot.
- out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-29'));
  if out<>'hold_expired' then raise exception 'FAIL checkout after the renewal window: %',out; end if; checks:=checks+1;
  perform expanse_private.release_expired_map_spots();
  if (select zone||size from public.products where id=(a->>'id')::bigint)<>'edge1' then raise exception 'FAIL refunded spot released'; end if;
@@ -146,9 +154,9 @@ begin
  if h<now()+interval '6 days' or (select map_hold_until from public.products where id=(b->>'id')::bigint)<>h then raise exception 'FAIL hold kept on move'; end if; checks:=checks+1;
 
  -- An order is reused for 12 hours only.
- o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(b->>'slug',b->>'key','2026-10-29')::jsonb;
  update expanse_private.map_purchases set created_at=now()-interval '13 hours' where id=(o->>'id')::uuid;
- if (public.owner_map_checkout(b->>'slug',b->>'key','2026-10-20')::jsonb->>'id')=o->>'id' then raise exception 'FAIL old order reused'; end if; checks:=checks+1;
+ if (public.owner_map_checkout(b->>'slug',b->>'key','2026-10-29')::jsonb->>'id')=o->>'id' then raise exception 'FAIL old order reused'; end if; checks:=checks+1;
 
  -- Rejected -> hidden -> approved also moves a product off cells taken meanwhile.
  a:=pg_temp.lc_mk('Review Charlie',-30,60,2);
@@ -160,7 +168,7 @@ begin
 
  -- A paying product returning from review is never the one moved.
  a:=pg_temp.lc_mk('Review Echo',-60,-40,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  perform pg_temp.lc_pay(pg_temp.lc_ev('evt_rv_e_paid','checkout.session.completed',o->>'id','cs_rv_e',3600,'belt',2,'pi_rv_e'));
  perform public.admin_set_status(adm,a->>'slug','rejected','Fixture');
  b:=pg_temp.lc_mk('Review Foxtrot',-140,-30,1);
@@ -182,14 +190,14 @@ begin
  if (select status from public.products where id=(a->>'id')::bigint)<>'pending' then raise exception 'FAIL edit sends to review'; end if;
  update public.products set map_hold_until=now()-interval '1 day' where id=(a->>'id')::bigint;
  perform public.admin_set_status(adm,a->>'slug','approved','');
- out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-29'));
  if out<>'ok' then raise exception 'FAIL checkout after re-approval: %',out; end if; checks:=checks+1;
 
  -- An open order can be resumed after its hold ends and is still protected and payable.
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  update public.products set map_hold_until=now()-interval '1 hour' where id=(a->>'id')::bigint;
  update expanse_private.map_purchases set created_at=now()-interval '3 hours' where id=(o->>'id')::uuid;
- if (public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb->>'id')<>o->>'id' then raise exception 'FAIL resume after hold end'; end if;
+ if (public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb->>'id')<>o->>'id' then raise exception 'FAIL resume after hold end'; end if;
  perform expanse_private.release_expired_map_spots();
  if (select zone||size from public.products where id=(a->>'id')::bigint)='edge1' then raise exception 'FAIL open order not protected'; end if;
  out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_jr_a_paid','checkout.session.completed',o->>'id','cs_jr_a',1600,'outer',2,'pi_jr_a'));
@@ -199,12 +207,12 @@ begin
  update expanse_private.map_purchases set paid_at=paid_at-interval '12 months 1 hour', ends_at=now()-interval '1 hour', created_at=created_at-interval '12 months 2 hours' where id=(o->>'id')::uuid;
  perform expanse_private.release_expired_map_spots();
  if (select zone||size from public.products where id=(a->>'id')::bigint)<>'outer2' then raise exception 'FAIL renewal window not respected'; end if;
- out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-29'));
  if out<>'ok' then raise exception 'FAIL renewal checkout: %',out; end if; checks:=checks+1;
 
  -- A delayed debit that is still processing after 48 hours keeps the order open and the spot protected.
  a:=pg_temp.lc_mk('Journey Bravo',-60,90,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_jr_b_unpaid','checkout.session.completed',o->>'id','cs_jr_b',1600,'outer',2,'pi_jr_b','unpaid'));
  update expanse_private.map_purchases set created_at=now()-interval '3 days' where id=(o->>'id')::uuid;
  update public.products set map_hold_until=now()-interval '2 days' where id=(a->>'id')::bigint;
@@ -222,7 +230,7 @@ declare a jsonb; o jsonb; out text; checks int:=0;
 begin
  -- A SEPA debit in one session keeps protecting the spot after a sibling session on the same order expires.
  a:=pg_temp.lc_mk('Debit Alpha',-70,80,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  perform pg_temp.lc_pay(pg_temp.lc_ev('evt_db_a_unpaid','checkout.session.completed',o->>'id','cs_db_a2',1600,'outer',2,'pi_db_a2','unpaid'));
  perform pg_temp.lc_pay(pg_temp.lc_ev('evt_db_a_expired','checkout.session.expired',o->>'id','cs_db_a1',1600,'outer',2,null,'unpaid'));
  update expanse_private.map_purchases set created_at=now()-interval '3 days' where id=(o->>'id')::uuid;
@@ -235,9 +243,17 @@ begin
 
  -- A processing session from another link or amount does not hold the spot.
  a:=pg_temp.lc_mk('Debit Bravo',30,-70,2);
- o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-20')::jsonb;
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
  perform pg_temp.lc_pay(pg_temp.lc_ev('evt_db_b_wrong','checkout.session.completed',o->>'id','cs_db_b',300,'edge',1,'pi_db_b','unpaid'));
  if exists(select 1 from expanse_private.stripe_events where event_id='evt_db_b_wrong' and outcome='processing') then raise exception 'FAIL mismatched session counted as processing'; end if; checks:=checks+1;
 
- raise notice '% delayed payment assertions passed', checks;
+ -- A 1x1 Edge spot is the free spot and is not sold.
+ a:=pg_temp.lc_mk('Free Edge Charlie',-150,0,1);
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-29'));
+ if out<>'free_spot' or (public.owner_map_status(a->>'slug',a->>'key')->>'can_pay')::boolean then raise exception 'FAIL free Edge 1x1 sold: %',out; end if; checks:=checks+1;
+ -- Checkout requires the current terms version.
+ a:=pg_temp.lc_mk('Terms Delta',-80,-70,2);
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
+ if out<>'terms_required' or (public.public_commerce()->>'terms_version')<>'2026-10-29' then raise exception 'FAIL terms version: %',out; end if; checks:=checks+1;
+ raise notice '% delayed payment and free spot assertions passed', checks;
 end $$;

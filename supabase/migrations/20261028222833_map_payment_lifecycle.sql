@@ -13,6 +13,7 @@
 --  5. A rejected product keeps its cells while its paid term runs, and a product coming back from
 --     review is moved to a free Edge cell when its old cells were taken, never a paying one.
 --  6. A withdrawal notice is linked to its order whenever the reference contains the order id.
+--  9. A 1x1 Edge cell is the free spot every listing gets, so it is no longer sold (terms 2026-10-29).
 --  7. A hold is armed on the first approval and on a move from the free spot or from no hold;
 --     moving never extends a running hold or revives a lapsed one, and a re-approval after an edit
 --     leaves at least a day to pay.
@@ -45,8 +46,10 @@ end $$;
 
 -- The first free 1x1 Edge cell, using the same occupancy rules as _assert_free.
 create or replace function expanse_private.free_edge_cell(p_ignore bigint) returns table(x int, y int)
-language sql stable security definer set search_path = '' as $$
- select g.x, g.y from generate_series(126,174) as ring(radius) cross join generate_series(0,359) as turn(angle)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+ -- Sampled points on rings of radius 126-174 first (fast, spread around the galaxy) ...
+ return query select g.x, g.y from generate_series(126,174) as ring(radius) cross join generate_series(0,359) as turn(angle)
  cross join lateral (select round(ring.radius*cos(turn.angle*pi()/180))::int as x, round(ring.radius*sin(turn.angle*pi()/180))::int as y) g
  where public.zone_of(g.x,g.y,1)='edge' and sqrt(power(g.x+.5,2)+power(g.y+.5,2))<175
  and not exists(select 1 from public.products q where q.id is distinct from p_ignore
@@ -54,8 +57,20 @@ language sql stable security definer set search_path = '' as $$
         or (q.status='rejected' and exists(select 1 from expanse_private.map_purchases b where b.product_id=q.id and b.state='paid' and b.ends_at>now())))
    and q.x<g.x+1 and g.x<q.x+q.size and q.y<g.y+1 and g.y<q.y+q.size)
  and not exists(select 1 from public.reservations q where q.x<g.x+1 and g.x<q.x+q.size and q.y<g.y+1 and g.y<q.y+q.size)
- limit 1
-$$;
+ limit 1;
+ if found then return; end if;
+ -- ... then every Edge cell, so a crowded ring never leaves an ended term or lapsed hold on a premium spot.
+ return query select g.x, g.y from generate_series(-175,174) as gx(x) cross join generate_series(-175,174) as gy(y)
+ cross join lateral (select gx.x as x, gy.y as y) g
+ where public.zone_of(g.x,g.y,1)='edge' and sqrt(power(g.x+.5,2)+power(g.y+.5,2))<175
+ and not exists(select 1 from public.products q where q.id is distinct from p_ignore
+   and (q.status in ('pending','approved','hidden')
+        or (q.status='rejected' and exists(select 1 from expanse_private.map_purchases b where b.product_id=q.id and b.state='paid' and b.ends_at>now())))
+   and q.x<g.x+1 and g.x<q.x+q.size and q.y<g.y+1 and g.y<q.y+q.size)
+ and not exists(select 1 from public.reservations q where q.x<g.x+1 and g.x<q.x+q.size and q.y<g.y+1 and g.y<q.y+q.size)
+ order by abs(sqrt(power(g.x+.5,2)+power(g.y+.5,2))-150), g.x, g.y
+ limit 1;
+end $$;
 revoke execute on function expanse_private.free_edge_cell(bigint) from public, anon, authenticated;
 
 -- 5. A product leaving review whose cells were taken meanwhile moves to a free Edge cell instead of overlapping.
@@ -95,7 +110,7 @@ revoke execute on function expanse_private.payment_processing(uuid) from public,
 create or replace function public.confirm_map_payment(p_token text,p_event jsonb) returns json
 language plpgsql volatile security definer set search_path = '' as $$
 declare b expanse_private.map_purchases; r public.products; v_id uuid; v_event text:=p_event->>'id';
- v_type text:=p_event->>'type'; v_session text:=p_event->>'session_id'; v_pi text:=p_event->>'payment_intent'; v_out text; v_review uuid;
+ v_type text:=p_event->>'type'; v_session text:=p_event->>'session_id'; v_pi text:=p_event->>'payment_intent'; v_out text; v_review uuid; v_foreign boolean;
 begin
  if p_token is null or char_length(p_token)<40 or public._key_hash(p_token) is distinct from
    (select webhook_key_hash from expanse_private.commerce_config where singleton) then raise exception 'forbidden'; end if;
@@ -145,13 +160,15 @@ begin
  end if;
  if v_type not in ('checkout.session.completed','checkout.session.async_payment_succeeded') then return json_build_object('outcome','ignored'); end if;
  select * into r from public.products where id=b.product_id for update;
+ -- A payment through another link, amount or square was not made for this order (for example a reference copied into
+ -- another Payment Link); it goes to review without changing the order.
+ v_foreign := p_event->>'payment_status' is distinct from 'paid' or p_event->>'currency' is distinct from 'eur'
+   or p_event->>'payment_link' is distinct from b.payment_link or (p_event->>'amount_total')::int is distinct from b.amount_cents
+   or p_event->>'zone' is distinct from b.zone or (p_event->>'size')::int is distinct from b.size;
  v_out := case
    when b.state='paid' and b.session_id=v_session then 'duplicate'
    when b.state not in ('pending','failed') then 'needs_review'
-   when p_event->>'payment_status' is distinct from 'paid' or p_event->>'currency' is distinct from 'eur'
-     or p_event->>'payment_link' is distinct from b.payment_link
-     or (p_event->>'amount_total')::int is distinct from b.amount_cents
-     or p_event->>'zone' is distinct from b.zone or (p_event->>'size')::int is distinct from b.size then 'needs_review'
+   when v_foreign then 'needs_review'
    when r.status<>'approved' or r.x<>b.x or r.y<>b.y or r.size<>b.size then 'needs_review'
    when to_timestamp((p_event->>'session_created')::bigint)>b.created_at+interval '24 hours' then 'needs_review'
    when exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='paid' and ends_at>now()) then 'needs_review'
@@ -164,7 +181,7 @@ begin
  elsif v_out='needs_review' then
    -- Only an order still waiting for its payment is rewritten. A paid, refunded, disputed or expired order keeps
    -- its state; this payment's ids are on its review event, which a refund or dispute of it is matched against.
-   if b.state in ('pending','failed') then
+   if b.state in ('pending','failed') and not v_foreign then
      update expanse_private.map_purchases set state='needs_review',issue='Payment needs manual review. Contact support before paying again.',
        session_id=case when v_session is not null and not exists(select 1 from expanse_private.map_purchases q where q.session_id=v_session and q.id<>b.id) then v_session else session_id end,
        payment_intent=coalesce(v_pi,payment_intent) where id=b.id;
@@ -248,7 +265,7 @@ begin
  return json_build_object('state',st,
    'hold_until',r.map_hold_until,'ends_at',b.ends_at,'paid_at',b.paid_at,'issue',case when st='free' then null else b.issue end,
    'zone',r.zone,'size',r.size,'amount_cents',case when b.state='paid' then b.amount_cents else public.map_price_cents(r.zone,r.size) end,
-   'can_pay',r.status='approved'
+   'can_pay',r.status='approved' and not (r.zone='edge' and r.size=1)
      and not exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='paid' and ends_at>now()));
 end $$;
 
@@ -258,6 +275,8 @@ language plpgsql volatile security definer set search_path = '' as $$
 declare r public.products := public._owned(p_slug,p_key); m expanse_private.map_catalog; b expanse_private.map_purchases;
 begin
  if r.status <> 'approved' then raise exception 'review_required'; end if;
+ -- A 1x1 Edge cell is the free spot every listing gets, so it is never sold.
+ if r.zone='edge' and r.size=1 then raise exception 'free_spot'; end if;
  if not (select enabled from expanse_private.commerce_config where singleton) then raise exception 'payments_paused'; end if;
  perform pg_advisory_xact_lock(4242);
  select * into r from public.products where id=r.id for update;
