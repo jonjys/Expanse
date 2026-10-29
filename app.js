@@ -835,7 +835,7 @@ function hover(m) {
 function tap(m) {
   const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
   if (introRunning) return;
-  if (ui === 'claim' && sub.step === 1) { if (sub.plan === 'free') { toast('Your free place is on the Edge. Choose a map spot to pick another zone.'); return; } const size = paidEdgeOne(zoneOf(cx, cy, 1).id, sub.size) ? 2 : sub.size; const s = nearestFree(cx - (size >> 1), cy - (size >> 1), size); if (s) { sub.size = size; setSpot(s, true); } return; }
+  if (ui === 'claim' && sub.step === 1) { if (sub.plan === 'free') { toast('Your free place is on the Edge. Choose a map spot to pick another zone.'); return; } const s = paidSpotNear(cx - (sub.size >> 1), cy - (sub.size >> 1), sub.size); if (s) { sub.size = s.size; setSpot(s, true); } return; }
   const it = itemAt(m);
   if (it) { openItem(it); return; }
   if (cp < 4.5) { markExplore(); flyTo(w.x, w.y, clamp(18 / CELL, ZMIN, ZMAX), 1300, easeInOut); return; }
@@ -1655,6 +1655,15 @@ function zoneSpot(id, size, preferred) {
 }
 // A 1×1 Edge cell is the free spot, so a paid placement on the Edge starts at 2×2.
 const paidEdgeOne = (id, size) => sub.plan === 'paid' && !sub.moving && id === 'edge' && size === 1;
+// The nearest free spot for the current size; if that lands on a 1×1 Edge cell in a paid flow, an Edge 2×2 around it.
+function paidSpotNear(x, y, size) {
+  let s = nearestFree(x, y, size);
+  if (s && paidEdgeOne(zoneOf(s.x, s.y, size).id, size)) {
+    const c = s; size = 2;
+    s = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: c.x - dx, y: c.y - dy })).find(q => spotOk(q.x, q.y, 2) && zoneOf(q.x, q.y, 2).id === 'edge') || nearestFree(c.x - 1, c.y - 1, 2);
+  }
+  return s ? { x: s.x, y: s.y, size } : null;
+}
 function chooseZone(id, size) {
   if (paidEdgeOne(id, size || sub.size)) size = 2;
   const next = zoneSpot(id, size || sub.size, sub.zone === id ? sub.spot : null);
@@ -1774,7 +1783,7 @@ $('#cSubmit').addEventListener('submit', async e => {
       else { const g = wiz.groupOf(k); if (g) { setStep(STEP_OF[g]); wiz.bad(k); } toast('Something in your profile needs a fix — check the highlighted field.', 4500); }
     } else if (m.includes('spot_taken')) {
       await refreshAll();
-      const s = nearestFree(sub.spot.x, sub.spot.y, sub.size); if (s) setSpot(s, true);
+      const s = paidSpotNear(sub.spot.x, sub.spot.y, sub.size); if (s) { sub.size = s.size; setSpot(s, true); }
       setStep(1); toast('Someone just took that exact spot! We moved you to the nearest free one.', 5000);
     } else if (m.includes('core_invite_only')) { setStep(1); toast('The middle is the Spotlight — it’s earned, not picked. Choose a spot just outside it.', 4500); }
     else if (m.includes('out_of_bounds')) { setStep(1); toast('That spot is outside the universe — pick one closer in.'); }
@@ -1835,7 +1844,7 @@ async function renderMapPlacement(o) {
       if(u.origin!=='https://buy.stripe.com'||!order.id)throw new Error('invalid_checkout');
       store.set('expanse.checkout.v1',{slug,id:order.id}); location.assign(u.href);
     }catch(err){
-      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':m==='free_spot'?'A 1×1 Edge spot is free. Choose another zone or a bigger size to buy a placement.':m==='terms_required'?'The purchase terms were updated. Reload the page to review them before paying.':'Could not start payment. Nothing was charged. Please try again.',5000);
+      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':m==='free_spot'?'A 1×1 Edge spot is free. Choose another zone or a bigger size to buy a placement.':m==='terms_required'?'The purchase terms were updated. Reload the page to review them before paying.':m==='payment_processing'?'A payment for this spot is still being processed. Do not pay again; it can take a few days for bank payments.':'Could not start payment. Nothing was charged. Please try again.',5000);
       buy.disabled=false;buy.textContent=`Pay ${eur(status.amount_cents/100)} for 12 months ↗`;
     }
   }});

@@ -150,8 +150,9 @@ to main: `20261028222833_map_payment_lifecycle`, `20261028223424_marketing_kit_t
 `20261029175620_map_terms_2026_10_29`. After main is applied, read the recorded versions from
 `supabase_migrations.schema_migrations`, keep the filenames identical, and refresh `supabase/migration-history.json`
 from read-only history. The frontend sends terms version 2026-10-29, so deploy the site and the migrations together;
-every payment attempt from a page opened before the release fails with `terms_required` until that page is reloaded
-(the new page tells the owner to reload).
+every payment attempt from a page opened before the release fails until that page is reloaded. Such a page shows the
+generic "Could not start payment … try again" message, so support should tell owners to reload. Pages from this release
+show a reload message at the next terms change.
 
 Payments in review now email the admin notification address (Admin → Settings). Set it before enabling checkout.
 Vercel logs show `stripe_webhook_confirmation_failed` when Stripe will retry an event and

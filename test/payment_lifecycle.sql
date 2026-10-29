@@ -238,6 +238,8 @@ begin
  update public.products set map_hold_until=now()-interval '2 days' where id=(a->>'id')::bigint;
  perform expanse_private.release_expired_map_spots();
  if (public.owner_map_status(a->>'slug',a->>'key')->>'state')<>'pending' or (select zone||size from public.products where id=(a->>'id')::bigint)<>'outer2' then raise exception 'FAIL sibling expiry ended the debit protection'; end if; checks:=checks+1;
+ out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-29'));
+ if out<>'payment_processing' then raise exception 'FAIL a second payment allowed while a debit is processing: %',out; end if; checks:=checks+1;
  out:=pg_temp.lc_pay(pg_temp.lc_ev('evt_db_a_paid','checkout.session.async_payment_succeeded',o->>'id','cs_db_a2',1600,'outer',2,'pi_db_a2','paid',now()-interval '3 days'));
  if out<>'paid' then raise exception 'FAIL debit paid after sibling expiry: %',out; end if; checks:=checks+1;
 
@@ -272,6 +274,12 @@ begin
    then raise exception 'FAIL resumed order keeps old terms'; end if; checks:=checks+1;
  -- The admin email says whether the maker can see a payment in review.
  perform pg_temp.lc_pay(pg_temp.lc_ev('evt_tf_foreign','checkout.session.completed',o->>'id','cs_tf',1700,'outer',2,'pi_tf'));
- if (select ob.body from public.outbox ob where ob.kind='map_review' order by ob.id desc limit 1) not like '%the maker is not shown it%' then raise exception 'FAIL admin email for a foreign payment'; end if; checks:=checks+1;
+ if (select ob.body from public.outbox ob where ob.kind='map_review' order by ob.id desc limit 1) not like '%The maker is not shown this payment%' then raise exception 'FAIL admin email for a foreign payment'; end if; checks:=checks+1;
+ -- A review of a second payment on a product whose panel shows another order says the maker cannot see it.
+ a:=pg_temp.lc_mk('Mail Golf',-95,-30,2);
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_mg_paid','checkout.session.completed',o->>'id','cs_mg',1600,'outer',2,'pi_mg'));
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_mg_twice','checkout.session.completed',o->>'id','cs_mg2',1600,'outer',2,'pi_mg2'));
+ if (select ob.body from public.outbox ob where ob.kind='map_review' order by ob.id desc limit 1) not like '%The maker is not shown this payment%' then raise exception 'FAIL admin email visibility'; end if; checks:=checks+1;
  raise notice '% delayed payment and free spot assertions passed', checks;
 end $$;

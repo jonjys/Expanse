@@ -194,18 +194,21 @@ end $$;
 -- 2. Tell the admin about every payment that needs review.
 create or replace function expanse_private.alert_payment_review() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare admin_email text:=coalesce(public._setting('notify_email')#>>'{}',''); b expanse_private.map_purchases; r public.products;
+declare admin_email text:=coalesce(public._setting('notify_email')#>>'{}',''); b expanse_private.map_purchases; r public.products; v_shown boolean;
 begin
  if new.outcome<>'needs_review' or admin_email='' then return new; end if;
  select * into b from expanse_private.map_purchases where id=new.purchase_id;
  select * into r from public.products where id=b.product_id;
+ -- The owner panel shows one order: an active paid one first, otherwise the newest (same order as owner_map_status).
+ v_shown := b.state='needs_review' and b.id=(select q.id from expanse_private.map_purchases q where q.product_id=b.product_id
+   order by (q.state='paid' and q.ends_at>now()) desc, q.created_at desc limit 1);
  insert into public.outbox(to_email,subject,body,kind,product_id) values(admin_email,'Expanse — a map payment needs review',
    left(E'A Stripe payment for a map placement could not be confirmed automatically, so no spot was granted.\nOrder: '||coalesce(b.id::text,'unknown')
    ||E'\nOrder state: '||coalesce(b.state,'unknown')||E'\nProduct: '||coalesce(r.name,'unknown')||' ('||coalesce(r.slug,'unknown')||')'
    ||E'\nStripe event: '||new.event_id||E'\nCheckout session: '||coalesce(new.session_id,'unknown')||E'\nPayment intent: '||coalesce(new.payment_intent,'unknown')
    ||E'\n\nCheck the payment in Stripe and in https://expanse.nyttolabs.com/admin before granting a spot or refunding.'
-   ||case when b.state='needs_review' then ' The maker sees “Payment needs review” and is asked to contact support.'
-     else ' This payment did not change the order (state '||coalesce(b.state,'unknown')||'), so the maker is not shown it. Contact the maker before they pay again.' end,6000),
+   ||case when v_shown then ' The maker sees “Payment needs review” and is asked to contact support.'
+     else ' The maker is not shown this payment (order state '||coalesce(b.state,'unknown')||'). Contact the maker before they pay again.' end,6000),
    'map_review',r.id);
  perform public._kick_worker('mail');
  return new;
@@ -284,6 +287,9 @@ begin
  perform pg_advisory_xact_lock(4242);
  select * into r from public.products where id=r.id for update;
  if exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='paid' and ends_at>now()) then raise exception 'already_paid'; end if;
+ -- A bank payment for this product is still processing: paying again would charge twice.
+ if exists(select 1 from expanse_private.map_purchases q where q.product_id=r.id and q.state in ('pending','failed')
+   and expanse_private.payment_processing(q.id)) then raise exception 'payment_processing'; end if;
  select * into m from expanse_private.map_catalog where zone=r.zone and size=r.size;
  if m.zone is null or m.amount_cents <> public.map_price_cents(r.zone,r.size) then raise exception 'payments_paused'; end if;
  select * into b from expanse_private.map_purchases where product_id=r.id and state='pending' and x=r.x and y=r.y and size=r.size
