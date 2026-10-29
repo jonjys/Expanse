@@ -7,6 +7,7 @@ const product={slug:'fixture',name:'Real Fixture',tagline:'Solve a real user pro
 function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.readFileSync(root+'index.html','utf8'),storage={},scenario={}){
  const dom=new JSDOM(html,{url,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
  const w=dom.window;w.AbortSignal=global.AbortSignal;w.matchMedia=()=>({matches:true,addEventListener(){}});w.requestAnimationFrame=fn=>0;w.cancelAnimationFrame=()=>{};
+ if(scenario.searchTimeout){const later=w.setTimeout.bind(w);w.setTimeout=(fn,ms,...args)=>{if(ms===10000){scenario.searchTimeout.fire=()=>fn(...args);return 1000000;}return later(fn,ms,...args);};}
  w.HTMLElement.prototype.scrollIntoView=()=>{};
  if(scenario.exposure){
   const io=scenario.exposure,timers=new Map();let seq=100000;const later=w.setTimeout.bind(w),cancel=w.clearTimeout.bind(w);
@@ -18,6 +19,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
  w.URL.createObjectURL=()=> 'blob:fixture-only';w.URL.revokeObjectURL=()=>{};w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
  w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
+ if(method==='search'&&scenario.search)return scenario.search(body,opts);
  const defaults={public_seller:{ready:true,legal_name:'Fixture <seller>',registration_number:'TEST-ONLY',address:'Test street\nSweden',email:'support@example.invalid',phone:'TEST-PHONE'},public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:300},owner_acquisition_stats:{totals:{impressions:0,views:0,visits:0,demos:0,verified_purchases:null},sources:[{source:'list',impressions:0,views:0,visits:0}],campaigns:[]},owner_marketing_kit:{revision:'a'.repeat(20),campaign:'mk-123456abcdef',svg:'<svg xmlns="http://www.w3.org/2000/svg"/>',post_text:'Maker post from public profile',prepared_at:'2026-10-21T12:00:00Z'},owner_need_preferences:{enabled:false},owner_need_matches:[],public_tool_needs:[],submit_tool_need:{id:'c3edd38a-1299-4000-8888-555555555555',key:'fixture-private-receipt-key',state:'private',expires_at:'2099-01-01T00:00:00Z',matches:[]},tool_need_status:{id:'c3edd38a-1299-4000-8888-555555555555',text:'I need to explain failed deployment errors',state:'private',expires_at:'2099-01-01T00:00:00Z',matches:[{slug:'fixture',name:'Real Fixture',reason:'Shared terms in the product profile: deployment, errors.'}]},owner_discovery_stats:[],owner_stats:{days:[{view:3,visit:2,demo:1}]}};
  if(method==='ai'){
    if(scenario.failAI)return {ok:false,status:429,json:async()=>({error:'rate_limited'})};
@@ -58,6 +60,22 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  const blocked=boot(true);await tick();assert.equal(errors.length,0,errors.join('\n'));blocked.window.close();
  const add=boot(false,'https://expanse.nyttolabs.com/add?utm_source=threads');await tick();assert.equal(add.window.document.querySelector('#cStep2').hidden,false);assert.ok(add.window.document.querySelector('#claim').classList.contains('open'));add.window.close();
  const browse=boot(false,'https://expanse.nyttolabs.com/browse?q=Fixture');await tick();assert.equal(browse.window.document.querySelector('#list').getAttribute('aria-hidden'),'false');assert.match(browse.window.document.querySelector('#cards').textContent,/Real Fixture/);browse.window.close();
+ // A dropdown search may already be in flight when the visitor submits to list view.
+ // Every consumer must receive the eventual empty/error result, not a cached loading marker.
+ for(const offline of [false,true]){
+  let started,finish,fail;const ready=new Promise(r=>{started=r;}),response=new Promise((resolve,reject)=>{finish=resolve;fail=reject;});let requests=0;
+  const pending=boot(false,'https://expanse.nyttolabs.com/',fs.readFileSync(root+'index.html','utf8'),{},{search:()=>{requests++;started();return response;}});await tick();
+  const sw=pending.window,sd=sw.document;sd.querySelector('#q').value='verify an EU VAT number';sd.querySelector('#q').dispatchEvent(new sw.Event('input',{bubbles:true}));await ready;
+  sd.querySelector('#searchForm').dispatchEvent(new sw.Event('submit',{bubbles:true,cancelable:true}));assert.match(sd.querySelector('#cards').textContent,/Searching by meaning/);
+  if(offline)fail(new Error('network unavailable'));else finish({ok:true,json:async()=>({results:[],count:1})});await tick();
+  assert.match(sd.querySelector('#cards').textContent,/No convincing match/,'submitted search must finish when an existing dropdown request returns no match or fails');
+  assert.ok([...sd.querySelectorAll('#cards button')].some(b=>b.textContent==='Save need & check new matches'));
+  sd.querySelector('#lSort').dispatchEvent(new sw.Event('change'));await tick();assert.equal(requests,1,'reuse the settled empty result');sw.close();
+ }
+ const timeout={};let timeoutSignal;
+ const stalled=boot(false,'https://expanse.nyttolabs.com/',fs.readFileSync(root+'index.html','utf8'),{},{searchTimeout:timeout,search:(_body,opts)=>new Promise((_resolve,reject)=>{timeoutSignal=opts.signal;opts.signal?.addEventListener('abort',()=>reject(new Error('timed out')),{once:true});})});await tick();
+ const tw=stalled.window,td=tw.document;td.querySelector('#q').value='verify an EU VAT number';td.querySelector('#searchForm').dispatchEvent(new tw.Event('submit',{bubbles:true,cancelable:true}));
+ assert.equal(typeof timeout.fire,'function','semantic requests must have a finite deadline');timeout.fire();await tick();assert.equal(timeoutSignal.aborted,true);assert.match(td.querySelector('#cards').textContent,/No convincing match/);tw.close();
  const rendered=require('../api/p').withProduct(fs.readFileSync(root+'index.html','utf8'),product,'https://expanse.nyttolabs.com/p/fixture');
  const profile=boot(false,'https://expanse.nyttolabs.com/p/fixture',rendered);await tick();assert.equal(profile.window.document.querySelector('#serverContent'),null,'app replaces initial profile after load');assert.equal(errors.length,0,errors.join('\n'));profile.window.close();
 
