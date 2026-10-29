@@ -208,7 +208,8 @@ const SAVED = (() => { const v = store.get(SAVED_KEY); return Array.isArray(v) ?
 const ACTIVITY = (() => { const v = store.get(ACTIVITY_KEY); return Array.isArray(v) ? v.filter(x => x && isSlug(x.slug)).slice(0,100) : []; })();
 let HL = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
-const paidTotal = (zone, size) => zone.reserved ? 0 : Math.max(3, zone.price * size * size);
+// A 1×1 Edge cell is the free spot every listing gets, so it has no paid price.
+const paidTotal = (zone, size) => zone.reserved || (zone.id === 'edge' && size === 1) ? 0 : Math.max(3, zone.price * size * size);
 const priceOf = (x, y, size) => paidTotal(zoneOf(x, y, size), size);
 const isFree = (x, y, w, h) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (occ.has(K(x + i, y + j))) return false; return true; };
 function addItem(it) {
@@ -683,7 +684,7 @@ function draw(T) {
     rrect(ctx, vx + 1, vy + 1, vs - 2, vs - 2, Math.min(5, vs * .18));
     if (named) { ctx.fillStyle = col; ctx.fill(); }
     else { ctx.fillStyle = `rgba(${rgb},${.18 + .16 * pu})`; ctx.fill(); ctx.setLineDash([4, 4]); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
-    floatLabel(c.x + s / 2, c.y, sub.plan === 'free' ? `${named ? sub.name : 'YOUR FREE SPOT'} · 1×1 · €0` : `${named ? sub.name : 'YOUR SPOT'} · ${s}×${s} · ${eur(priceOf(c.x, c.y, s))} / 12 MONTHS`, col, T);
+    floatLabel(c.x + s / 2, c.y, sub.plan === 'free' || !priceOf(c.x, c.y, s) ? `${named ? sub.name : 'YOUR FREE SPOT'} · 1×1 · €0` : `${named ? sub.name : 'YOUR SPOT'} · ${s}×${s} · ${eur(priceOf(c.x, c.y, s))} / 12 MONTHS`, col, T);
   }
   for (const it of ITEMS) if (it.owned && !(ui === 'claim' && sub.step < 6)) floatLabel(it.x + it.w / 2, it.y, '★ ' + it.name + (it.kind === 'mine' ? ' · in review' : ''), '#c8ff3d', T);
   if (sel && sel.kind === 'product' && !sel.owned && ui === 'pop') floatLabel(sel.x + sel.w / 2, sel.y, sel.name, itemColor(sel), T);
@@ -834,7 +835,7 @@ function hover(m) {
 function tap(m) {
   const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
   if (introRunning) return;
-  if (ui === 'claim' && sub.step === 1) { if (sub.plan === 'free') { toast('Your free place is on the Edge. Choose a map spot to pick another zone.'); return; } const s = nearestFree(cx - (sub.size >> 1), cy - (sub.size >> 1), sub.size); if (s) setSpot(s, true); return; }
+  if (ui === 'claim' && sub.step === 1) { if (sub.plan === 'free') { toast('Your free place is on the Edge. Choose a map spot to pick another zone.'); return; } const size = paidEdgeOne(zoneOf(cx, cy, 1).id, sub.size) ? 2 : sub.size; const s = nearestFree(cx - (size >> 1), cy - (size >> 1), size); if (s) { sub.size = size; setSpot(s, true); } return; }
   const it = itemAt(m);
   if (it) { openItem(it); return; }
   if (cp < 4.5) { markExplore(); flyTo(w.x, w.y, clamp(18 / CELL, ZMIN, ZMAX), 1300, easeInOut); return; }
@@ -1477,7 +1478,7 @@ let errSeq = 0;
 function fieldError(w, msg) {
   if (!w) return; w.classList.add('bad');
   let e = w.querySelector(':scope > small.err');
-  if (!e) { e = el('small', { class: 'err', id: 'field-err-' + (++errSeq) }); w.append(e); }
+  if (!e) { e = el('small', { class: 'err', id: 'field-err-' + (++errSeq), 'aria-hidden': 'true' }); w.append(e); } // read once, through aria-describedby
   if (msg) e.textContent = msg; else if (!e.textContent) e.textContent = 'Check this field.';
   const i = w.querySelector('input,textarea'); if (i) { i.setAttribute('aria-invalid', 'true'); i.setAttribute('aria-describedby', e.id); }
 }
@@ -1688,8 +1689,9 @@ function describe() {
   sub.zone = z.id;
   $('#cZone').textContent = z.label; $('#cZone').style.background = z.color;
   $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells unoccupied`;
-  $('#cPrice').textContent = sub.plan === 'free' ? '€0' : eur(paidTotal(z, sub.size));
-  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
+  const freeNow = sub.plan === 'free' || paidTotal(z, sub.size) === 0;
+  $('#cPrice').textContent = freeNow ? '€0' : eur(paidTotal(z, sub.size));
+  $('#cPriceTerms').textContent = freeNow ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
   $('#cPaidOptions').hidden = sub.plan === 'free';
   $('#cPlans').querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.plan === sub.plan)));
   $('#cZoneValue').textContent = 'Every zone includes your own page, website link and stats. Map position changes where you appear while exploring; it never buys search ranking or Spotlight. No traffic or sales are guaranteed.';
@@ -1702,7 +1704,7 @@ function describe() {
   claimEl.querySelectorAll('[data-s]').forEach(b => {
     const sz = +b.dataset.s, freeCell = paidEdgeOne(sub.zone, sz), candidate = !freeCell && zoneSpot(sub.zone, sz);
     b.disabled = !candidate; b.setAttribute('aria-pressed', String(sz === sub.size));
-    b.querySelector('small').textContent = freeCell ? 'Free plan' : candidate ? eur(paidTotal(z, sz)) : 'Unavailable';
+    b.querySelector('small').textContent = freeCell ? 'Free plan' : candidate ? (paidTotal(z, sz) ? eur(paidTotal(z, sz)) : 'Free') : 'Unavailable';
   });
   saveDraft();
   $('#cMoveHint').textContent = sub.plan === 'free' ? 'Your free 1×1 place is on the Edge. You can explore paid placement after review.' : (coarse ? 'Tap' : 'Click') + ' the map to move your spot. Held during review and for 7 days after approval. Pay then to keep it for 12 months.';
@@ -1742,7 +1744,7 @@ function renderSummary() {
   const d = wiz.get(), s = sub.spot, z = zoneOf(s.x, s.y, sub.size), cat = CATS[d.category] || CATS.other;
   $('#cSummary').style.setProperty('--c', cat.color);
   $('#sName').textContent = d.name; $('#sWhere').textContent = `${cat.label} · ${z.label} · ${sub.size}×${sub.size}`;
-  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' ? 'free profile' : `${eur(paidTotal(z, sub.size))} / 12 months after review`);
+  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' || !paidTotal(z, sub.size) ? 'free profile' : `${eur(paidTotal(z, sub.size))} / 12 months after review`);
   $('#cReviewTerms').textContent = sub.plan === 'free' ? 'Every product is reviewed under the same rules. Your free profile, search listing and stats have no expiry. No payment required.' : 'Every product is reviewed under the same rules. Your spot is held free during review and for 7 days after approval. Once approved, you can pay once for 12 months of placement. No automatic renewal. Payment never buys approval, search ranking or Spotlight.';
 }
 $('#cMail').addEventListener('input', () => fieldOk($('#fMail')));
@@ -1833,7 +1835,7 @@ async function renderMapPlacement(o) {
       if(u.origin!=='https://buy.stripe.com'||!order.id)throw new Error('invalid_checkout');
       store.set('expanse.checkout.v1',{slug,id:order.id}); location.assign(u.href);
     }catch(err){
-      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':m==='free_spot'?'A 1×1 Edge spot is free. Choose another zone or a bigger size to buy a placement.':'Could not start payment. Nothing was charged. Please try again.',5000);
+      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':m==='free_spot'?'A 1×1 Edge spot is free. Choose another zone or a bigger size to buy a placement.':m==='terms_required'?'The purchase terms were updated. Reload the page to review them before paying.':'Could not start payment. Nothing was charged. Please try again.',5000);
       buy.disabled=false;buy.textContent=`Pay ${eur(status.amount_cents/100)} for 12 months ↗`;
     }
   }});

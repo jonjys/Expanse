@@ -9,7 +9,12 @@ begin
  perform public._owned(p_slug,p_key);
  if p_terms_version is distinct from '2026-10-29' then raise exception 'terms_required';end if;
  r:=expanse_private.owner_map_checkout(p_slug,p_key);
- update expanse_private.map_purchases set terms_version=p_terms_version,accepted_at=coalesce(accepted_at,now()),contract_text=coalesce(contract_text,expanse_private.contract_terms()) where id=(r->>'id')::uuid;
+ -- An order resumed under a newer version of the terms is accepted again under that version, with its contract text.
+ update expanse_private.map_purchases set
+   contract_text=case when terms_version is distinct from p_terms_version then expanse_private.contract_terms() else coalesce(contract_text,expanse_private.contract_terms()) end,
+   accepted_at=case when terms_version is distinct from p_terms_version then now() else coalesce(accepted_at,now()) end,
+   terms_version=p_terms_version
+ where id=(r->>'id')::uuid;
  return r;
 end $$;
 

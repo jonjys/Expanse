@@ -203,7 +203,9 @@ begin
    left(E'A Stripe payment for a map placement could not be confirmed automatically, so no spot was granted.\nOrder: '||coalesce(b.id::text,'unknown')
    ||E'\nOrder state: '||coalesce(b.state,'unknown')||E'\nProduct: '||coalesce(r.name,'unknown')||' ('||coalesce(r.slug,'unknown')||')'
    ||E'\nStripe event: '||new.event_id||E'\nCheckout session: '||coalesce(new.session_id,'unknown')||E'\nPayment intent: '||coalesce(new.payment_intent,'unknown')
-   ||E'\n\nCheck the payment in Stripe and in https://expanse.nyttolabs.com/admin before granting a spot or refunding. The maker sees “Payment needs review” and is asked to contact support.',6000),
+   ||E'\n\nCheck the payment in Stripe and in https://expanse.nyttolabs.com/admin before granting a spot or refunding.'
+   ||case when b.state='needs_review' then ' The maker sees “Payment needs review” and is asked to contact support.'
+     else ' This payment did not change the order (state '||coalesce(b.state,'unknown')||'), so the maker is not shown it. Contact the maker before they pay again.' end,6000),
    'map_review',r.id);
  perform public._kick_worker('mail');
  return new;
@@ -260,7 +262,8 @@ begin
  st:=case when b.state='paid' and b.ends_at<=now() then 'expired'
    -- An order whose sessions can no longer be paid is over; the owner can choose a spot again.
    when b.state in ('pending','failed') and expanse_private.payment_processing(b.id) then 'pending'
-   when b.state in ('pending','failed') and b.created_at<=now()-interval '48 hours' then 'free'
+   -- An unpaid order is over after 48 hours, and at once for a 1x1 Edge order, which can no longer be paid.
+   when b.state in ('pending','failed') and (b.created_at<=now()-interval '48 hours' or (b.zone='edge' and b.size=1)) then 'free'
    else coalesce(b.state,'free') end;
  return json_build_object('state',st,
    'hold_until',r.map_hold_until,'ends_at',b.ends_at,'paid_at',b.paid_at,'issue',case when st='free' then null else b.issue end,
@@ -309,7 +312,8 @@ begin
  perform 1 from public.products where id=r.id for update;
  if exists(select 1 from expanse_private.map_purchases where product_id=r.id and state='paid' and ends_at>now()) then raise exception 'active_purchase'; end if;
  if exists(select 1 from expanse_private.map_purchases b where b.product_id=r.id
-   and ((b.state='pending' and b.created_at>now()-interval '48 hours') or (b.state in ('pending','failed') and expanse_private.payment_processing(b.id)))) then raise exception 'checkout_open'; end if;
+   and ((b.state='pending' and b.created_at>now()-interval '48 hours' and not (b.zone='edge' and b.size=1))
+        or (b.state in ('pending','failed') and expanse_private.payment_processing(b.id)))) then raise exception 'checkout_open'; end if;
  perform public._assert_free(p_x,p_y,p_size,r.id,null);
  z := public.zone_of(p_x,p_y,p_size);
  update public.products set x=p_x,y=p_y,size=p_size,zone=z,price_eur=public.price_per_cell(z)*p_size*p_size where id=r.id returning * into r;

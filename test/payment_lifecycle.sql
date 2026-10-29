@@ -226,7 +226,7 @@ end $$;
 
 -- Delayed payments from the third review.
 do $$
-declare a jsonb; o jsonb; out text; checks int:=0;
+declare a jsonb; o jsonb; out text; checks int:=0; v_old uuid;
 begin
  -- A SEPA debit in one session keeps protecting the spot after a sibling session on the same order expires.
  a:=pg_temp.lc_mk('Debit Alpha',-70,80,2);
@@ -255,5 +255,23 @@ begin
  a:=pg_temp.lc_mk('Terms Delta',-80,-70,2);
  out:=pg_temp.lc_err(format('select public.owner_map_checkout(%L,%L,%L)',a->>'slug',a->>'key','2026-10-20'));
  if out<>'terms_required' or (public.public_commerce()->>'terms_version')<>'2026-10-29' then raise exception 'FAIL terms version: %',out; end if; checks:=checks+1;
+ -- A 1x1 Edge order from before the change no longer blocks the owner.
+ a:=pg_temp.lc_mk('Legacy Edge Echo',-155,20,1);
+ insert into expanse_private.map_purchases(product_id,x,y,size,zone,amount_cents,payment_link,terms_version)
+ values((a->>'id')::bigint,-155,20,1,'edge',300,'plink_lc_edge1','2026-10-20') returning id into v_old;
+ if (public.owner_map_status(a->>'slug',a->>'key')->>'state')<>'free' then raise exception 'FAIL legacy Edge order still pending'; end if;
+ out:=pg_temp.lc_err(format('select public.owner_choose_map_spot(%L,%L,-90,70,2)',a->>'slug',a->>'key'));
+ if out<>'ok' then raise exception 'FAIL legacy Edge order blocks a move: %',out; end if; checks:=checks+1;
+ -- An order resumed under newer terms is accepted again under them, with their contract text.
+ a:=pg_temp.lc_mk('Terms Foxtrot',95,-45,2);
+ o:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb;
+ update expanse_private.map_purchases set terms_version='2026-10-20',contract_text='Expanse map placement — terms version 2026-10-20',accepted_at=now()-interval '2 hours' where id=(o->>'id')::uuid;
+ out:=public.owner_map_checkout(a->>'slug',a->>'key','2026-10-29')::jsonb->>'id';
+ if out<>o->>'id'
+   or not exists(select 1 from expanse_private.map_purchases where id=(o->>'id')::uuid and terms_version='2026-10-29' and contract_text like '%terms version 2026-10-29%' and accepted_at>now()-interval '1 minute')
+   then raise exception 'FAIL resumed order keeps old terms'; end if; checks:=checks+1;
+ -- The admin email says whether the maker can see a payment in review.
+ perform pg_temp.lc_pay(pg_temp.lc_ev('evt_tf_foreign','checkout.session.completed',o->>'id','cs_tf',1700,'outer',2,'pi_tf'));
+ if (select ob.body from public.outbox ob where ob.kind='map_review' order by ob.id desc limit 1) not like '%the maker is not shown it%' then raise exception 'FAIL admin email for a foreign payment'; end if; checks:=checks+1;
  raise notice '% delayed payment and free spot assertions passed', checks;
 end $$;
