@@ -1202,18 +1202,29 @@ function searchDemo(qs) {
 const whyLabel = r => r.why ? (r.why.startsWith('Works with') ? r.why : `Solves “${r.why}”`) : r.p.tagline;
 
 /* ---------- AI search: matched by meaning (gte-small in Supabase), merged with the word matches above ---------- */
-const AI = new Map();       // query → results from the search function (or null while loading / on failure)
+const AI = new Map();       // query → results, or null only while loading
+const AI_PENDING = new Map(); // dropdown and list consumers share the same pending request
 async function aiSearch(qs) {
   const q = String(qs || '').replace(/\s+/g, ' ').trim(), k = q.toLowerCase();
   if (q.length < 3 || !PRODUCTS.length) return null;
+  if (AI_PENDING.has(k)) return AI_PENDING.get(k);
   if (AI.has(k)) return AI.get(k);
   AI.set(k, null);
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 10000);
+  const pending = (async () => {
+    try {
+      const r = await fetch(SUPA.url + '/functions/v1/search', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPA.key }, body: JSON.stringify({ q }), signal: ctl.signal });
+      const j = await r.json();
+      if (r.ok && Array.isArray(j.results)) return j.results;
+    } catch (e) {}
+    return []; // unavailable: fall back to word matches and useful empty-state actions
+  })();
+  AI_PENDING.set(k, pending);
   try {
-    const r = await fetch(SUPA.url + '/functions/v1/search', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPA.key }, body: JSON.stringify({ q }) });
-    const j = await r.json();
-    if (r.ok && Array.isArray(j.results)) { AI.set(k, j.results); if (AI.size > 80) AI.delete(AI.keys().next().value); return j.results; }
-  } catch (e) {}
-  AI.set(k, []); return [];   // unavailable: fall back to word matches only
+    const rows = await pending;
+    AI.set(k, rows); if (AI.size > 80) AI.delete(AI.keys().next().value);
+    return rows;
+  } finally { clearTimeout(timer); AI_PENDING.delete(k); }
 }
 const aiCached = qs => AI.get(String(qs || '').replace(/\s+/g, ' ').trim().toLowerCase()) || null;
 /* What the words ask for besides the need itself: price, platform, tools it should work with. */
