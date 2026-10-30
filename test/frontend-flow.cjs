@@ -49,7 +49,7 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  click('#cNext2');assert.equal(d.querySelector('#cStep2').hidden,false,'invalid profile blocked');
  set('#fBasics input[maxlength="40"]','New Fixture');set('#fBasics input[type="url"]','example.com');set('#fBasics input[maxlength="90"]','Solve a real user problem');click('#cNext2');
  assert.equal(d.querySelector('#cStep1').hidden,false);assert.equal(d.querySelector('#cPrice').textContent,'€0');assert.equal(d.querySelector('#cZone').textContent,'Edge');
- click('[data-plan="paid"]');assert.equal(d.querySelector('#cPrice').textContent,'€3');
+ click('[data-plan="paid"]');assert.equal(d.querySelector('#cPrice').textContent,'€4','a paid Edge placement starts at 2×2');assert.equal(d.querySelector('[data-s="1"]').disabled,true,'1×1 Edge is the free spot');
  const zones=()=>[...d.querySelectorAll('#cZones button')];zones().find(e=>e.querySelector('b').textContent==='Inner ring').click();click('[data-s="2"]');assert.equal(d.querySelector('#cPrice').textContent,'€76');
  zones().find(e=>e.querySelector('b').textContent==='Edge').click();assert.equal(d.querySelector('#cPrice').textContent,'€4');
  click('[data-plan="free"]');assert.equal(d.querySelector('#cPrice').textContent,'€0');assert.equal(d.querySelector('[data-s="1"]').getAttribute('aria-pressed'),'true');

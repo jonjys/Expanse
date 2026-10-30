@@ -89,7 +89,7 @@ Per cell; a 2×2 is four cells and an 8×8 landmark sixty-four.
 | Edge       | 125+    | €1 / cell      |
 
 The same table lives in `ZONES` in `app.js` and in `zone_of()` / `price_per_cell()` in Supabase — change both together.
-Listing is free with a 1×1 Edge spot. Optional map placement uses a single Stripe payment for 12 months,
+Listing is free with a 1×1 Edge spot, which is therefore never sold. Optional map placement (from €4: 2×2 on the Edge, or another zone) uses a single Stripe payment for 12 months,
 including applicable tax, without automatic renewal. Payment opens after approval. Legacy founding holds remain valid. New chosen spots are held through review and for 7 days after approval; unpaid holds then return to the free Edge.
 The public terms are in the "How it works" sheet in `index.html`. Search and Spotlight never use purchase state.
 
@@ -261,9 +261,22 @@ needed in the app: the account's Payment Links create Checkout Sessions, linked 
 Only live events for Expanse are accepted. `confirm_map_payment` independently checks a random callback credential,
 the stored order, payment link, currency, amount, zone, size and current product coordinates. Only a paid session
 starts the 12-month term. The return page never grants anything. Repeated events/session notifications are idempotent;
-a separate second payment or mismatch is flagged for review in **Admin → Map purchases**. Full refunds and disputes
-end the paid term; partial refunds do not automatically remove it. `expanse-map-terms` runs daily in Postgres to move
-expired terms to a free 1×1 Edge cell, preserving the product page and stats. Legacy holds are unaffected.
+a separate second payment or mismatch is flagged for review in **Admin → Map purchases**, keeps its Stripe session
+and payment ids, and emails the admin notification address. A payment through another link, amount or square goes to
+review without changing the order it names. A session that expires or fails does not end the order:
+another session for the same order can still be paid. Full refunds and disputes end the paid term, also for a payment
+in review; partial refunds do not automatically remove it. `expanse-map-terms` runs daily in Postgres to move
+expired terms and lapsed holds to a free 1×1 Edge cell, preserving the product page and stats. It skips a spot while a
+checkout for it can still be paid (48 hours after the order), never moves a product already on a free 1×1 Edge cell,
+and keeps refunded and disputed states. An unpaid checkout lapses after those 48 hours and the spot can be changed again.
+A rejected product keeps
+its cells while its paid term runs, and a product returning from review onto taken cells moves to a free Edge cell.
+Legacy holds are unaffected.
+A delayed payment (e.g. SEPA) that is still processing keeps its order open and the spot protected for up to 14 days.
+Holds start on the first approval or when a product moves from its free spot; moving or re-approval never extends a
+running hold or revives a lapsed one, and a re-approval after an edit leaves at least a day to pay. Purchase terms are
+version 2026-10-29 (`lib/legal-pages.js`, `contract_terms()`, `public_commerce()` and the checkout call in `app.js`
+must change together).
 
 See [`.env.example`](.env.example) for a credential-free configuration template. Keep real credentials in Vercel; the example file does not prove that hosting variables are configured.
 

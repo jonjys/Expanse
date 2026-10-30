@@ -208,7 +208,8 @@ const SAVED = (() => { const v = store.get(SAVED_KEY); return Array.isArray(v) ?
 const ACTIVITY = (() => { const v = store.get(ACTIVITY_KEY); return Array.isArray(v) ? v.filter(x => x && isSlug(x.slug)).slice(0,100) : []; })();
 let HL = [];
 const zoneOf = (x, y, size) => { const d = Math.hypot(x + size / 2, y + size / 2); return ZONES.find(z => d < z.r); };
-const paidTotal = (zone, size) => zone.reserved ? 0 : Math.max(3, zone.price * size * size);
+// A 1×1 Edge cell is the free spot every listing gets, so it has no paid price.
+const paidTotal = (zone, size) => zone.reserved || (zone.id === 'edge' && size === 1) ? 0 : Math.max(3, zone.price * size * size);
 const priceOf = (x, y, size) => paidTotal(zoneOf(x, y, size), size);
 const isFree = (x, y, w, h) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (occ.has(K(x + i, y + j))) return false; return true; };
 function addItem(it) {
@@ -315,12 +316,13 @@ async function loadSpots() {
   try { const s = await rpc('public_spots'); if (Array.isArray(s)) SPOTS = s.filter(v => v && Number.isInteger(v.x) && Number.isInteger(v.y) && [1, 2, 4, 8].includes(v.size) && Math.hypot(v.x + v.size / 2, v.y + v.size / 2) < MAX_R); } catch (e) {}
 }
 async function loadOwned() {
-  const slugs = Object.keys(OWNED).filter(isSlug);
+  const slugs = Object.keys(OWNED).filter(isSlug), lost = [];
   await Promise.all(slugs.map(async slug => {
     try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: OWNED[slug].key }); OWNED[slug].name = OWNDATA[slug].name; }
-    catch (e) { if (errCode(e) === 'bad_key') { delete OWNED[slug]; delete OWNDATA[slug]; } }
+    catch (e) { if (errCode(e) === 'bad_key') { lost.push(OWNED[slug].name || slug); delete OWNED[slug]; delete OWNDATA[slug]; } }
   }));
   store.set(OWNED_KEY, OWNED); updateMine();
+  if (lost.length) toast(`${lost.join(', ')} is no longer signed in on this device. Sign in again with your email, or use “Lost your key?”.`, 6000);
 }
 async function loadPlacements() {
   try { const l = await rpc('public_placements'); PLACEMENTS = Array.isArray(l) ? l.filter(x => x && Number.isInteger(x.id) && isSlug(x.slug)) : []; } catch (e) { PLACEMENTS = []; }
@@ -353,6 +355,7 @@ function resize() {
   W = innerWidth; H = innerHeight; DPR = Math.min(2, devicePixelRatio || 1);
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   const f = focusTarget(); fp.x = f.x; fp.y = f.y;
+  if (ui === 'manage') draw(now()); // the paused loop would otherwise leave the visible strip blank
   kick();
 }
 const toS = (wx, wy) => ({ x: fp.x + (wx - cam.x) * CELL * cam.z, y: fp.y + (wy - cam.y) * CELL * cam.z });
@@ -681,7 +684,7 @@ function draw(T) {
     rrect(ctx, vx + 1, vy + 1, vs - 2, vs - 2, Math.min(5, vs * .18));
     if (named) { ctx.fillStyle = col; ctx.fill(); }
     else { ctx.fillStyle = `rgba(${rgb},${.18 + .16 * pu})`; ctx.fill(); ctx.setLineDash([4, 4]); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
-    floatLabel(c.x + s / 2, c.y, sub.plan === 'free' ? `${named ? sub.name : 'YOUR FREE SPOT'} · 1×1 · €0` : `${named ? sub.name : 'YOUR SPOT'} · ${s}×${s} · ${eur(priceOf(c.x, c.y, s))} / 12 MONTHS`, col, T);
+    floatLabel(c.x + s / 2, c.y, sub.plan === 'free' || !priceOf(c.x, c.y, s) ? `${named ? sub.name : 'YOUR FREE SPOT'} · 1×1 · €0` : `${named ? sub.name : 'YOUR SPOT'} · ${s}×${s} · ${eur(priceOf(c.x, c.y, s))} / 12 MONTHS`, col, T);
   }
   for (const it of ITEMS) if (it.owned && !(ui === 'claim' && sub.step < 6)) floatLabel(it.x + it.w / 2, it.y, '★ ' + it.name + (it.kind === 'mine' ? ' · in review' : ''), '#c8ff3d', T);
   if (sel && sel.kind === 'product' && !sel.owned && ui === 'pop') floatLabel(sel.x + sel.w / 2, sel.y, sel.name, itemColor(sel), T);
@@ -690,7 +693,7 @@ function draw(T) {
   for (const zz of ZONES) {
     const r = (isFinite(zz.r) ? zz.r : WORLD_R + 8) * cp; if (r < (zz.reserved ? 40 : 70) || r > Math.max(W, H) * 2.2) continue;
     const y = c0.y - r; if (y < 70 || y > H - 20 || c0.x < -200 || c0.x > W + 200) continue;
-    const label = zz.reserved ? 'SPOTLIGHT · EARNED, NOT SOLD' : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL · €3 MIN`;
+    const label = zz.reserved ? 'SPOTLIGHT · EARNED, NOT SOLD' : `${zz.label.toUpperCase()} · ${eur(zz.price)}/CELL`;
     const tw = ctx.measureText(label).width + 20;
     ctx.globalAlpha = .92; ctx.fillStyle = 'rgba(4,6,22,.88)'; rrect(ctx, c0.x - tw / 2, y - 11, tw, 22, 11); ctx.fill();
     ctx.strokeStyle = zz.color; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.stroke();
@@ -745,6 +748,7 @@ let running = !document.hidden, raf = 0, lastT = now(), idle = now();
 function tick(T) {
   raf = 0; if (!running) return;
   if (view === 'list' && !fly) return; // the list covers the map: stop drawing until it closes
+  if (ui === 'manage' && !fly && !zAnim && !drag && !pinch && !vel.x && !vel.y && innerWidth <= 650) return; // the phone owner sheet covers most of the map; any interaction or setUI() kicks the loop again
   const dt = Math.min(50, T - lastT) / 1000; lastT = T;
   if (fly) {
     const k = clamp((T - fly.t0) / fly.ms, 0, 1), e = fly.e(k);
@@ -817,7 +821,7 @@ function hover(m) {
     if (d > MAX_R) { hideTip(); return; }
     const z = ZONES.find(zz => d < zz.r);
     cv.classList.add('dive');
-    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `${eur(z.price)} per cell / 12 months · €3 minimum · click to zoom in`, z.reserved ? '#ffcf4a' : z.color);
+    showTip(m, z.label, z.reserved ? 'Earned by real use, never sold · click to dive in' : `${eur(z.price)} per cell / 12 months · click to zoom in`, z.reserved ? '#ffcf4a' : z.color);
     return;
   }
   const q = demoAt(m);
@@ -831,7 +835,7 @@ function hover(m) {
 function tap(m) {
   const cp = CELL * cam.z, w = toW(m.x, m.y), cx = Math.floor(w.x), cy = Math.floor(w.y);
   if (introRunning) return;
-  if (ui === 'claim' && sub.step === 1) { if (sub.plan === 'free') { toast('Your free place is on the Edge. Choose a map spot to pick another zone.'); return; } const s = nearestFree(cx - (sub.size >> 1), cy - (sub.size >> 1), sub.size); if (s) setSpot(s, true); return; }
+  if (ui === 'claim' && sub.step === 1) { if (sub.plan === 'free') { toast('Your free place is on the Edge. Choose a map spot to pick another zone.'); return; } const s = paidSpotNear(cx - (sub.size >> 1), cy - (sub.size >> 1), sub.size); if (s) { sub.size = s.size; setSpot(s, true); } return; }
   const it = itemAt(m);
   if (it) { openItem(it); return; }
   if (cp < 4.5) { markExplore(); flyTo(w.x, w.y, clamp(18 / CELL, ZMIN, ZMAX), 1300, easeInOut); return; }
@@ -957,7 +961,16 @@ function download(name, blob) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
-function setPath(path) { try { if (location.protocol.startsWith('http') && location.pathname + location.search !== path) history.replaceState(null, '', path); } catch (e) {} }
+/* On phones, open the share sheet so the image can go to Photos or straight into an app; otherwise download it. */
+async function saveImage(name, blob) {
+  let file = null; try { file = new File([blob], name, { type: blob.type || 'image/png' }); } catch (e) {}
+  if (coarse && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return 'shared'; }
+    catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
+  }
+  download(name, blob); return 'downloaded';
+}
+function setPath(path) { try { if (location.protocol.startsWith('http') && location.pathname + location.search !== path) history.replaceState(history.state, '', path); } catch (e) {} }
 
 /* 1080×1350 share card: the product's square in its corner of the galaxy. */
 const kitCache = new Map();
@@ -978,8 +991,13 @@ function setUI(v) {
   if (v !== 'manage') manageEl.classList.remove('open');
   kick();
 }
+let sheetHist = false;
+function pushSheetHistory() { if (sheetHist) return; try { if (history.state?.expanse !== 'sheet') history.pushState({ expanse: 'sheet' }, ''); sheetHist = true; } catch (e) {} }
+window.addEventListener('popstate', () => { if (!sheetHist) return; sheetHist = false; if (ui !== 'none') closeUI(); });
 function closeUI() {
   const wasPop = ui === 'pop';
+  if (sheetHist && history.state?.expanse === 'sheet') { sheetHist = false; try { history.back(); } catch (e) {} }
+  if (ui === 'manage') mDirty = false;
   setUI('none'); sel = null;
   if (wasPop) setPath('/');
   if (view !== 'list') cv.focus({ preventScroll: true });
@@ -1361,7 +1379,7 @@ function setView(v) {
   if (v === view) { if (v === 'list') renderList(); return; }
   view = v; app.classList.toggle('listing', v === 'list'); listEl.setAttribute('aria-hidden', String(v !== 'list'));
   $('#vMap').setAttribute('aria-pressed', String(v === 'map')); $('#vList').setAttribute('aria-pressed', String(v === 'list'));
-  if (v === 'list') { if (ui === 'claim' || ui === 'manage') setUI('none'); renderFilters(); renderList(); }
+  if (v === 'list') { if (ui === 'claim' || ui === 'manage') closeUI(); renderFilters(); renderList(); }
   else { listQ = ''; lSort.value = 'pop'; }
   kick();
 }
@@ -1466,13 +1484,27 @@ function normUrl(v) {
   return v;
 }
 const urlOk = v => /^https:\/\/(?!(?:[^\/?#]*@))[a-z0-9.-]+\.[a-z]{2,24}(:\d{2,5})?([\/?#]\S*)?$/i.test(v) && v.length <= 300;
+/* Field errors: shown next to the field and linked to it for screen readers, not only in a toast. */
+let errSeq = 0;
+function fieldError(w, msg) {
+  if (!w) return; w.classList.add('bad');
+  let e = w.querySelector(':scope > small.err');
+  if (!e) { e = el('small', { class: 'err', id: 'field-err-' + (++errSeq), 'aria-hidden': 'true' }); w.append(e); } // read once, through aria-describedby
+  if (msg) e.textContent = msg; else if (!e.textContent) e.textContent = 'Check this field.';
+  const i = w.querySelector('input,textarea'); if (i) { i.setAttribute('aria-invalid', 'true'); i.setAttribute('aria-describedby', e.id); }
+}
+function fieldOk(w) {
+  if (!w) return; w.classList.remove('bad');
+  const e = w.querySelector(':scope > small.err'); if (e) e.remove();
+  const i = w.querySelector('input,textarea'); if (i) { i.removeAttribute('aria-invalid'); i.removeAttribute('aria-describedby'); }
+}
 function makeForm() {
   const f = {}, data = { category: 'other', pricing: 'unspecified', needs: [], platforms: [], integrations: [] };
   const input = (name, label, attrs, hint) => { const i = el('input', Object.assign({ autocomplete: 'off', spellcheck: 'false' }, attrs)); const w = el('label', { class: 'field', 'data-f': name }, el('span', { class: 'mono' }, label), i, hint ? el('small', { class: 'hint', text: hint }) : null); f[name] = { w, i }; return w; };
   const opts = (name, label, entries, multi, colors) => {
     const box = el('div', { class: 'opts', role: 'group', 'aria-label': label });
     const paint = () => box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(multi ? data[name].includes(b.dataset.v) : data[name] === b.dataset.v)));
-    for (const [k, l] of entries) box.append(el('button', { type: 'button', 'data-v': k, 'aria-pressed': 'false', style: colors ? '--c:' + colors[k] : null, onclick: () => { if (multi) { const a = data[name]; const i = a.indexOf(k); i < 0 ? a.push(k) : a.splice(i, 1); } else data[name] = k; paint(); f[name].w.classList.remove('bad'); changed(); } }, colors ? el('i') : null, l));
+    for (const [k, l] of entries) box.append(el('button', { type: 'button', 'data-v': k, 'aria-pressed': 'false', style: colors ? '--c:' + colors[k] : null, onclick: () => { if (multi) { const a = data[name]; const i = a.indexOf(k); i < 0 ? a.push(k) : a.splice(i, 1); } else data[name] = k; paint(); fieldOk(f[name].w); changed(); } }, colors ? el('i') : null, l));
     const w = el('div', { class: 'field', 'data-f': name }, el('span', { class: 'mono', text: label }), box); f[name] = { w, paint }; return w;
   };
   const tags = (name, label, ph, max, maxLen, ideas, lower) => {
@@ -1483,7 +1515,7 @@ function makeForm() {
       box.replaceChildren(...data[name].map((t, i) => el('span', { class: 't' }, t, el('button', { type: 'button', 'aria-label': 'Remove ' + t, text: '×', onclick: e => { e.stopPropagation(); data[name].splice(i, 1); paint(); changed(); } }))), inp);
       if (ideaBox) ideaBox.replaceChildren(...ideas().filter(x => !data[name].includes(x)).slice(0, 8).map(x => el('button', { type: 'button', text: '+ ' + x, onclick: () => { add(x); inp.focus(); } })));
     };
-    const add = v => { v = String(v || '').replace(/\s+/g, ' ').trim().slice(0, maxLen); if (lower) v = v.toLowerCase(); if (v.length < (lower ? 2 : 1) || data[name].some(x => x.toLowerCase() === v.toLowerCase())) return; if (data[name].length >= max) { toast(`Up to ${max}.`); return; } data[name].push(v); paint(); f[name].w.classList.remove('bad'); changed(); };
+    const add = v => { v = String(v || '').replace(/\s+/g, ' ').trim().slice(0, maxLen); if (lower) v = v.toLowerCase(); if (v.length < (lower ? 2 : 1) || data[name].some(x => x.toLowerCase() === v.toLowerCase())) return; if (data[name].length >= max) { toast(`Up to ${max}.`); return; } data[name].push(v); paint(); fieldOk(f[name].w); changed(); };
     inp.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ',') && inp.value.trim()) { e.preventDefault(); add(inp.value); inp.value = ''; } else if (e.key === 'Backspace' && !inp.value && data[name].length) { data[name].pop(); paint(); changed(); } });
     inp.addEventListener('blur', () => { if (inp.value.trim()) { add(inp.value); inp.value = ''; } });
     const w = el('div', { class: 'field', 'data-f': name }, el('span', { class: 'mono' }, label), box, ideaBox);
@@ -1514,9 +1546,9 @@ function makeForm() {
     story: [f.description.w, input('demo_url', 'Demo link · optional', { type: 'url', inputmode: 'url', maxlength: '300', placeholder: 'A live demo, video or sandbox' }), f.images.w]
   };
   f.needs.w.querySelector('.mono').append(el('em', { text: 'what people would search for' }));
-  for (const k of ['name', 'url', 'tagline', 'audience', 'price_text', 'demo_url']) f[k].i.addEventListener('input', () => { f[k].w.classList.remove('bad'); changed(); });
-  desc.addEventListener('input', () => { f.description.w.classList.remove('bad'); changed(); });
-  imgs.addEventListener('input', () => { f.images.w.classList.remove('bad'); changed(); });
+  for (const k of ['name', 'url', 'tagline', 'audience', 'price_text', 'demo_url']) f[k].i.addEventListener('input', () => { fieldOk(f[k].w); changed(); });
+  desc.addEventListener('input', () => { fieldOk(f.description.w); changed(); });
+  imgs.addEventListener('input', () => { fieldOk(f.images.w); changed(); });
   function get() {
     return {
       name: f.name.i.value.replace(/\s+/g, ' ').trim(), url: normUrl(f.url.i.value), tagline: f.tagline.i.value.replace(/\s+/g, ' ').trim(),
@@ -1534,7 +1566,7 @@ function makeForm() {
     data.needs = (d.needs || []).slice(0, 6); data.platforms = (d.platforms || []).filter(x => PLATFORMS[x]); data.integrations = (d.integrations || []).slice(0, 12);
     f.category.paint(); f.pricing.paint(); f.platforms.paint(); f.needs.paint(); f.integrations.paint();
     counter.textContent = f.description.i.value.length + ' / 1200';
-    for (const k in f) f[k].w.classList.remove('bad');
+    for (const k in f) fieldOk(f[k].w);
   }
   const CHECKS = {
     name: d => d.name.length >= 2 || 'Give your product a name.',
@@ -1553,19 +1585,22 @@ function makeForm() {
     const d = get();
     for (const g of groupNames) for (const k of GROUP_FIELDS[g]) {
       const r = CHECKS[k](d);
-      if (r !== true) { bad(k); toast(r, 4000); return k; }
+      if (r !== true) { bad(k, r); toast(r, 4000); return k; }
     }
     return null;
   }
-  function bad(k) { const w = f[k] && f[k].w; if (!w) return; w.classList.add('bad'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake'); const i = w.querySelector('input,textarea'); if (i) i.focus({ preventScroll: false }); w.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' }); }
+  function bad(k, msg) { const w = f[k] && f[k].w; if (!w) return; fieldError(w, msg); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake'); const i = w.querySelector('input,textarea'); if (i) i.focus({ preventScroll: false }); w.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' }); }
   const groupOf = k => Object.keys(GROUP_FIELDS).find(g => GROUP_FIELDS[g].includes(k));
   return { groups, get, set, check, bad, groupOf, onChange: fn => { onChange = fn; } };
 }
 
 /* ================= ADD YOUR PRODUCT ================= */
-const sub = { step: 0, spot: null, size: 1, plan: 'free', zone: 'edge', name: '', cat: '', result: null };
+const sub = { step: 0, spot: null, size: 1, plan: 'free', zone: 'edge', name: '', cat: '', result: null, moving: null, moved: false };
 const wiz = makeForm();
-$('#fBasics').append(wiz.groups.basics[1],$('#cAiImport'),wiz.groups.basics[0],wiz.groups.basics[2]); $('#fFit').append(wiz.groups.basics[3], ...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
+$('#fBasics').append(wiz.groups.basics[1],$('#cAiImport'),wiz.groups.basics[0],wiz.groups.basics[2]);
+{ const seq = ['url', 'name', 'tagline'].map(k => $(`#fBasics [data-f="${k}"] input`)).filter(Boolean);
+  seq.forEach((inp, i) => { inp.enterKeyHint = i < seq.length - 1 ? 'next' : 'go';
+    inp.addEventListener('keydown', e => { if (e.key !== 'Enter' || e.isComposing) return; e.preventDefault(); if (i < seq.length - 1) seq[i + 1].focus(); else $('#cNext2').click(); }); }); } $('#fFit').append(wiz.groups.basics[3], ...wiz.groups.fit); $('#fStory').append(...wiz.groups.story);
 async function aiRequest(body) {
   const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(55000)});
   let result;try{result=await r.json();}catch{throw new Error('ai_unavailable');}
@@ -1597,7 +1632,7 @@ $('#cAiDraft').onclick=async()=>{
   }catch(e){status.textContent=aiMessage(e);}finally{button.disabled=false;}
 };
 let draftT = 0;
-wiz.onChange(() => { const d = wiz.get(); sub.name = d.name; sub.cat = d.category; kick(); clearTimeout(draftT); draftT = setTimeout(() => store.set(DRAFT_KEY, Object.assign(d, { size: sub.size, plan: sub.plan, zone: sub.zone })), 400); });
+wiz.onChange(() => { const d = wiz.get(); sub.name = d.name; sub.cat = d.category; kick(); clearTimeout(draftT); draftT = setTimeout(saveDraft, 400); });
 const STEP_OF = { basics: 2, fit: 2, story: 2 };
 const FLOW = [2, 1, 5, 6];
 function setStep(n) {
@@ -1607,6 +1642,7 @@ function setStep(n) {
   claimEl.querySelector('.steps').hidden = n === 6;
   if (n === 5) renderSummary();
   if (n === 1 && sub.spot) { describe(); if (prev !== 1) centerOnSpot(true); }
+  if (prev !== n) { const h = $('#cStep' + n + ' .c-title'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
   claimEl.scrollTop = 0; kick();
 }
 function placementSpotOk(x,y,size) {
@@ -1628,52 +1664,69 @@ function zoneSpot(id, size, preferred) {
   }
   return null;
 }
+// A 1×1 Edge cell is the free spot, so a paid placement on the Edge starts at 2×2.
+const paidEdgeOne = (id, size) => sub.plan === 'paid' && !sub.moving && id === 'edge' && size === 1;
+// The nearest free spot for the current size; if that lands on a 1×1 Edge cell in a paid flow, an Edge 2×2 around it.
+function paidSpotNear(x, y, size) {
+  let s = nearestFree(x, y, size);
+  if (s && paidEdgeOne(zoneOf(s.x, s.y, size).id, size)) {
+    const c = s; size = 2;
+    s = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: c.x - dx, y: c.y - dy })).find(q => spotOk(q.x, q.y, 2) && zoneOf(q.x, q.y, 2).id === 'edge') || nearestFree(c.x - 1, c.y - 1, 2);
+  }
+  return s ? { x: s.x, y: s.y, size } : null;
+}
 function chooseZone(id, size) {
+  if (paidEdgeOne(id, size || sub.size)) size = 2;
   const next = zoneSpot(id, size || sub.size, sub.zone === id ? sub.spot : null);
   if (!next) { toast('No free spot of this size in this zone. Try a smaller size or another zone.'); return false; }
   sub.zone = id; sub.size = size || sub.size; setSpot(next, true); return true;
 }
 function startSubmit(spot, fromMap) {
-  sub.moving = null; $('#cNext1').textContent = 'Review your listing →';
+  // After the owner move flow borrowed the wizard, start from the stored draft again instead of the borrowed state.
+  const reset = sub.step === 6 || !sub.step || sub.moved; sub.moving = null; sub.moved = false; $('#cNext1').textContent = 'Review your listing →';
   if (demo) setDemo(false);
   closeSheet(); closeDlg(); sel = null; if (view === 'list') setView('map');
-  if (sub.step === 6 || !sub.step) {
-    sub.result = null; const d = store.get(DRAFT_KEY); wiz.set(d);
+  if (reset) {
+    sub.step = 0; sub.result = null; const d = store.get(DRAFT_KEY); wiz.set(d);
     sub.plan = d && d.plan === 'paid' ? 'paid' : 'free';
     sub.size = sub.plan === 'paid' && d && [1, 2, 4, 8].includes(d.size) ? d.size : 1;
     sub.zone = sub.plan === 'paid' && d && ['inner','belt','outer','edge'].includes(d.zone) ? d.zone : 'edge';
+    if (paidEdgeOne(sub.zone, sub.size)) sub.size = 2;
     sub.name = d ? d.name || '' : ''; sub.cat = d ? d.category || 'other' : 'other';
   }
   // Map previews offer a 2×2 block: keep that exact size when entering the product-first form.
   if (spot) { sub.plan = 'paid'; sub.size = [1,2,4,8].includes(spot.size) ? spot.size : 2; sub.zone = zoneOf(spot.x, spot.y, sub.size).id; }
-  openPanel(claimEl, 'claim'); markExplore();
+  openPanel(claimEl, 'claim'); markExplore(); pushSheetHistory();
   const candidate = spot || zoneSpot(sub.zone, sub.size);
   if (candidate) { sub.spot = { x: candidate.x, y: candidate.y }; describe(); }
   setStep(2);
   if (!coarse) requestAnimationFrame(() => wiz.groups.basics[0].querySelector('input').focus({ preventScroll: true }));
 }
+function saveDraft() { if (sub.moving || sub.step === 6 || !sub.step) return; store.set(DRAFT_KEY, Object.assign(wiz.get(), { size: sub.size, plan: sub.plan, zone: sub.zone })); }
 function describe() {
   if (!sub.spot) return;
   const z = zoneOf(sub.spot.x, sub.spot.y, sub.size), zf = zoneFree(z.id);
   sub.zone = z.id;
   $('#cZone').textContent = z.label; $('#cZone').style.background = z.color;
   $('#cCloser').textContent = `${fmt(zf.free)} of ${fmt(zf.cap)} cells unoccupied`;
-  $('#cPrice').textContent = sub.plan === 'free' ? '€0' : eur(paidTotal(z, sub.size));
-  $('#cPriceTerms').textContent = sub.plan === 'free' ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · €3 minimum · one payment for 12 months · tax included where applicable`;
+  const freeNow = sub.plan === 'free' || paidTotal(z, sub.size) === 0;
+  $('#cPrice').textContent = freeNow ? '€0' : eur(paidTotal(z, sub.size));
+  $('#cPriceTerms').textContent = freeNow ? 'Free profile · no payment required' : `${plural(sub.size * sub.size, 'cell', 'cells')} × ${eur(z.price)} · one payment for 12 months · tax included where applicable`;
   $('#cPaidOptions').hidden = sub.plan === 'free';
   $('#cPlans').querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.plan === sub.plan)));
   $('#cZoneValue').textContent = 'Every zone includes your own page, website link and stats. Map position changes where you appear while exploring; it never buys search ranking or Spotlight. No traffic or sales are guaranteed.';
   $('#cZones').replaceChildren(...ZONES.filter(z => !z.reserved).slice().reverse().map(item => {
     const f = zoneFree(item.id);
     return el('button', { type: 'button', class: 'zone-option', style: '--zc:' + item.color, 'aria-pressed': String(item.id === sub.zone), onclick: () => chooseZone(item.id) },
-      el('b', { text: item.label }), el('strong', { text: eur(item.price) + ' / cell · €3 minimum' }),
+      el('b', { text: item.label }), el('strong', { text: eur(item.price) + (item.id === 'edge' ? ' / cell · from 2×2' : ' / cell') }),
       el('small', { text: `${fmt(f.free)} of ${fmt(f.cap)} cells unoccupied · ${item.line}` }));
   }));
   claimEl.querySelectorAll('[data-s]').forEach(b => {
-    const sz = +b.dataset.s, candidate = zoneSpot(sub.zone, sz);
+    const sz = +b.dataset.s, freeCell = paidEdgeOne(sub.zone, sz), candidate = !freeCell && zoneSpot(sub.zone, sz);
     b.disabled = !candidate; b.setAttribute('aria-pressed', String(sz === sub.size));
-    b.querySelector('small').textContent = candidate ? eur(paidTotal(z, sz)) : 'Unavailable';
+    b.querySelector('small').textContent = freeCell ? 'Free plan' : candidate ? (paidTotal(z, sz) ? eur(paidTotal(z, sz)) : 'Free') : 'Unavailable';
   });
+  saveDraft();
   $('#cMoveHint').textContent = sub.plan === 'free' ? 'Your free 1×1 place is on the Edge. You can explore paid placement after review.' : (coarse ? 'Tap' : 'Click') + ' the map to move your spot. Held during review and for 7 days after approval. Pay then to keep it for 12 months.';
 }
 function centerOnSpot(quick) { const s = sub.spot; if (!s) return; flyTo(s.x + sub.size / 2, s.y + sub.size / 2, clamp(Math.max(cam.z, (isMobile() ? 26 : 34) / CELL / Math.max(1, sub.size / 2)), ZMIN, ZMAX), quick ? 550 : 1300, easeInOut); }
@@ -1681,8 +1734,10 @@ function setSpot(s, quick) { sub.spot = { x: s.x, y: s.y }; describe(); centerOn
 $('#cPlans').addEventListener('click', e => {
   const b = e.target.closest('[data-plan]'); if (!b) return;
   const plan = b.dataset.plan;
-  if (plan === 'free') { if (!chooseZone('edge', 1)) return; }
-  sub.plan = plan; describe();
+  if (plan === 'free') { const was = sub.plan; sub.plan = 'free'; if (!chooseZone('edge', 1)) { sub.plan = was; return; } }
+  sub.plan = plan;
+  if (paidEdgeOne(sub.zone, sub.size)) { if (!chooseZone('edge', 2)) chooseZone('outer', 1); return; }
+  describe();
 });
 $('#cSizes').addEventListener('click', e => {
   const b = e.target.closest('[data-s]'); if (!b || b.disabled) return;
@@ -1709,15 +1764,16 @@ function renderSummary() {
   const d = wiz.get(), s = sub.spot, z = zoneOf(s.x, s.y, sub.size), cat = CATS[d.category] || CATS.other;
   $('#cSummary').style.setProperty('--c', cat.color);
   $('#sName').textContent = d.name; $('#sWhere').textContent = `${cat.label} · ${z.label} · ${sub.size}×${sub.size}`;
-  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' ? 'free profile' : `${eur(paidTotal(z, sub.size))} / 12 months after review`);
+  $('#sAmt').replaceChildren(el('b', { text: '€0' }), el('br'), sub.plan === 'free' || !paidTotal(z, sub.size) ? 'free profile' : `${eur(paidTotal(z, sub.size))} / 12 months after review`);
   $('#cReviewTerms').textContent = sub.plan === 'free' ? 'Every product is reviewed under the same rules. Your free profile, search listing and stats have no expiry. No payment required.' : 'Every product is reviewed under the same rules. Your spot is held free during review and for 7 days after approval. Once approved, you can pay once for 12 months of placement. No automatic renewal. Payment never buys approval, search ranking or Spotlight.';
 }
+$('#cMail').addEventListener('input', () => fieldOk($('#fMail')));
 $('#cSubmit').addEventListener('submit', async e => {
   e.preventDefault();
   if ($('#cWeb').value) return;
   const input = $('#cMail'), email = input.value.trim().toLowerCase();
-  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('#fMail').classList.add('bad'); input.focus(); toast('That email looks off.'); return; }
-  $('#fMail').classList.remove('bad');
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fieldError($('#fMail'), 'That email looks off. Check it, for example name@company.com.'); input.focus(); toast('That email looks off.'); return; }
+  fieldOk($('#fMail'));
   if (!$('#cOwn').checked) { toast('Please confirm that you make or represent this product.'); $('#cOwn').focus(); return; }
   const stepWithError = wiz.check(['basics', 'fit', 'story']); if (stepWithError) { setStep(2); $('#cExtras').open = true; wiz.bad(stepWithError); return; }
   const btn = $('#cSend'); btn.disabled = true; btn.textContent = 'Sending…';
@@ -1733,12 +1789,12 @@ $('#cSubmit').addEventListener('submit', async e => {
     const m = errCode(err);
     if (m.startsWith('invalid:')) {
       const k = m.slice(8);
-      if (k === 'email') { $('#fMail').classList.add('bad'); toast('That email looks off.'); }
+      if (k === 'email') { fieldError($('#fMail'), 'That email looks off.'); toast('That email looks off.'); }
       else if (k === 'spot') { setStep(1); toast('Pick your spot again.'); }
       else { const g = wiz.groupOf(k); if (g) { setStep(STEP_OF[g]); wiz.bad(k); } toast('Something in your profile needs a fix — check the highlighted field.', 4500); }
     } else if (m.includes('spot_taken')) {
       await refreshAll();
-      const s = nearestFree(sub.spot.x, sub.spot.y, sub.size); if (s) setSpot(s, true);
+      const s = paidSpotNear(sub.spot.x, sub.spot.y, sub.size); if (s) { sub.size = s.size; setSpot(s, true); }
       setStep(1); toast('Someone just took that exact spot! We moved you to the nearest free one.', 5000);
     } else if (m.includes('core_invite_only')) { setStep(1); toast('The middle is the Spotlight — it’s earned, not picked. Choose a spot just outside it.', 4500); }
     else if (m.includes('out_of_bounds')) { setStep(1); toast('That spot is outside the universe — pick one closer in.'); }
@@ -1778,7 +1834,7 @@ function celebrate(q) {
 document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { closeSheet(); startSubmit(null); });
 
 /* Map purchases use the current reserved coordinates and a server-priced order. */
-let mapPoll = 0;
+let mapPoll = 0, mapPollSince = 0, mapPollSlug = null;
 async function renderMapPlacement(o) {
   const box=$('#mPlacement'),slug=mSlug; clearTimeout(mapPoll);
   if (!o.slug) { box.replaceChildren(el('p',{class:'fine',text:'Loading…'})); return; }
@@ -1794,35 +1850,43 @@ async function renderMapPlacement(o) {
   const buy=el('button',{type:'button',class:'btn btn-primary',text:`Pay ${eur(status.amount_cents/100)} for 12 months ↗`,onclick:async()=>{
     buy.disabled=true;buy.textContent='Preparing secure payment…';
     try{
-      const order=await rpc('owner_map_checkout',{p_slug:slug,p_key:OWNED[slug].key,p_terms_version:'2026-10-20'});
+      const order=await rpc('owner_map_checkout',{p_slug:slug,p_key:OWNED[slug].key,p_terms_version:'2026-10-29'});
       const u=new URL(order.url);
       if(u.origin!=='https://buy.stripe.com'||!order.id)throw new Error('invalid_checkout');
       store.set('expanse.checkout.v1',{slug,id:order.id}); location.assign(u.href);
     }catch(err){
-      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':'Could not start payment. Nothing was charged. Please try again.',5000);
+      const m=errCode(err);toast(m==='already_paid'?'This spot is already paid for.':m==='review_required'?'Payment opens after your product is approved.':m==='hold_expired'?'This hold expired. Choose an available spot again.':m==='free_spot'?'A 1×1 Edge spot is free. Choose another zone or a bigger size to buy a placement.':m==='terms_required'?'The purchase terms were updated. Reload the page to review them before paying.':m==='payment_processing'?'A payment for this spot is still being processed. Do not pay again; it can take a few days for bank payments.':'Could not start payment. Nothing was charged. Please try again.',5000);
       buy.disabled=false;buy.textContent=`Pay ${eur(status.amount_cents/100)} for 12 months ↗`;
     }
   }});
   const change=el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'Choose another zone or size',onclick:()=>{
-    sub.moving=slug;sub.plan='paid';sub.size=o.size;sub.zone=o.zone;sub.spot={x:o.x,y:o.y};sub.name=o.name;sub.cat=o.category;
+    sub.moving=slug;sub.moved=true;sub.plan='paid';sub.size=o.size;sub.zone=o.zone;sub.spot={x:o.x,y:o.y};sub.name=o.name;sub.cat=o.category;
     openPanel(claimEl,'claim');setStep(1);$('#cNext1').textContent='Save this spot →';
   }});
   const consent=el('input',{type:'checkbox'});
   const terms=el('label',{class:'check'},consent,el('span',{text:'I agree to the purchase terms and request placement to start when payment is confirmed. One payment for 12 months, no automatic renewal, no guaranteed traffic or sales, and no effect on search or Spotlight. I keep the 14-day full-refund right.'}));
   buy.disabled=true;consent.addEventListener('change',()=>buy.disabled=!consent.checked);
+  const freeSpot=o.zone==='edge'&&o.size===1;
   box.replaceChildren(el('h3',{class:'display',text:`${z.label} · ${o.size}×${o.size}`}),paid);
-  if(!active){
+  if(!active&&freeSpot&&status.state!=='pending'&&status.state!=='needs_review'){
+    box.append(el('p',{class:'note',text:'This 1×1 Edge spot is your free spot, so there is nothing to pay for here. A paid placement means another zone, or 2×2 or larger on the Edge, for 12 months.'}));
+    if(o.status==='approved')box.append(change);
+  }else if(!active){
     box.append(el('div',{class:'placement-total',text:`${eur(status.amount_cents/100)} / 12 months`}),el('p',{class:'fine',text:'One payment in euros. Tax included where applicable. No automatic renewal. Map placement is separate from Sponsored cards.'}));
     if(o.status!=='approved')box.append(el('p',{class:'note',text:'Your spot is held free while your product is reviewed. Payment opens after approval, under the same rules for every maker.'}));
     else if(!COMMERCE.enabled)box.append(el('p',{class:'note',text:'Payments are temporarily paused. Your free listing continues.'}));
+    else if(status.state==='pending'){
+      const resume=el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'I haven’t paid yet: resume checkout',onclick:()=>{clearTimeout(mapPoll);resume.replaceWith(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);}});
+      box.append(el('p',{class:'note',text:'If you have paid, do not pay again. Confirmation usually takes a few minutes. If it has not appeared within an hour, contact support with your order details below.'}),resume);
+    }
     else if(status.state!=='needs_review')box.append(el('p',{class:'fine'},el('a',{href:'/terms',target:'_blank',rel:'noopener',text:'Read terms & refunds ↗'}),' · ',el('a',{href:'/seller',target:'_blank',rel:'noopener',text:'Seller details ↗'})),terms,buy);
     if(status.state!=='pending')box.append(change);
-    else box.append(el('p',{class:'fine',text:'If you have just paid, wait for confirmation before trying again. An unpaid checkout can be resumed with the button above.'}));
   }
   box.append(el('a',{class:'linkbtn',href:'/withdraw',text:'Withdraw from a contract / request a refund'}));
   renderPurchaseHistory(box,slug);
   if(status.state==='needs_review')box.append(el('button',{class:'linkbtn',text:'Contact support',onclick:()=>openContact('other')}));
-  if(status.state==='pending')mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);
+  if(status.state!=='pending'||mapPollSlug!==slug){mapPollSince=0;mapPollSlug=slug;}
+  if(status.state==='pending'){if(!mapPollSince)mapPollSince=Date.now();if(Date.now()-mapPollSince<10*60*1000)mapPoll=setTimeout(()=>{if(mSlug===slug&&mTab==='placement')renderMapPlacement(OWNDATA[slug]||o);},5000);}
 }
 
 async function renderPurchaseHistory(box,slug) {
@@ -1836,7 +1900,7 @@ async function renderPurchaseHistory(box,slug) {
 }
 
 /* ================= OWNER PANEL ================= */
-const mform = makeForm();
+const mform = makeForm(); let mDirty = false; mform.onChange(() => { mDirty = true; });
 $('#eBasics').append(...mform.groups.basics); $('#eFit').append(...mform.groups.fit); $('#eStory').append(...mform.groups.story);
 let mSlug = null, mTab = 'stats';
 function updateMine() {
@@ -1853,6 +1917,7 @@ $('#mineBtn').onclick = () => {
 async function openManage(slug, tab) {
   const own = OWNED[slug]; if (!own) { openOwnerLogin(slug); return; }
   closeSheet(); closeDlg(); if (view === 'list') setView('map');
+  if (slug !== mSlug) mDirty = false;
   mSlug = slug; mTab = tab || (OWNDATA[slug] && OWNDATA[slug].status === 'approved' ? 'stats' : 'verify');
   renderManage();
   openPanel(manageEl, 'manage'); markExplore();
@@ -1870,9 +1935,10 @@ function renderManage() {
   else if (o.status === 'hidden') note.append(el('div', { class: 'note' }, el('b', { text: 'Hidden. ' }), o.review_note || 'This product is hidden after reports, until it has been checked.'));
   else if (o.status === 'approved') note.append(el('div', { class: 'note ok' }, 'Live at ', el('a', { href: productUrl(mSlug), style: 'text-decoration:underline', onclick: e => { e.preventDefault(); const p = BY_SLUG.get(mSlug); if (p) openProduct(p); }, text: productUrl(mSlug).replace(/^https?:\/\//, '') })));
   $('#mTabs').querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === mTab)));
+  const selTab = $('#mTabs [aria-selected="true"]'); if (selTab && selTab.scrollIntoView) selTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   manageEl.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== mTab);
   if (mTab === 'stats') renderStats(o);
-  if (mTab === 'edit' && o.slug) mform.set(o);
+  if (mTab === 'edit' && o.slug && !mDirty) mform.set(o);
   if (mTab === 'verify') renderVerify(o);
   if (mTab === 'share') renderShare(o);
   if (mTab === 'needs') renderMakerNeeds(o);
@@ -1997,13 +2063,13 @@ async function renderShare(o) {
  const text=el('textarea',{rows:6,maxlength:3000,'aria-label':'Editable post',value:typeof local.text==='string'?local.text:kit.post_text}),link=el('input',{type:'url',readonly:true,'aria-label':'Trackable product link'}),preview=el('img',{class:'kit-preview',src:'/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision,alt:o.name+' — prepared Expanse share card',width:1080,height:1350}),performance=el('p',{class:'fine'});let activeKit=kit,previewUrl;
  const currentLink=()=>marketing.link(slug,campaign.value,channel.value);
  const update=()=>{link.value=currentLink();store.set(draftKey,{text:text.value,channel:channel.value});const row=campaignRows.find(r=>r.campaign===campaign.value);performance.textContent=row?`${row.views} profile opens · ${row.visits} website clicks · last 30 days, all channels. Not sales.`:'No campaign observations available.';};
- const image=()=>{if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}if(format.value==='prepared'){activeKit=kit;preview.src='/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision;}else{const compare=BY_SLUG.get(other.value),svg=G.asset(o,kind.value,format.value,compare);activeKit={...kit,svg,revision:kit.revision+':'+kind.value+':'+format.value+':'+(compare?.slug||'')+':'+(compare?.tagline||'')};previewUrl=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));preview.src=previewUrl;}const dims=format.value==='prepared'?[1080,1350]:G.formats[format.value];preview.width=dims[0];preview.height=dims[1];};
+ const image=()=>{if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}if(format.value==='prepared'){activeKit=kit;preview.src='/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision;}else{const compare=BY_SLUG.get(other.value),svg=G.asset(o,kind.value,format.value,compare);activeKit={...kit,svg,revision:kit.revision+':'+kind.value+':'+format.value+':'+(compare?.slug||'')+':'+(compare?.tagline||'')};previewUrl=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));preview.src=previewUrl;}const dims=format.value==='prepared'?[1080,1350]:G.formats[format.value];preview.width=dims[0];preview.height=dims[1];warm();};const warm=()=>{marketing.png(slug,activeKit).catch(()=>{});};
  const generate=()=>{text.value=G.copy(o,kind.value,channel.value,BY_SLUG.get(other.value));update();};
- channel.onchange=update;text.oninput=update;campaign.onchange=()=>{const row=campaignRows.find(r=>r.campaign===campaign.value);if(row)kind.value=row.kind;update();};kind.onchange=image;format.onchange=image;other.onchange=image;update();
+ channel.onchange=update;text.oninput=update;campaign.onchange=()=>{const row=campaignRows.find(r=>r.campaign===campaign.value);if(row&&kind.value!==row.kind){kind.value=row.kind;image();}update();};kind.onchange=image;format.onchange=image;other.onchange=image;update();
  const name=el('input',{maxlength:60,placeholder:'e.g. Black Friday launch','aria-label':'New campaign name'}),create=el('button',{class:'btn btn-ghost btn-sm',text:'Create tracked campaign',onclick:async()=>{create.disabled=true;try{const row=await rpc('owner_create_campaign',{p_slug:slug,p_key:OWNED[slug].key,p_name:name.value.trim(),p_kind:kind.value});if(!campaignRows.some(x=>x.campaign===row.campaign)){campaignRows.unshift({...row,views:0,visits:0});campaign.append(el('option',{value:row.campaign,text:row.name}));}campaign.value=row.campaign;update();toast('Campaign link ready. Publish it yourself.');}catch(e){toast(errCode(e).includes('slow_down')?'Campaign limit reached for this hour. Try later.':'Could not create campaign. Use a name of 2–60 characters, or reuse an existing campaign.');}finally{create.disabled=false;}}});
- const save=el('button',{class:'btn btn-primary btn-sm',text:'Download PNG',onclick:async()=>{save.disabled=true;try{download(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));studioEvent(slug,'download');toast('Image saved.');}catch{toast('PNG conversion failed. Download original image (SVG) instead.',5000);}finally{save.disabled=false;}}});
+ const save=el('button',{class:'btn btn-primary btn-sm',text:coarse?'Save or share image':'Download PNG',onclick:async()=>{save.disabled=true;try{const done=await saveImage(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));if(done!=='cancelled')studioEvent(slug,'download');if(done==='downloaded')toast(coarse?'Download started. Find the image in your Downloads.':'Image downloaded.');}catch{toast('PNG conversion failed. Try again, or take a screenshot of the preview. The SVG file is for design tools; social networks do not accept SVG.',6000);}finally{save.disabled=false;}}});warm();
  fill(box,el('h3',{text:'Your ready-to-share kit · 2.0'}),el('p',{class:'fine',text:'Prepared from approved public facts. Choose a campaign and format; edit before publishing. Feature-update copy describes listed capabilities, not an invented release. Seasonal templates do not claim a discount.'}),
- el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
+ el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image (SVG, for design tools)',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
  el('p',{class:'fine',text:'Campaign IDs are generated and validated by Expanse. Names stay in your private studio. Legacy links continue working. Profile views are attributed to the link, not proof of a customer or sale. Cached images and post drafts stay in this browser. No automatic posting.'}),
  el('div',{class:'growth-handoff'},el('h4',{text:'Create a campaign in MakeItReal'}),el('p',{class:'fine',text:'Review and copy your approved public product facts, then paste them into Campaign Studio. No accounts, private analytics or owner keys are shared.'}),el('button',{class:'btn btn-ghost btn-sm',text:'Review campaign brief →',onclick:()=>{const brief=G.brief(o,currentLink()),payload=JSON.stringify(brief,null,2);openDlg(el('h2',{class:'display',text:'Review your public campaign brief'}),el('pre',{class:'codeblock',text:payload}),el('p',{class:'fine',text:'Manual handoff: copy the one-sentence summary into “What is it?” and the website into “Website” in MakeItReal. Review and confirm the facts there. Return to Expanse → Growth Studio to review tracked link visits. No OAuth, automatic project import or sales synchronization is connected.'}),el('div',{class:'c-row'},el('button',{class:'btn btn-primary btn-sm',text:'Copy approved facts',onclick:()=>copy(payload)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy one-sentence summary',onclick:()=>copy(o.name+' — '+o.tagline)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy website',onclick:()=>copy(o.url)}),el('a',{class:'btn btn-ghost btn-sm',href:'https://makeit-real.vercel.app/en/launch.html',target:'_blank',rel:'noopener',text:'Open MakeItReal Campaign Studio ↗'}),el('button',{class:'btn btn-ghost btn-sm',text:'Back to Expanse',onclick:closeDlg})));}})));
  renderSeasonalForm(box,o);
@@ -2126,12 +2192,18 @@ function placementReport(r) {
     el('p', { class: 'fine', text: `Unique visitors per day; your own visits and known bots aren’t counted. “Before” is the same number of days just before the slot (${r.before.from === r.before.to ? dayFmt(r.before.from) : dayFmt(r.before.from) + ' – ' + dayFmt(r.before.to)}).` }));
 }
 function box_(b, ...kids) { b.replaceChildren(...kids); }
-function confirmRemove(o) {
+async function confirmRemove(o) {
+  const slug = mSlug, key = OWNED[slug] && OWNED[slug].key; if (!key) return;
+  let map = null, unknown = false; try { map = await rpc('owner_map_status', { p_slug: slug, p_key: key }); } catch (e) { unknown = true; }
+  if (mSlug !== slug || ui !== 'manage') return;
+  const paidMap = map && map.state === 'paid' && Date.parse(map.ends_at) > Date.now();
   openDlg(el('div', { class: 'mono kick', style: 'color:#ff8a8a', text: 'Take listing down' }), el('h2', { class: 'display', text: `Remove ${o.name}?` }),
     el('p', { style: 'margin-top:12px', text: 'The profile disappears everywhere, the spot is released and your contact email is wiped. This can’t be undone.' }),
+    paidMap ? el('p', { class: 'note', text: `This product has a paid map placement until ${dateStr(map.ends_at)}. Taking the listing down ends it, and this owner key will no longer open your order details. First download your order details in the Map spot tab. To ask for a refund, use Withdraw / request a refund with your order reference.` })
+      : unknown ? el('p', { class: 'note', text: 'We could not check for a paid map placement just now. If you paid for one, download your order details in the Map spot tab first.' }) : null,
     el('div', { class: 'c-row' }, el('button', { class: 'btn btn-danger', text: 'Yes, take it down', onclick: async e => {
       e.target.disabled = true;
-      try { await rpc('owner_remove', { p_slug: mSlug, p_key: OWNED[mSlug].key }); delete OWNED[mSlug]; delete OWNDATA[mSlug]; saveOwned(); closeDlg(); closeUI(); await refreshAll(); loadStats(); toast('Your listing has been taken down.'); }
+      try { await rpc('owner_remove', { p_slug: slug, p_key: key }); delete OWNED[slug]; delete OWNDATA[slug]; saveOwned(); closeDlg(); closeUI(); await refreshAll(); loadStats(); toast('Your listing has been taken down.'); }
       catch (err) { e.target.disabled = false; toast("Couldn't take it down right now — try again."); }
     } }), el('button', { class: 'btn btn-ghost btn-sm', text: 'Cancel', onclick: closeDlg })));
 }
@@ -2141,7 +2213,7 @@ $('#eSave').onclick = async () => {
   try {
     const before = OWNDATA[mSlug] && OWNDATA[mSlug].status;
     OWNDATA[mSlug] = await rpc('owner_update', { p_slug: mSlug, p_key: OWNED[mSlug].key, p: mform.get() });
-    kitCache.delete(mSlug);
+    mDirty = false; kitCache.delete(mSlug);
     OWNED[mSlug].name = OWNDATA[mSlug].name; saveOwned();
     await refreshAll(); renderManage();
     toast(before === 'approved' && OWNDATA[mSlug].status === 'pending' ? 'Saved. Your new link or images go to review before they show.' : before === 'rejected' ? 'Saved and sent for review again.' : 'Saved.', 4500);
@@ -2193,7 +2265,7 @@ dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[
 function slugFrom(v) { v = String(v || '').trim(); const m = v.match(/\/p\/([a-z0-9-]+)/i); if (m) return m[1].toLowerCase(); return normQ(v).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48); }
 function openOwnerLogin(slug, name) {
   const slugIn = slug ? null : el('input', { placeholder: 'Product link or name', autocomplete: 'off', spellcheck: 'false' });
-  const keyIn = el('input', { placeholder: 'Your owner key', autocomplete: 'off', spellcheck: 'false', style: 'font-family:"IBM Plex Mono",monospace' });
+  const keyIn = el('input', { placeholder: 'Your owner key', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', style: 'font-family:"IBM Plex Mono",monospace' });
   const go = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Open owner panel' });
   const form = el('form', { onsubmit: async e => {
     e.preventDefault(); const s = slug || slugFrom(slugIn.value), k = keyIn.value.trim();

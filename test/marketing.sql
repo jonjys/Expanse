@@ -30,3 +30,20 @@ begin
  if public.public_marketing_card(slug) is not null or exists(select 1 from expanse_private.marketing_kits where product_id=pid) then raise exception 'FAIL hidden card';end if;n:=n+1;
  raise notice '% marketing and acquisition assertions passed',n;
 end $$;
+
+-- Share card text fit: a wide all-caps name is fitted to the card, a short one keeps its letters,
+-- and a tagline word longer than a line is shortened.
+do $$
+declare wide json; narrow json; svg text; checks int:=0;
+begin
+ wide:=public.submit_product(jsonb_build_object('name','MOMENTUM WORKFLOW MANAGER','url','https://example.com/wide-card','tagline','Fits https://example.com/an-extremely-long-tagline-token-without-spaces-here','category','other','pricing','unspecified','needs','[]'::jsonb,'email','wide-card@example.invalid','x',-60,'y',70,'size',1));
+ update public.products set created_at=now()-interval '2 hours',submit_hash=null where slug=wide->>'slug';
+ narrow:=public.submit_product(jsonb_build_object('name','Deploy Doctor','url','https://example.com/narrow-card','tagline','Short and readable tagline','category','other','pricing','unspecified','needs','[]'::jsonb,'email','narrow-card@example.invalid','x',-62,'y',70,'size',1));
+ update public.products set status='approved' where slug in (wide->>'slug',narrow->>'slug');
+ select k.svg into svg from expanse_private.marketing_kits k join public.products p on p.id=k.product_id where p.slug=wide->>'slug';
+ if svg not like '%textLength="920"%' then raise exception 'FAIL wide name fitted'; end if; checks:=checks+1;
+ if svg like '%an-extremely-long-tagline-token-without-spaces-here%' or svg not like '%…%' then raise exception 'FAIL long tagline word shortened'; end if; checks:=checks+1;
+ select k.svg into svg from expanse_private.marketing_kits k join public.products p on p.id=k.product_id where p.slug=narrow->>'slug';
+ if svg like '%textLength="920"%' then raise exception 'FAIL short name stretched'; end if; checks:=checks+1;
+ raise notice '% share card text assertions passed', checks;
+end $$;
