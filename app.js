@@ -953,6 +953,12 @@ async function copy(text) {
 /* Shared links always use the real domain, whichever address the visitor came in on. */
 const SITE = 'https://expanse.nyttolabs.com';
 const productUrl = slug => SITE + '/p/' + slug;
+/* Opens X's own composer with a prepared post; the person edits and posts it themselves. */
+function postOnX(text, url) {
+  const a = el('a', { href: 'https://x.com/intent/post?' + new URLSearchParams(url ? { text, url } : { text }), target: '_blank', rel: 'noopener noreferrer' });
+  document.body.append(a); a.click(); a.remove();
+}
+const xBtn = (label, onclick, cls = 'btn btn-ghost btn-sm') => el('button', { type: 'button', class: cls, onclick }, el('span', { 'aria-hidden': 'true', text: '𝕏' }), ' ' + label);
 async function shareUrl(url, title, text, okMsg) {
   if (coarse && navigator.share) { try { await navigator.share({ title, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
   toast((await copy(url)) ? okMsg : 'Copy the link: ' + url, 4200);
@@ -1039,7 +1045,8 @@ function openProduct(p, opts) {
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
     imgs,
     el('div', { class: 'pact' }, visit, demoBtn),
-    el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), stackBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
+    el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), stackBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share'),
+      xBtn('Post', () => postOnX(OWNED[p.slug] ? `${p.name} is live on Expanse 🌌\n\n${p.tagline}` : `Found ${p.name} on Expanse: ${p.tagline}`, productUrl(p.slug)), 'chip-btn')),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
@@ -1817,6 +1824,7 @@ $('#dKeyCopy').onclick = async () => toast((await copy($('#dKey').textContent)) 
 $('#dKeySave').onclick = () => { const r = sub.result; if (r) saveKeyFile(r.slug, r.name, $('#dKey').textContent); };
 $('#dManage').onclick = () => { if (sub.result) openManage(sub.result.slug, 'verify'); };
 $('#dCard').onclick = () => { if (sub.result) openManage(sub.result.slug, 'share'); };
+$('#dX').onclick = () => { const r = sub.result; if (r) postOnX(`I just put ${r.name} on the map at Expanse 🌌\n\nA galaxy of real products, searched by the problem you have. Ranking can't be bought.\n\n#buildinpublic`, SITE); };
 $('#dExplore').onclick = () => closeUI();
 function saveKeyFile(slug, name, key) {
   download(`expanse-owner-key-${slug}.txt`, new Blob([`Expanse owner key for ${name}\n\nProduct: ${productUrl(slug)}\nOwner key: ${key}\n\nKeep this private. Anyone with this key can edit the listing.\n`], { type: 'text/plain' }));
@@ -2051,6 +2059,22 @@ function repoBox(o) {
     el('p', { class: 'c-text', style: 'font-size:13.5px;margin-top:0', text: 'Connect your public repo: new releases show on your profile and in the updates of everyone who follows you.' }),
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Repository' }), inp), status, el('div', { class: 'c-row' }, btn));
 }
+/* "Live on Expanse" badge: an image link back to the product page for the maker's own site. */
+function badgeSection(o) {
+  const slug = o.slug, page = productUrl(slug), theme = el('select', { 'aria-label': 'Badge style' }, el('option', { value: 'dark', text: 'Dark' }), el('option', { value: 'light', text: 'Light' }));
+  const img = el('img', { class: 'badge-preview', alt: o.name + ' on Expanse', width: 230, height: 54 });
+  const code = el('textarea', { rows: 3, readonly: true, 'aria-label': 'Badge HTML' });
+  const src = () => `${SITE}/api/badge?slug=${encodeURIComponent(slug)}${theme.value === 'light' ? '&theme=light' : ''}`;
+  const html = () => `<a href="${page}" target="_blank" rel="noopener"><img src="${src()}" alt="${o.name.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])} on Expanse" width="230" height="54"></a>`;
+  const md = () => `[![${o.name.replace(/[\[\]]/g, '')} on Expanse](${src()})](${page})`;
+  const update = () => { img.src = src(); code.value = html(); };
+  theme.onchange = update; update();
+  return el('div', { class: 'growth-handoff badge-kit' }, el('h4', { text: 'Live on Expanse badge' }),
+    el('p', { class: 'fine', text: 'Put it on your website or README. It shows your live upvotes and links to your profile, so every visitor can find and upvote you.' }),
+    el('div', { class: 'badge-row' }, img, el('label', { class: 'field' }, el('span', { text: 'Style' }), theme)), code,
+    el('div', { class: 'c-row' }, el('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Copy HTML', onclick: async () => toast(await copy(code.value) ? 'Badge HTML copied.' : 'Select the code and copy it.') }),
+      el('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Copy Markdown', onclick: async () => toast(await copy(md()) ? 'Badge Markdown copied for your README.' : 'Select the code and copy it.') })));
+}
 async function renderShare(o) {
  const box=$('#mShare'),slug=mSlug,url=productUrl(slug),G=window.ExpanseGrowth;
  if(o.status!=='approved'){fill(box,el('p',{class:'fine',text:'Your sharing kit is prepared when your product goes live. Your future profile link:'}),el('div',{class:'codeblock',text:url}));return;}
@@ -2069,9 +2093,10 @@ async function renderShare(o) {
  const name=el('input',{maxlength:60,placeholder:'e.g. Black Friday launch','aria-label':'New campaign name'}),create=el('button',{class:'btn btn-ghost btn-sm',text:'Create tracked campaign',onclick:async()=>{create.disabled=true;try{const row=await rpc('owner_create_campaign',{p_slug:slug,p_key:OWNED[slug].key,p_name:name.value.trim(),p_kind:kind.value});if(!campaignRows.some(x=>x.campaign===row.campaign)){campaignRows.unshift({...row,views:0,visits:0});campaign.append(el('option',{value:row.campaign,text:row.name}));}campaign.value=row.campaign;update();toast('Campaign link ready. Publish it yourself.');}catch(e){toast(errCode(e).includes('slow_down')?'Campaign limit reached for this hour. Try later.':'Could not create campaign. Use a name of 2–60 characters, or reuse an existing campaign.');}finally{create.disabled=false;}}});
  const save=el('button',{class:'btn btn-primary btn-sm',text:coarse?'Save or share image':'Download PNG',onclick:async()=>{save.disabled=true;try{const done=await saveImage(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));if(done!=='cancelled')studioEvent(slug,'download');if(done==='downloaded')toast(coarse?'Download started. Find the image in your Downloads.':'Image downloaded.');}catch{toast('PNG conversion failed. Try again, or take a screenshot of the preview. The SVG file is for design tools; social networks do not accept SVG.',6000);}finally{save.disabled=false;}}});warm();
  fill(box,el('h3',{text:'Your ready-to-share kit · 2.0'}),el('p',{class:'fine',text:'Prepared from approved public facts. Choose a campaign and format; edit before publishing. Feature-update copy describes listed capabilities, not an invented release. Seasonal templates do not claim a discount.'}),
- el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image (SVG, for design tools)',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
+ el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image (SVG, for design tools)',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,xBtn('Post on X',()=>{const t=text.value.trim(),l=marketing.link(slug,campaign.value,'x');postOnX(t,t.includes(l)?'':l);studioEvent(slug,'copy');}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
  el('p',{class:'fine',text:'Campaign IDs are generated and validated by Expanse. Names stay in your private studio. Legacy links continue working. Profile views are attributed to the link, not proof of a customer or sale. Cached images and post drafts stay in this browser. No automatic posting.'}),
  el('div',{class:'growth-handoff'},el('h4',{text:'Create a campaign in MakeItReal'}),el('p',{class:'fine',text:'Review and copy your approved public product facts, then paste them into Campaign Studio. No accounts, private analytics or owner keys are shared.'}),el('button',{class:'btn btn-ghost btn-sm',text:'Review campaign brief →',onclick:()=>{const brief=G.brief(o,currentLink()),payload=JSON.stringify(brief,null,2);openDlg(el('h2',{class:'display',text:'Review your public campaign brief'}),el('pre',{class:'codeblock',text:payload}),el('p',{class:'fine',text:'Manual handoff: copy the one-sentence summary into “What is it?” and the website into “Website” in MakeItReal. Review and confirm the facts there. Return to Expanse → Growth Studio to review tracked link visits. No OAuth, automatic project import or sales synchronization is connected.'}),el('div',{class:'c-row'},el('button',{class:'btn btn-primary btn-sm',text:'Copy approved facts',onclick:()=>copy(payload)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy one-sentence summary',onclick:()=>copy(o.name+' — '+o.tagline)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy website',onclick:()=>copy(o.url)}),el('a',{class:'btn btn-ghost btn-sm',href:'https://makeit-real.vercel.app/en/launch.html',target:'_blank',rel:'noopener',text:'Open MakeItReal Campaign Studio ↗'}),el('button',{class:'btn btn-ghost btn-sm',text:'Back to Expanse',onclick:closeDlg})));}})));
+ box.append(badgeSection(o));
  renderSeasonalForm(box,o);
  }catch{if(mSlug===slug&&mTab==='share')fill(box,el('p',{class:'fine',text:'The prepared kit is unavailable right now. Your product page still works:'}),el('div',{class:'codeblock',text:url}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy profile link',onclick:()=>copy(url)}),el('button',{class:'btn btn-ghost btn-sm',text:'Try again',onclick:()=>{kitCache.delete(slug);renderShare(o);}}));}
 }

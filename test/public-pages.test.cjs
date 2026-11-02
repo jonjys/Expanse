@@ -25,7 +25,7 @@ test('browse exposes crawlable live product links and a stable canonical without
 });
 test('product URLs and share images reject unsafe schemes and credential-bearing links',()=>{
  const html=productPage.withProduct(require('node:fs').readFileSync('index.html','utf8'),{...fixture,url:'javascript:alert(1)',demo_url:'https://secret:password@example.com',images:['javascript:alert(2)']},'https://expanse.nyttolabs.com/p/real-tool');
- assert.doesNotMatch(html,/href="javascript:/);assert.doesNotMatch(html,/href="https:\/\/secret:/);assert.match(html,/og:image" content="https:\/\/expanse.nyttolabs.com\/og.jpg/);
+ assert.doesNotMatch(html,/href="javascript:/);assert.doesNotMatch(html,/href="https:\/\/secret:/);assert.match(html,/og:image" content="https:\/\/expanse.nyttolabs.com\/api\/card\?slug=/);assert.doesNotMatch(html,/content="javascript:/);assert.match(html,/og:image:width" content="1200/);
 });
 test('sitemap includes browse and validated product pages',async()=>{
  global.fetch=async()=>({ok:true,json:async()=>[fixture]});const res=response();await sitemap({},res);assert.equal(res.statusCode,200);assert.match(res.body,/<loc>https:\/\/expanse.nyttolabs.com\/browse<\/loc>/);assert.match(res.body,/<loc>https:\/\/expanse.nyttolabs.com\/p\/real-tool<\/loc>/);

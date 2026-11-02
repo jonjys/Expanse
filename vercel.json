@@ -71,6 +71,9 @@
     },
     "api/browse.js": {
       "includeFiles": "index.html"
+    },
+    "api/card.js": {
+      "includeFiles": "{fonts/ttf/**,node_modules/@resvg/**}"
     }
   },
   "headers": [
