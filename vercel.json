@@ -67,10 +67,13 @@
       "maxDuration": 60
     },
     "api/p.js": {
-      "includeFiles": "index.html"
+      "includeFiles": "{index.html,fonts/ttf/*.ttf}"
     },
     "api/browse.js": {
       "includeFiles": "index.html"
+    },
+    "api/card.js": {
+      "includeFiles": "{fonts/ttf/**,node_modules/@resvg/**}"
     }
   },
   "headers": [

@@ -5,8 +5,9 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 
 ## Structure
 
-- `index.html` — markup and CSS. `app.js` — all the behaviour. No build step or runtime dependencies. The regression suite uses jsdom as a development dependency.
-- `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and share image in the `<head>`.
+- `index.html` — markup and CSS. `app.js` — all the behaviour. No build step and no browser dependencies. The only runtime dependency is `@resvg/resvg-js`, used server-side by `api/card.js`. The regression suite uses jsdom as a development dependency.
+- `api/p.js` — serves `/p/<slug>` (product pages) with the product's own title, description and generated share card in the `<head>`.
+- `api/card.js` + `lib/og-card.js` — the 1200×630 PNG share card for each product (see *Sharing on X* below). `api/badge.js` + `lib/badge.js` — the embeddable "Live on Expanse" badge.
 - `api/browse.js` + `lib/public-pages.js` — crawlable `/browse`, visible initial product content, and honest 404/503 responses. `/add` opens registration directly.
 - `api/sitemap.js` — serves `/sitemap.xml` with every live product page. `robots.txt` points to it.
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
@@ -14,7 +15,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 - `supabase/migrations/` — the database schema; compare migration history before deploying changes.
 - `supabase/functions/verify-domain/` — the domain and GitHub checks. `supabase/functions/worker/` — background jobs
   (link checks, email, releases, embeddings). `supabase/functions/search/` — AI search.
-- `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `favicon.svg`, `og.jpg` — browser icon and 1200×630 share image.
+- `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `fonts/ttf/` holds the same three weights as TTF for the share-card renderer, which cannot read WOFF2, plus Noto Sans 500/700 (Latin, Greek, Cyrillic, Vietnamese; OFL, licence alongside) for names Instrument Sans cannot draw. `favicon.svg`, `og.jpg` — browser icon and the site-wide 1200×630 share image.
 
 Vercel deploys the repo root: every push to `main` goes to production, every other branch gets a preview URL.
 
@@ -129,6 +130,34 @@ in `app.js`) instead of going to the oldest, biggest or alphabetically first pro
 Visitors can follow any product (★ on the profile). The list of followed products is kept in the browser only — no account,
 nothing stored about the visitor. The ★ Following button shows one combined feed from `updates`: launches, domain
 verifications, profile changes (merged per day) and GitHub releases, with a count of what's new since it was last opened.
+
+## Sharing on X
+
+Every product page carries its own share card, so a `/p/<slug>` link posted on X, LinkedIn, Slack or iMessage
+unfurls into a picture of that product rather than the generic site image.
+
+- **Share card** — `GET /api/card?slug=<slug>&v=<version>` draws the product's name, tagline, category, upvotes,
+  verification and its real position in the galaxy into a 1200×630 PNG (`lib/og-card.js`, rendered with
+  `@resvg/resvg-js` using the bundled TTF fonts; system fonts are never loaded, so every runtime draws the same
+  card). Only fields from `public_product` are used. `v` is a hash of the text, category, position and
+  verification (not the vote count, which changes too often), so an edit gives a new URL and X fetches a fresh
+  image instead of its cached one. Only the exact canonical URL of the current version is rendered: a stale `v`,
+  extra or reordered parameters or an upper-case slug get an uncached 302 to it, so cache-busting URLs cannot
+  force renders. The card is cached for a day at the CDN (not immutable), so the vote count refreshes and a hidden
+  or removed product loses its card within a day.
+- **Scripts** — a line Instrument Sans cannot draw is set in Noto Sans. Emoji and invisible formatting characters
+  are left out of the drawing and hyphen variants become a plain hyphen; nothing else is ever removed. A name or
+  tagline with any other character the fonts lack (CJK, Arabic, Hebrew, Indic or Thai script, ≥, ≈…) gets no
+  card, because the renderer silently skips missing glyphs and the card would say something else; its page keeps
+  the maker's first image or the site image.
+- **Post on X** — the profile, the registration success screen and the owner panel's Marketing kit tab open X's
+  post composer (`x.com/intent/post`) with the text and link filled in. Nothing is posted automatically; the maker
+  or visitor presses Post on X themselves. The Marketing kit button uses the campaign's tracked link and records the
+  same studio event as copying the post.
+- **Badge** — the owner panel's Marketing kit tab gives makers an HTML or Markdown snippet for a 230×54
+  "Live on Expanse" badge (`GET /api/badge?slug=<slug>&theme=dark|light`). It shows live upvotes and links to the
+  plain profile URL. It is served with a sandboxing CSP and `Cross-Origin-Resource-Policy: cross-origin`, so it
+  can be embedded on any site and can never run script. Its size is fixed so a pasted snippet stays correct as votes grow.
 
 ## Makers: owner key and verification
 
