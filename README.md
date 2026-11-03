@@ -15,7 +15,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 - `supabase/migrations/` — the database schema; compare migration history before deploying changes.
 - `supabase/functions/verify-domain/` — the domain and GitHub checks. `supabase/functions/worker/` — background jobs
   (link checks, email, releases, embeddings). `supabase/functions/search/` — AI search.
-- `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `fonts/ttf/` holds the same three weights as TTF for the share-card renderer, which cannot read WOFF2. `favicon.svg`, `og.jpg` — browser icon and the site-wide 1200×630 share image.
+- `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `fonts/ttf/` holds the same three weights as TTF for the share-card renderer, which cannot read WOFF2, plus Noto Sans 500/700 (Latin, Greek, Cyrillic, Vietnamese; OFL, licence alongside) for names Instrument Sans cannot draw. `favicon.svg`, `og.jpg` — browser icon and the site-wide 1200×630 share image.
 
 Vercel deploys the repo root: every push to `main` goes to production, every other branch gets a preview URL.
 
@@ -139,9 +139,15 @@ unfurls into a picture of that product rather than the generic site image.
 - **Share card** — `GET /api/card?slug=<slug>&v=<version>` draws the product's name, tagline, category, upvotes,
   verification and its real position in the galaxy into a 1200×630 PNG (`lib/og-card.js`, rendered with
   `@resvg/resvg-js` using the bundled TTF fonts; system fonts are never loaded, so every runtime draws the same
-  card). Only fields from `public_product` are used. `v` is a hash of everything drawn, so a change gives a new
-  URL and X fetches a fresh image instead of its cached one. The current version is cached as immutable; any other
-  `v` gets a 302 to the current one, so an old URL can never pin an outdated image in the CDN.
+  card). Only fields from `public_product` are used. `v` is a hash of the text, category, position and
+  verification (not the vote count, which changes too often), so an edit gives a new URL and X fetches a fresh
+  image instead of its cached one. Only the exact canonical URL of the current version is rendered: a stale `v`,
+  extra or reordered parameters or an upper-case slug get an uncached 302 to it, so cache-busting URLs cannot
+  force renders. The card is cached for a day at the CDN (not immutable), so the vote count refreshes and a hidden
+  or removed product loses its card within a day.
+- **Scripts** — a line Instrument Sans cannot draw is set in Noto Sans. Emoji and symbols no bundled font has are
+  left out of the drawing. A name or tagline in any other script (CJK, Arabic, Hebrew, Indic, Thai…) gets no card,
+  because the renderer silently skips missing glyphs; its page keeps the maker's first image or the site image.
 - **Post on X** — the profile, the registration success screen and the Growth Studio open X's post composer
   (`x.com/intent/post`) with the text and link filled in. Nothing is posted automatically; the maker or visitor
   presses Post on X themselves. The Growth Studio button uses the campaign's tracked link and records the same

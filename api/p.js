@@ -1,9 +1,11 @@
 'use strict';
 const {SITE,isSlug,esc,https,page,rpc,metadata,content,send,failure} = require('../lib/public-pages');
-const {cardUrl} = require('../lib/og-card');
+const {cardUrl,cardSupported} = require('../lib/og-card');
 function withProduct(html, p, url) {
   const description = [p.tagline, (p.needs || []).length ? `Solves: ${p.needs.join(', ')}` : '', p.description].filter(Boolean).join('. ').replace(/\s+/g,' ').slice(0,220);
-  html = metadata(html,{title:`${p.name} — ${p.tagline} · Expanse`,description,url,card:cardUrl(p),alt:`${p.name} on Expanse: ${p.tagline}`});
+  // The generated card when its fonts can draw the name; otherwise the maker's own image, or the site image.
+  const card = cardSupported(p) ? cardUrl(p) : null, image = (p.images || []).find(https);
+  html = metadata(html,{title:`${p.name} — ${p.tagline} · Expanse`,description,url,card,image,alt:card || image ? `${p.name} on Expanse: ${p.tagline}` : undefined});
   const website = https(p.url), demo = https(p.demo_url);
   const needs = (p.needs || []).length ? `<h2>What it solves</h2><ul>${p.needs.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '';
   const pricing = {free:'Free',freemium:'Free plan',trial:'Free trial',paid:'Paid'}[p.pricing];

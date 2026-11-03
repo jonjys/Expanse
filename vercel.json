@@ -67,7 +67,7 @@
       "maxDuration": 60
     },
     "api/p.js": {
-      "includeFiles": "index.html"
+      "includeFiles": "{index.html,fonts/ttf/*.ttf}"
     },
     "api/browse.js": {
       "includeFiles": "index.html"

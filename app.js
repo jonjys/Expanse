@@ -958,7 +958,7 @@ function postOnX(text, url) {
   const a = el('a', { href: 'https://x.com/intent/post?' + new URLSearchParams(url ? { text, url } : { text }), target: '_blank', rel: 'noopener noreferrer' });
   document.body.append(a); a.click(); a.remove();
 }
-const xBtn = (label, onclick, cls = 'btn btn-ghost btn-sm') => el('button', { type: 'button', class: cls, onclick }, el('span', { 'aria-hidden': 'true', text: '𝕏' }), ' ' + label);
+const xBtn = (label, onclick, cls = 'btn btn-ghost btn-sm', aria) => el('button', { type: 'button', class: cls, onclick, ...(aria ? { 'aria-label': aria } : {}) }, el('span', { 'aria-hidden': 'true', text: '𝕏' }), ' ' + label);
 async function shareUrl(url, title, text, okMsg) {
   if (coarse && navigator.share) { try { await navigator.share({ title, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
   toast((await copy(url)) ? okMsg : 'Copy the link: ' + url, 4200);
@@ -1046,7 +1046,7 @@ function openProduct(p, opts) {
     imgs,
     el('div', { class: 'pact' }, visit, demoBtn),
     el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), stackBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share'),
-      xBtn('Post', () => postOnX(OWNED[p.slug] ? `${p.name} is live on Expanse 🌌\n\n${p.tagline}` : `Found ${p.name} on Expanse: ${p.tagline}`, productUrl(p.slug)), 'chip-btn')),
+      xBtn('Post', () => postOnX(OWNED[p.slug] ? `${p.name} is live on Expanse 🌌\n\n${p.tagline}` : `Found ${p.name} on Expanse: ${p.tagline}`, productUrl(p.slug)), 'chip-btn', `Post ${p.name} on X (opens X in a new tab)`)),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
