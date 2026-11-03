@@ -47,7 +47,15 @@ test('Greek, Cyrillic and Vietnamese names are drawn; other scripts get no card 
  assert.equal(cardSupported({...product,tagline:'速い'}),false);
  // Emoji are decoration: dropped from the drawn text, never a reason to lose the card.
  assert.deepEqual(drawable('Ship faster 🚀✨'),{text:'Ship faster',family:'Instrument Sans'});
+ assert.deepEqual(drawable('🇸🇪 Swedish 👍🏽 team \u{1F468}\u200D\u{1F469}\u200D\u{1F467}'),{text:'Swedish team',family:'Instrument Sans'});
  assert.ok(cardSupported({...product,tagline:'Ship faster 🚀'}));
+ // Nothing else is removed: hyphen variants look like a hyphen, other missing characters withhold the card.
+ assert.deepEqual(drawable('AI\u2011powered, self\u2010hosted'),{text:'AI-powered, self-hosted',family:'Instrument Sans'});
+ assert.equal(drawable('soft\u00adhyphen\u200b').text,'softhyphen');
+ for(const tagline of ['Save ≥50% on hosting','From ≈$10 a month','x\u0302 notation'])assert.equal(cardSupported({...product,tagline}),false,tagline);
+ // A Cyrillic line keeps its card when it holds a glyph only Instrument Sans has.
+ assert.equal(drawable('Идея → запуск за один день').family,'Noto Sans');
+ assert.ok(inkInNameArea(cardSvg({...product,name:'Идея → запуск'}))>2000);
 });
 test('the version follows what the card shows, but not the vote count',()=>{
  assert.equal(cardVersion(product),cardVersion({...product,description:'not on the card'}));

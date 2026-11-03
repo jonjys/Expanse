@@ -145,13 +145,15 @@ unfurls into a picture of that product rather than the generic site image.
   extra or reordered parameters or an upper-case slug get an uncached 302 to it, so cache-busting URLs cannot
   force renders. The card is cached for a day at the CDN (not immutable), so the vote count refreshes and a hidden
   or removed product loses its card within a day.
-- **Scripts** — a line Instrument Sans cannot draw is set in Noto Sans. Emoji and symbols no bundled font has are
-  left out of the drawing. A name or tagline in any other script (CJK, Arabic, Hebrew, Indic, Thai…) gets no card,
-  because the renderer silently skips missing glyphs; its page keeps the maker's first image or the site image.
-- **Post on X** — the profile, the registration success screen and the Growth Studio open X's post composer
-  (`x.com/intent/post`) with the text and link filled in. Nothing is posted automatically; the maker or visitor
-  presses Post on X themselves. The Growth Studio button uses the campaign's tracked link and records the same
-  studio event as copying the post.
+- **Scripts** — a line Instrument Sans cannot draw is set in Noto Sans. Emoji and invisible formatting characters
+  are left out of the drawing and hyphen variants become a plain hyphen; nothing else is ever removed. A name or
+  tagline with any other character the fonts lack (CJK, Arabic, Hebrew, Indic or Thai script, ≥, ≈…) gets no
+  card, because the renderer silently skips missing glyphs and the card would say something else; its page keeps
+  the maker's first image or the site image.
+- **Post on X** — the profile, the registration success screen and the owner panel's Marketing kit tab open X's
+  post composer (`x.com/intent/post`) with the text and link filled in. Nothing is posted automatically; the maker
+  or visitor presses Post on X themselves. The Marketing kit button uses the campaign's tracked link and records the
+  same studio event as copying the post.
 - **Badge** — the owner panel's Marketing kit tab gives makers an HTML or Markdown snippet for a 230×54
   "Live on Expanse" badge (`GET /api/badge?slug=<slug>&theme=dark|light`). It shows live upvotes and links to the
   plain profile URL. It is served with a sandboxing CSP and `Cross-Origin-Resource-Policy: cross-origin`, so it
