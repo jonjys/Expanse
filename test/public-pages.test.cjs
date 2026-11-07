@@ -30,3 +30,21 @@ test('product URLs and share images reject unsafe schemes and credential-bearing
 test('sitemap includes browse and validated product pages',async()=>{
  global.fetch=async()=>({ok:true,json:async()=>[fixture]});const res=response();await sitemap({},res);assert.equal(res.statusCode,200);assert.match(res.body,/<loc>https:\/\/expanse.nyttolabs.com\/browse<\/loc>/);assert.match(res.body,/<loc>https:\/\/expanse.nyttolabs.com\/p\/real-tool<\/loc>/);
 });
+test('product text with $ patterns comes through verbatim and the page keeps one head',()=>{
+ const html=productPage.withProduct(require('node:fs').readFileSync('index.html','utf8'),{...fixture,name:'Pay $& Co',pricing:'paid',price_text:'From $10 / month',description:"Costs $1,000 a year, or $` and $' when quoted"},'https://expanse.nyttolabs.com/p/real-tool');
+ assert.match(html,/From \$10 \/ month/);assert.match(html,/Costs \$1,000 a year/);assert.match(html,/<title>Pay \$&amp; Co/);
+ assert.equal((html.match(/<title>/g)||[]).length,1);assert.equal((html.match(/property="og:image"/g)||[]).length,1);assert.equal((html.match(/<body/g)||[]).length,1);
+});
+test('the share description adds what the product solves, without doubled punctuation or a cut word',()=>{
+ const html=require('node:fs').readFileSync('index.html','utf8'),url='https://expanse.nyttolabs.com/p/real-tool';
+ const desc=h=>h.match(/property="og:description" content="([^"]*)"/)[1];
+ const long=desc(productPage.withProduct(html,{...fixture,tagline:'Ends with a period.',needs:['fix failed deployments.','check a repository before deploying','find missing environment variables','explain a build error log','catch hardcoded secrets in code'],description:'Paste a repository and get a report of everything that will break when you deploy it.'},url));
+ assert.doesNotMatch(long,/\.\./);assert.doesNotMatch(long,/Ends with a period/);assert.match(long,/^Solves: fix failed deployments, check/);
+ assert.ok(long.length<=221);assert.match(long,/[a-z]…$/);
+ assert.equal(desc(productPage.withProduct(html,{...fixture,tagline:'Only a tagline!',needs:[],description:''},url)),'Only a tagline');
+});
+test('trailing-slash product and browse links redirect to the canonical page',()=>{
+ const {redirects}=JSON.parse(require('node:fs').readFileSync('vercel.json','utf8'));
+ assert.ok(redirects.some(r=>r.source==='/p/:slug/'&&r.destination==='/p/:slug'&&r.permanent));
+ assert.ok(redirects.some(r=>r.source==='/browse/'&&r.destination==='/browse'&&r.permanent));
+});
