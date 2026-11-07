@@ -63,8 +63,16 @@ test('text is measured as drawn: it stays in its column, two-line names get room
  const name=two.filter(l=>l.weight===700),tag=two.filter(l=>l.weight===500);
  assert.equal(name.length,2);assert.ok(name[1].y-name[0].y>=name[0].size*1.1,'descenders clear the next line');
  assert.equal(tag.length,3);assert.doesNotMatch(tag.at(-1).text,/…$/);
- // A long first word is cut, but the last line only gets an ellipsis when words are left over.
+ // A long first word is cut, but the last line only gets an ellipsis when words are left over, and never two.
  assert.deepEqual(wrap('WWWWWWWWWWWWWWWWWWWW MMMM',52,590,2,'Instrument Sans',700).map(l=>l.endsWith('…')),[true,false]);
+ for(const [text,size,lines,weight] of [['Go WaveDashCommonCommerceWindow Hub',52,2,700],['Plan sprints and ship with your whole team: TeamMomentumMeetingAdminMaximum today',31,3,500]])
+  assert.doesNotMatch(wrap(text,size,590,lines,'Instrument Sans',weight).join('\n'),/……/,text);
+ // Lines with symbols are drawn where they were measured: a glyph the mono face also has must not turn the line monospaced.
+ const ink=line=>{const img=render(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="120"><rect width="1200" height="120" fill="#000"/><text x="80" y="80" font-family="Instrument Sans" font-weight="500" font-size="31" fill="#fff">${line}</text></svg>`),px=img.pixels,w=img.width;let max=0;for(let y=0;y<120;y++)for(let x=0;x<w;x++)if(px[(y*w+x)*4]>60&&x>max)max=x;return max;};
+ for(const line of ['Two-way sync ⇄ for Notion, Airtable and','Undo ↩ and redo ↻ every change your','Footnotes‡ for every chart in your','Uptime alerts ✓ status pages ● on-call']){
+  const end=80+measure(line,'Instrument Sans',500,31),drawn=ink(line);
+  assert.ok(drawn<=end+2&&drawn>=end-30,`${line}: measured ${Math.round(end)}, drawn ${drawn}`);
+ }
 });
 test('Greek, Cyrillic and Vietnamese names are drawn; other scripts get no card instead of a blank one',()=>{
  assert.equal(drawable('Łódź Kraków').family,'Instrument Sans');
