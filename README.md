@@ -15,7 +15,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 - `supabase/migrations/` — the database schema; compare migration history before deploying changes.
 - `supabase/functions/verify-domain/` — the domain and GitHub checks. `supabase/functions/worker/` — background jobs
   (link checks, email, releases, embeddings). `supabase/functions/search/` — AI search.
-- `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `fonts/ttf/` holds the same three weights as TTF for the share-card renderer, which cannot read WOFF2, plus Noto Sans 500/700 (Latin, Greek, Cyrillic, Vietnamese; OFL, licence alongside) for names Instrument Sans cannot draw. `favicon.svg`, `og.jpg` — browser icon and the site-wide 1200×630 share image.
+- `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `fonts/ttf/` holds the same three weights as TTF for the share-card renderer, which cannot read WOFF2, plus Noto Sans 500/700 (Latin, Greek, Cyrillic, Vietnamese) for text Instrument Sans cannot draw and subsets of Noto Sans Symbols 2 and Noto Sans Math for symbols such as ✓ ● ≥ ⇒ (all OFL, licences alongside). `favicon.svg`, `og.jpg` — browser icon and the site-wide 1200×630 share image.
 
 Vercel deploys the repo root: every push to `main` goes to production, every other branch gets a preview URL.
 
@@ -144,20 +144,32 @@ unfurls into a picture of that product rather than the generic site image.
   image instead of its cached one. Only the exact canonical URL of the current version is rendered: a stale `v`,
   extra or reordered parameters or an upper-case slug get an uncached 302 to it, so cache-busting URLs cannot
   force renders. The card is cached for a day at the CDN (not immutable), so the vote count refreshes and a hidden
-  or removed product loses its card within a day.
-- **Scripts** — a line Instrument Sans cannot draw is set in Noto Sans. Emoji and invisible formatting characters
-  are left out of the drawing and hyphen variants become a plain hyphen; nothing else is ever removed. A name or
-  tagline with any other character the fonts lack (CJK, Arabic, Hebrew, Indic or Thai script, ≥, ≈…) gets no
-  card, because the renderer silently skips missing glyphs and the card would say something else; its page keeps
-  the maker's first image or the site image.
+  or removed product loses its card within a day. Text is measured with the fonts' real advance widths, so names
+  get the largest size at which they fit and chips are sized as drawn; nothing is drawn below the chips, because X
+  lays the link's domain over the bottom-left corner. The PNG is written as RGB (about 170 KB), well under the
+  ~300 KB at which WhatsApp is reported to drop previews. A font that cannot be read is logged
+  (`og_card_fonts_unreadable`) and answered with an uncached 500, never cached as "no card".
+- **Description** — the page's description adds what the product solves to the title's tagline, joined without
+  doubled punctuation and cut at a word. `/p/<slug>/` and `/browse/` redirect to their canonical URLs.
+- **Scripts** — a line Instrument Sans cannot draw is set in Noto Sans; symbols come from the symbol fonts. Emoji
+  and invisible formatting characters are left out of the drawing and hyphen variants become a plain hyphen;
+  nothing else is ever removed. A name or tagline with any other character the fonts lack (CJK, Arabic, Hebrew,
+  Indic or Thai script, rare symbols) gets no card, because the renderer silently skips missing glyphs and the card
+  would say something else; its page keeps the maker's first image or the site image.
 - **Post on X** — the profile, the registration success screen and the owner panel's Marketing kit tab open X's
   post composer (`x.com/intent/post`) with the text and link filled in. Nothing is posted automatically; the maker
   or visitor presses Post on X themselves. The Marketing kit button uses the campaign's tracked link and records the
-  same studio event as copying the post.
+  same studio event as copying the post; it shows the post's length as X counts it (links 23, emoji and CJK 2) and
+  refuses copy over 280 with a message instead of opening a composer that cannot post. X copy from the Growth
+  helpers is fitted by dropping the audience line, then shortening the product line at a word; the closing
+  pricing or comparison caveat is always kept. The success screen's post says the spot is claimed and goes live
+  after review, because the product is not public yet.
 - **Badge** — the owner panel's Marketing kit tab gives makers an HTML or Markdown snippet for a 230×54
   "Live on Expanse" badge (`GET /api/badge?slug=<slug>&theme=dark|light`). It shows live upvotes and links to the
   plain profile URL. It is served with a sandboxing CSP and `Cross-Origin-Resource-Policy: cross-origin`, so it
   can be embedded on any site and can never run script. Its size is fixed so a pasted snippet stays correct as votes grow.
+  While the product is not public (in review after an edit, hidden, removed) or the catalog cannot be read, the
+  same URL serves a neutral Expanse badge, briefly cached, so the maker's site never shows a broken image.
 
 ## Makers: owner key and verification
 

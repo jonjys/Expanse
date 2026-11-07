@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "jsdom": "26.1.0",
+    "twitter-text": "3.1.0",
     "typescript": "5.9.3"
   },
   "license": "UNLICENSED",

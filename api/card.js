@@ -4,14 +4,16 @@
 // parameters, an upper-case slug) redirects to it without rendering, so cache-busting URLs cannot force renders or
 // fill the CDN with copies: each product has one cached card per version.
 const {SITE,isSlug,rpc} = require('../lib/public-pages');
-const {cardSvg,renderPng,cardVersion,cardUrl,cardSupported} = require('../lib/og-card');
+const {cardSvg,renderPng,cardVersion,cardUrl,cardSupported,fontsReady} = require('../lib/og-card');
 module.exports = async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
   if (!['GET','HEAD'].includes(req.method || 'GET')) { res.setHeader('Allow','GET, HEAD'); res.statusCode = 405; return res.end(); }
   const slug = String(req.query?.slug || '').toLowerCase();
   if (!isSlug(slug)) { res.setHeader('Cache-Control','public, max-age=300'); res.statusCode = 404; return res.end(); }
   let p;
-  try { p = await rpc('public_product',{p_slug:slug}); } catch { res.setHeader('Cache-Control','no-store'); res.statusCode = 503; return res.end(); }
+  try { p = await rpc('public_product',{p_slug:slug}); } catch (e) { console.error('card_catalog_unavailable', slug, e && e.message); res.setHeader('Cache-Control','no-store'); res.statusCode = 503; return res.end(); }
+  // Unreadable fonts are a deploy fault, not an unsupported name: never cache it as "no card" (fontsReady logs it).
+  if (!fontsReady()) { res.setHeader('Cache-Control','no-store'); res.statusCode = 500; return res.end(); }
   // No card for a hidden product, or for a name in a script the bundled fonts cannot draw (its page keeps the
   // maker's image or the site image instead, see api/p.js).
   if (!p?.name || !cardSupported(p)) { res.setHeader('Cache-Control','public, max-age=60, s-maxage=300'); res.statusCode = 404; return res.end(); }
@@ -25,7 +27,7 @@ module.exports = async (req,res) => {
     res.statusCode = 302; return res.end();
   }
   let png;
-  try { png = renderPng(cardSvg(p)); } catch { res.setHeader('Cache-Control','no-store'); res.statusCode = 500; return res.end(); }
+  try { png = renderPng(cardSvg(p)); } catch (e) { console.error('card_render_failed', slug, e && e.message); res.setHeader('Cache-Control','no-store'); res.statusCode = 500; return res.end(); }
   res.setHeader('Content-Type','image/png');
   res.setHeader('Content-Length',String(png.length));
   // Bounded rather than immutable: the vote count on the card refreshes, and a product that is hidden or removed
