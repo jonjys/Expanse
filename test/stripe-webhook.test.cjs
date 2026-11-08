@@ -57,3 +57,14 @@ test('endpoint passes only a verified event and retries temporary database failu
   global.fetch=async()=>({ok:false});assert.equal((await invoke(body,header)).code,503);
  }finally{global.fetch=original;}
 });
+test('a payment the database sends to review is logged with its ids',async()=>{
+ process.env.STRIPE_WEBHOOK_SECRET=secret;process.env.EXPANSE_PAYMENT_CALLBACK_TOKEN='local_callback_token_not_real';
+ const body=Buffer.from(JSON.stringify(event())),header=sign(body,Math.floor(Date.now()/1000)),original=global.fetch,warn=console.warn,logged=[];
+ try{
+  console.warn=(...a)=>logged.push(a);
+  global.fetch=async()=>({ok:true,json:async()=>({outcome:'unknown_order'})});
+  const res=await invoke(body,header);assert.equal(res.code,200);assert.equal(res.body.outcome,'unknown_order');
+  assert.equal(logged.length,1);assert.equal(logged[0][0],'stripe_webhook_payment_review');assert.equal(logged[0][3],'unknown_order');
+  logged.length=0;global.fetch=async()=>({ok:true,json:async()=>({outcome:'paid'})});await invoke(body,header);assert.equal(logged.length,0);
+ }finally{global.fetch=original;console.warn=warn;}
+});

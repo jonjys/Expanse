@@ -48,3 +48,12 @@ test('trailing-slash product and browse links redirect to the canonical page',()
  assert.ok(redirects.some(r=>r.source==='/p/:slug/'&&r.destination==='/p/:slug'&&r.permanent));
  assert.ok(redirects.some(r=>r.source==='/browse/'&&r.destination==='/browse'&&r.permanent));
 });
+test('internal files are never deployed or served as static files',()=>{
+ const fs=require('node:fs');
+ const ignored=fs.readFileSync('.vercelignore','utf8').split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('#'));
+ for(const dir of ['/docs','/supabase','/test'])assert.ok(ignored.includes(dir),dir);
+ // lib/ is bundled into the functions, so it stays in the upload but is never served.
+ assert.ok(!ignored.some(l=>/^\/?lib/.test(l)));
+ const {redirects}=JSON.parse(fs.readFileSync('vercel.json','utf8'));
+ assert.ok(redirects.some(r=>r.source==='/lib/:path*'&&r.destination==='/404'));
+});

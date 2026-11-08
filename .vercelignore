@@ -1,0 +1,6 @@
+# Not needed at runtime and must not be served as static files: ops notes, database source, tests.
+# Supabase deploys from GitHub/the CLI and CI uses the GitHub checkout, so nothing outside Vercel changes.
+/docs
+/supabase
+/test
+/.github

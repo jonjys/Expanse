@@ -1,6 +1,11 @@
 {
   "redirects": [
     {
+      "source": "/lib/:path*",
+      "destination": "/404",
+      "permanent": false
+    },
+    {
       "source": "/p/:slug/",
       "destination": "/p/:slug",
       "permanent": true
