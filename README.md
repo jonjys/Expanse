@@ -13,6 +13,7 @@ compare products in a list, and add your own. Live at <https://expanse.nyttolabs
 - `admin.html` + `admin.js` — the admin page at `/admin` (review, reports, placements, products, overview, settings).
 - `vercel.json` — the `/p/<slug>` and `/admin` rewrites and a few security headers.
 - `supabase/migrations/` — the database schema; compare migration history before deploying changes.
+- `.vercelignore` keeps `docs/`, `supabase/` and `test/` out of the Vercel upload, and `vercel.json` redirects `/lib/*` to the 404 page, so internal notes, database source and tests are never served as static files.
 - `supabase/functions/verify-domain/` — the domain and GitHub checks. `supabase/functions/worker/` — background jobs
   (link checks, email, releases, embeddings). `supabase/functions/search/` — AI search.
 - `fonts/` — Instrument Sans and IBM Plex Mono, subset to Latin WOFF2. `fonts/ttf/` holds the same three weights as TTF for the share-card renderer, which cannot read WOFF2, plus Noto Sans 500/700 (Latin, Greek, Cyrillic, Vietnamese) for text Instrument Sans cannot draw and subsets of Noto Sans Symbols 2 and Noto Sans Math for symbols such as ✓ ● ≥ ⇒ (all OFL, licences alongside). `favicon.svg`, `og.jpg` — browser icon and the site-wide 1200×630 share image.
@@ -51,6 +52,8 @@ Embeddings are made by the worker's `embed` job when a product is approved or it
 - **Build my stack:** goal + optional free-plan/platform filters → at most 60 relevant real catalog
   entries → up to 4 workflow picks and visible gaps. Only catalog IDs survive validation. Price,
   zone, sponsorship and popularity are not sent to the model as ranking signals.
+  While fewer than 8 live products match, it answers from those products without calling Claude, so
+  launch-week curiosity cannot use up the shared daily quota that makers need for profile drafts.
 - **Compare & save:** up to 8 tools, maker-provided facts and dated independent checks, up to
   20 browser-local stacks. `/stack#<encoded JSON>` carries only a name and product IDs. Opening
   a shared stack never auto-saves it. Missing/unpublished products are marked unavailable.
@@ -111,7 +114,11 @@ Anyone can upvote a live product (▲ on the profile), no account. The browser k
 (`expanse.voter.v1`) and the products it upvoted (`expanse.votes.v1`); the `votes` table stores only a hash of the id,
 so one browser has one vote per product and can take it back (`upvote(slug, voter, on)`). The day's visitor hash (the
 same daily-salted hash as the stats) stops the same network and browser from voting twice for a product on one day by
-clearing its storage, and caps a visitor at 60 votes a day. Makers can't upvote their own product (owner marks). The
+clearing its storage, and caps a visitor at 60 votes a day. Because a new User-Agent gives a new visitor hash, the same
+limits also count per network address (IPv4 address, or IPv6 /64, with the day's salt and no User-Agent): at most three
+voters per product per day from one address, 60 votes a day per address, and no product gains more than 300 live votes
+an hour (withdrawn votes do not count, so vote-and-withdraw cycles cannot freeze a product). Submissions (ten an hour), contact messages, sign-in codes, withdrawal notices and reports are limited per
+address the same way. Makers can't upvote their own product (owner marks). The
 admin can take back every upvote on a product (*Reset upvotes*, `admin_reset_votes`).
 
 Popularity is a share, not a volume, so a big audience or a famous name doesn't win by size: (unique clicks to the
@@ -269,7 +276,7 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `founding_stats()` | Count of held spots, live products, and the 12 latest events for the LIVE feed (no emails). |
 | `submit_product(p)` | Validates and stores a new product (pending), returns the owner key once. |
 | `owner_get` / `owner_update` / `owner_stats` / `owner_remove` | Owner panel, all checked against the owner key. |
-| `track(slug, kind)` / `report_product(slug, reason, details)` | Visit counting and reports. |
+| `track(slug, kind)` / `report_product(slug, reason, details, email?, good_faith?)` | Visit counting and reports. An “illegal content” report (Digital Services Act notice) needs an explanation of at least 30 characters and a good-faith statement; a notifier who gives an email gets a fixed-text receipt (at most three a day per recipient, forty a day in total), a notice sent again the same day is merged into the first, the admin gets an alert and sees the notifier in the Reports tab. Returns `{ok, receipt}`. |
 | `upvote(slug, voter, on)` | Upvote a product, or take the upvote back. |
 | `start_recovery(slug)` | Starts the lost-key flow. |
 | `public_updates(slugs)` / `public_releases(slug)` | The followed-products feed and a product's latest releases. |
@@ -281,7 +288,7 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `contact_message(email, message, topic)` | The contact form. |
 | `owner_set_repo(slug, key, repo)` | Names the GitHub repo to connect (checked by `verify-domain` with `repo: true`). |
 | `referral_count(code)` | Legacy referral count; no unfulfilled cell reward is promoted. |
-| `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version; kept so old links keep working. |
+| `reserve_spot(...)`, `reserve(...)` | Founding reservations from the earlier version. Closed to anonymous callers since 2026-11-08 (they let anyone hold paid cells with no review); existing holds stay valid. |
 | `admin_*(p_key, ...)` | The admin page: overview, products, status decisions, reports, placements, settings, key rotation. Each checks the admin key. |
 
 Functions starting with `_` are internal and not callable through the API; the edge function reaches them over the database connection.
@@ -378,7 +385,12 @@ Unpublished seller registration/address remains a legal-information gap; the att
 “by NyttoLabs” is not a statement that all seller-disclosure requirements are satisfied.
 
 Withdrawal notices do not require login. A recorded notice returns a downloadable
-acknowledgement and queues email; admin review never automatically issues a payout.
+acknowledgement with every detail, and every new notice is also acknowledged by email (up to three a day per
+address, and to the order's contact email when the reference matches an order) with the request id, time, matched
+order, and the name and reference only when they are plain text, never the free-text message or anything a mail
+client would turn into a link; the response says whether an email went out. Admin review never automatically issues
+a payout. A paid Stripe session that
+matches no order (a bare or copied payment link) is recorded for review and emails the admin instead of vanishing.
 The owner panel keeps order details and accepted purchase-term snapshots.
 
 GitHub Actions runs `npm run check`, `npm test` and fresh local Supabase

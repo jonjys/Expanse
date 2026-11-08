@@ -52,4 +52,22 @@ test('API returns reviewable drafts and missions without any listing or payment 
  const handler=ai.createHandler({env,reserve:async()=>{},page:async()=>({url:'https://example.com/',text:'public page'}),profile:async()=>({name:'Fixture',url:'https://example.com/'}),catalog:async()=>[live],mission:async(_g,c)=>({title:'Start',steps:[{slug:c[0].slug}],gaps:[]})});
  let r=response();await handler(request({mode:'profile',url:'https://example.com'}),r);assert.equal(r.statusCode,200);assert.equal(r.body.profile.name,'Fixture');assert.equal(r.headers['Cache-Control'],'no-store');
  r=response();await handler(request({mode:'mission',goal:'Fix a failing deployment',free:true,platform:'web'}),r);assert.equal(r.statusCode,200);assert.equal(r.body.catalog_count,1);assert.equal(r.body.mission.steps[0].slug,'real-tool');
+ // A catalog large enough for a real choice goes to the model.
+ const many=Array.from({length:ai.MIN_MISSION_CATALOG},(_,i)=>({...live,slug:'real-tool-'+i}));let modelCalls=0;
+ const big=ai.createHandler({env,reserve:async()=>{},catalog:async()=>many,mission:async(_g,c)=>{modelCalls++;return {title:'Start',steps:[{slug:c[0].slug}],gaps:[]};}});
+ r=response();await big(request({mode:'mission',goal:'Fix a failing deployment'}),r);assert.equal(r.statusCode,200);assert.equal(modelCalls,1);assert.equal(r.body.catalog_count,ai.MIN_MISSION_CATALOG);
+});
+test('a mission over a young catalog spends neither the shared AI quota nor a model call',async()=>{
+ let reserved=0,modelCalls=0;
+ const handler=ai.createHandler({env,reserve:async()=>{reserved++;},catalog:async()=>[live],mission:async()=>{modelCalls++;return {};}});
+ const r=response();await handler(request({mode:'mission',goal:'Fix a failing deployment'}),r);
+ assert.equal(r.statusCode,200);assert.equal(reserved,0);assert.equal(modelCalls,0);
+ assert.equal(r.body.mission.steps[0].slug,'real-tool');assert.match(r.body.mission.gaps[0],/Only 1 live product matches parts of this brief/);
+ // Profile drafts still reserve quota as before.
+ const profile=ai.createHandler({env,reserve:async()=>{reserved++;},page:async()=>({url:'https://example.com/',text:'page'}),profile:async()=>({name:'Fixture'})});
+ await profile(request({mode:'profile',url:'https://example.com'}),response());assert.equal(reserved,1);
+});
+test('a young catalog never presents an unrelated product as a match',async()=>{
+ const m=ai.smallCatalogMission([live],'Send invoices to my clients every month');
+ assert.deepEqual(m.steps,[]);assert.match(m.gaps[0],/No live product matches this brief yet/);
 });
