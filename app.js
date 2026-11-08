@@ -1118,7 +1118,7 @@ function voteBtn(p) {
       if (on) delete VOTED[p.slug]; else VOTED[p.slug] = 1;
       p.upvotes = before;
       const m = errCode(e);
-      toast(m === 'already' ? 'Someone on this network already upvoted it today.' : m === 'own_product' ? 'You can’t upvote your own product.' : m === 'slow_down' ? 'That’s a lot of upvotes for one day. Try again tomorrow.' : "Couldn't count that upvote right now. Try again.");
+      toast(m === 'already' ? 'Someone on this network already upvoted it today.' : m === 'own_product' ? 'You can’t upvote your own product.' : m === 'slow_down' ? 'That’s a lot of upvotes for one day. Try again tomorrow.' : m === 'busy' ? 'Lots of upvotes on this product right now. Try again in an hour.' : "Couldn't count that upvote right now. Try again.");
     } finally { b.disabled = false; paint(); }
   };
   paint(); return b;
@@ -1344,7 +1344,7 @@ function renderResults() {
   const v = qIn.value.trim();
   if (v.length < 2) {
     HL = [];
-    results.replaceChildren(el('div', { class: 'lbl mono', text: PRODUCTS.length ? 'Popular needs' : 'Try a need' }), el('div', { class: 'ideas' }, topNeeds(8).map(n => el('button', { type: 'button', text: n, onclick: () => runSearch(n) }))));
+    { const ideas = topNeeds(8); results.replaceChildren(...(ideas.length ? [el('div', { class: 'lbl mono', text: PRODUCTS.length ? 'Popular needs' : 'Try a need' }), el('div', { class: 'ideas' }, ideas.map(n => el('button', { type: 'button', text: n, onclick: () => runSearch(n) })))] : [el('div', { class: 'lbl mono', text: 'Describe the problem you have' })])); }
     results.hidden = false; return;
   }
   const all = rankAll(v), r = all.slice(0, 6), d = searchDemo(v), kids = [], u = understood(v), anyAi = r.some(x => x.ai);
@@ -2437,19 +2437,20 @@ function openContact(topic) {
 document.querySelectorAll('[data-contact]').forEach(b => b.onclick = () => openContact());
 function openReport(p) {
   const reasons = [['broken_link', 'The link is broken'], ['wrong_info', 'Information is wrong'], ['spam', 'Spam or scam'], ['illegal', 'Illegal content'], ['other', 'Something else']];
-  const txt = el('textarea', { maxlength: '2000', rows: '3', placeholder: 'Anything that helps us check (optional)' });
+  const txt = el('textarea', { maxlength: '600', rows: '3', placeholder: 'Anything that helps us check (optional)' });
   const email = el('input', { type: 'email', maxlength: '254', autocomplete: 'email', placeholder: 'you@example.com' });
   const faith = el('input', { type: 'checkbox' });
   const faithRow = el('label', { class: 'check', hidden: true }, faith, el('span', { text: 'I confirm that this notice is accurate and complete to the best of my knowledge, and made in good faith.' }));
   const send = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Send report' });
   const sync = () => { const illegal = dlgBody.querySelector('input[name=reason]:checked')?.value === 'illegal'; faithRow.hidden = !illegal;
+    txt.maxLength = illegal ? 2000 : 600;
     txt.placeholder = illegal ? 'Explain why the content is illegal, and where on the profile it is (required)' : 'Anything that helps us check (optional)'; };
   openDlg(el('div', { class: 'mono kick', text: 'Report a problem' }), el('h2', { class: 'display', text: p.name }),
     el('form', { onchange: sync, onsubmit: async e => {
       e.preventDefault(); const r = dlgBody.querySelector('input[name=reason]:checked'); if (!r) { toast('Pick what’s wrong.'); return; }
       if (r.value === 'illegal' && (txt.value.trim().length < 30 || !faith.checked)) { toast('For illegal content, explain why (at least 30 characters) and confirm the statement.'); return; }
       send.disabled = true;
-      try { await rpc('report_product', { p_slug: p.slug, p_reason: r.value, p_details: txt.value, p_email: email.value.trim() || null, p_good_faith: faith.checked }); closeDlg(); toast(email.value.trim() ? 'Thanks — we’ve emailed you a receipt and will tell you what we decide.' : 'Thanks — we’ll take a look.'); }
+      try { const res = await rpc('report_product', { p_slug: p.slug, p_reason: r.value, p_details: txt.value, p_email: email.value.trim() || null, p_good_faith: faith.checked }); closeDlg(); toast(res && res.receipt ? 'Thanks — we’ve emailed you a receipt and will tell you what we decide.' : email.value.trim() ? 'Thanks — we have your report and email, and will tell you what we decide.' : 'Thanks — we’ll take a look.'); }
       catch (err) { const m = errCode(err); toast(m === 'invalid:email' ? 'Check the email address, or leave it empty.' : m === 'invalid:notice' ? 'For illegal content, explain why (at least 30 characters) and confirm the statement.' : m === 'slow_down' || m === 'busy' ? 'Too many reports right now. Try again in a while.' : "Couldn't send the report right now."); } finally { send.disabled = false; }
     } }, el('div', { class: 'radios' }, reasons.map(([v, l]) => el('label', null, el('input', { type: 'radio', name: 'reason', value: v }), l))),
       el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Details' }), txt),
@@ -2777,6 +2778,7 @@ let deepSlug = null, deepSpot = null;
   deepSlug = pm ? pm[1] : isSlug(qp.get('p')) ? qp.get('p') : null;
   const ref = qp.get('ref');
   store.del(REF_KEY); // stored by earlier versions; attribution is now kept in memory only
+  if (!personalOn()) store.del(ACTIVITY_KEY); // history saved by earlier versions without a choice stays for this visit only
   if (deepSlug && !OWNED[deepSlug]) LANDING_REF = deepSlug;
   else if (isSlug(ref) && ref !== 'maker' && !OWNED[ref]) LANDING_REF = ref;
   const h = location.hash, ms = h.match(/^#s=([\w-]{4,800})$/);

@@ -12,7 +12,7 @@ const CATS = {
 const PRICING = { unspecified: 'Not specified', free: 'Free', freemium: 'Free plan', trial: 'Free trial', paid: 'Paid' };
 const PLATFORMS = { web: 'Web', ios: 'iOS', android: 'Android', macos: 'macOS', windows: 'Windows', linux: 'Linux', api: 'API', extension: 'Browser extension' };
 const STATUS = { pending: 'In review', approved: 'Live', rejected: 'Changes needed', hidden: 'Hidden', removed: 'Removed' };
-const REASONS = { broken_link: 'The link is broken', wrong_info: 'Information is wrong', spam: 'Spam, scam or harmful', other: 'Something else' };
+const REASONS = { broken_link: 'The link is broken', wrong_info: 'Information is wrong', spam: 'Spam, scam or harmful', illegal: 'Illegal content (DSA notice)', other: 'Something else' };
 const PRESETS = {
   rejected: ['The website link doesn’t work.', 'The description doesn’t match the website.', 'Please describe what the product does in plain words.', 'We only list software products and tools.', 'This looks like a duplicate of an existing listing.'],
   hidden: ['The website hasn’t answered for several days.', 'Visitors reported wrong information — we’re checking.', 'Reported as spam or harmful — we’re checking.']
@@ -243,9 +243,10 @@ async function renderReports(main) {
     el('div', null,
       el('div', { class: 't', text: `${r.name} — ${REASONS[r.reason] || r.reason}` }),
       r.details ? el('div', { class: 'd', text: r.details }) : null,
-      el('div', { class: 'm', text: `${r.automatic ? 'Automatic check' : 'Anonymous visitor'} · ${ago(r.created_at)} · product is ${STATUS[r.status] || r.status}` })),
+      el('div', { class: 'm', text: `${r.automatic ? 'Automatic check' : r.notifier_email ? 'Notifier: ' + r.notifier_email + (r.good_faith ? ' · good-faith statement' : '') : 'Anonymous visitor'} · ${ago(r.created_at)} · product is ${STATUS[r.status] || r.status}` })),
     el('div', { class: 'a' },
       el('a', { class: 'btn btn-ghost btn-sm', href: r.url, target: '_blank', rel: 'noopener nofollow', text: 'Check site ↗' }),
+      r.notifier_email ? el('a', { class: 'btn btn-ghost btn-sm', href: 'mailto:' + encodeURIComponent(r.notifier_email) + '?subject=' + encodeURIComponent('Your report about ' + r.name + ' on Expanse') + '&body=' + encodeURIComponent('Our decision and the reasons:\n\nYou can contest this decision by replying to this email.'), text: 'Email decision' }) : null,
       !r.resolved && r.status === 'approved' ? el('button', { class: 'btn btn-warn btn-sm', text: 'Review product', title: 'Open it under To review to keep it live or hide it', onclick: () => go('queue') }) : null,
       el('button', { class: 'btn btn-sm ' + (r.resolved ? 'btn-ghost' : 'btn-ok'), text: r.resolved ? 'Reopen' : '✓ Handled', onclick: async e => {
         const btn = e.currentTarget; btn.disabled = true;

@@ -116,8 +116,8 @@ so one browser has one vote per product and can take it back (`upvote(slug, vote
 same daily-salted hash as the stats) stops the same network and browser from voting twice for a product on one day by
 clearing its storage, and caps a visitor at 60 votes a day. Because a new User-Agent gives a new visitor hash, the same
 limits also count per network address (IPv4 address, or IPv6 /64, with the day's salt and no User-Agent): at most three
-voters per product per day from one address, 60 votes a day per address, and no product gains more than 300 votes an
-hour. Submissions (ten an hour), contact messages, sign-in codes, withdrawal notices and reports are limited per
+voters per product per day from one address, 60 votes a day per address, and no product gains more than 300 live votes
+an hour (withdrawn votes do not count, so vote-and-withdraw cycles cannot freeze a product). Submissions (ten an hour), contact messages, sign-in codes, withdrawal notices and reports are limited per
 address the same way. Makers can't upvote their own product (owner marks). The
 admin can take back every upvote on a product (*Reset upvotes*, `admin_reset_votes`).
 
@@ -276,7 +276,7 @@ The browser only talks to these RPC functions; no table is readable or writable 
 | `founding_stats()` | Count of held spots, live products, and the 12 latest events for the LIVE feed (no emails). |
 | `submit_product(p)` | Validates and stores a new product (pending), returns the owner key once. |
 | `owner_get` / `owner_update` / `owner_stats` / `owner_remove` | Owner panel, all checked against the owner key. |
-| `track(slug, kind)` / `report_product(slug, reason, details, email?, good_faith?)` | Visit counting and reports. An “illegal content” report (Digital Services Act notice) needs an explanation of at least 30 characters and a good-faith statement; a notifier who gives an email gets a fixed-text receipt (once a day per address) and the admin gets an alert. |
+| `track(slug, kind)` / `report_product(slug, reason, details, email?, good_faith?)` | Visit counting and reports. An “illegal content” report (Digital Services Act notice) needs an explanation of at least 30 characters and a good-faith statement; a notifier who gives an email gets a fixed-text receipt (at most three a day per recipient, forty a day in total), a notice sent again the same day is merged into the first, the admin gets an alert and sees the notifier in the Reports tab. Returns `{ok, receipt}`. |
 | `upvote(slug, voter, on)` | Upvote a product, or take the upvote back. |
 | `start_recovery(slug)` | Starts the lost-key flow. |
 | `public_updates(slugs)` / `public_releases(slug)` | The followed-products feed and a product's latest releases. |
@@ -385,9 +385,11 @@ Unpublished seller registration/address remains a legal-information gap; the att
 “by NyttoLabs” is not a statement that all seller-disclosure requirements are satisfied.
 
 Withdrawal notices do not require login. A recorded notice returns a downloadable
-acknowledgement with every detail, and queues an email with fixed text only (request id, time and matched order),
-at most once a day per address and also to the order's contact email when the reference matches an order, so the
-form cannot relay a stranger's text; admin review never automatically issues a payout. A paid Stripe session that
+acknowledgement with every detail, and every new notice is also acknowledged by email (up to three a day per
+address, and to the order's contact email when the reference matches an order) with the request id, time, matched
+order, and the name and reference only when they are plain text, never the free-text message or anything a mail
+client would turn into a link; the response says whether an email went out. Admin review never automatically issues
+a payout. A paid Stripe session that
 matches no order (a bare or copied payment link) is recorded for review and emails the admin instead of vanishing.
 The owner panel keeps order details and accepted purchase-term snapshots.
 

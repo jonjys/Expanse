@@ -62,8 +62,12 @@ test('a mission over a young catalog spends neither the shared AI quota nor a mo
  const handler=ai.createHandler({env,reserve:async()=>{reserved++;},catalog:async()=>[live],mission:async()=>{modelCalls++;return {};}});
  const r=response();await handler(request({mode:'mission',goal:'Fix a failing deployment'}),r);
  assert.equal(r.statusCode,200);assert.equal(reserved,0);assert.equal(modelCalls,0);
- assert.equal(r.body.mission.steps[0].slug,'real-tool');assert.match(r.body.mission.gaps[0],/Only 1 matching product is live/);
+ assert.equal(r.body.mission.steps[0].slug,'real-tool');assert.match(r.body.mission.gaps[0],/Only 1 live product matches parts of this brief/);
  // Profile drafts still reserve quota as before.
  const profile=ai.createHandler({env,reserve:async()=>{reserved++;},page:async()=>({url:'https://example.com/',text:'page'}),profile:async()=>({name:'Fixture'})});
  await profile(request({mode:'profile',url:'https://example.com'}),response());assert.equal(reserved,1);
+});
+test('a young catalog never presents an unrelated product as a match',async()=>{
+ const m=ai.smallCatalogMission([live],'Send invoices to my clients every month');
+ assert.deepEqual(m.steps,[]);assert.match(m.gaps[0],/No live product matches this brief yet/);
 });

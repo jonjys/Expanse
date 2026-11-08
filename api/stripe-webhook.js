@@ -27,7 +27,8 @@ module.exports=async(req,res)=>{
     if(!r.ok){console.error('stripe_webhook_confirmation_failed',event.id,event.type,r.status);return res.status(503).json({error:'confirmation_unavailable'});}
     const result=await r.json();
     // A payment the database could not tie to an order is in admin review; log its ids so it shows in the logs too.
-    if(['missing_reference','unknown_order','needs_review'].includes(result.outcome))console.warn('stripe_webhook_payment_review',event.id,event.type,result.outcome,event.session_id||'',event.payment_intent||'');
+    const paid=event.type==='checkout.session.async_payment_succeeded'||(event.type==='checkout.session.completed'&&event.payment_status==='paid');
+    if(paid&&['missing_reference','unknown_order','needs_review'].includes(result.outcome))console.warn('stripe_webhook_payment_review',event.id,event.type,result.outcome,event.session_id||'',event.payment_intent||'');
     return res.status(200).json({received:true,outcome:result.outcome});
   }catch(e){console.error('stripe_webhook_confirmation_failed',event.id,event.type,e&&e.name);return res.status(503).json({error:'confirmation_unavailable'});}
 };

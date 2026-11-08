@@ -50,7 +50,8 @@ create index if not exists withdrawals_ahash_idx on expanse_private.withdrawals 
 create index if not exists withdrawals_email_idx on expanse_private.withdrawals (email, created_at);
 
 -- Upvotes: one address may add at most three distinct votes per product per day (a shared office or home network),
--- at most 60 votes a day, and no product gains more than 300 votes an hour.
+-- at most 60 votes a day, and no product gains more than 300 live votes an hour. Withdrawn votes do not count toward
+-- that cap, so vote-and-withdraw cycles cannot lock other voters out of a product.
 create or replace function public.upvote(p_slug text, p_voter text, p_on boolean) returns json
 language plpgsql volatile security definer set search_path = '' as $$
 declare
@@ -77,7 +78,7 @@ begin
       end if;
       if (select count(*) from public.votes where day = current_date and vhash = v_hash) >= 60 then raise exception 'slow_down'; end if;
       if v_ah is not null and (select count(*) from public.votes where day = current_date and ahash = v_ah) >= 60 then raise exception 'slow_down'; end if;
-      if (select count(*) from public.votes where product_id = v_id and created_at > now() - interval '1 hour') >= 300 then raise exception 'slow_down'; end if;
+      if (select count(*) from public.votes where product_id = v_id and created_at > now() - interval '1 hour' and removed_at is null) >= 300 then raise exception 'busy'; end if;
       insert into public.votes (product_id, voter, vhash, ahash, day) values (v_id, v_voter, v_hash, v_ah, current_date)
       on conflict (product_id, voter) do update
         set removed_at = null, vhash = excluded.vhash, ahash = excluded.ahash, day = excluded.day, created_at = now();
@@ -95,7 +96,7 @@ language plpgsql security definer set search_path = '' as $$
 declare v_ah text := public._abuse_hash();
 begin
   if v_ah is not null and (select count(*) from public.products where submit_ahash = v_ah and created_at > now() - interval '1 hour') >= 10 then
-    raise exception 'slow_down';
+    raise exception 'too_many';
   end if;
   new.submit_ahash := v_ah;
   return new;
@@ -267,14 +268,17 @@ begin
  return json_build_object('outcome',v_out);
 end $$;
 
--- 4. Withdrawal notices. The on-screen receipt keeps every detail; the email is fixed text with the request id, the
---    time and the matched order, sent at most once a day to an address (and to the order's contact email when the
---    reference matches an order and that address differs).
+-- 4. Withdrawal notices. The on-screen receipt keeps every detail. Every new notice is also acknowledged by email
+--    (a durable medium), with the request id, the time, the matched order, and the name and reference when they are
+--    plain text: never the free-text message and never anything a mail client would turn into a link. At most three
+--    acknowledgements a day go to one address, so the form cannot be used to flood a stranger. The order's contact
+--    email gets a copy when the reference matches an order and that address differs. The response says whether an
+--    email was queued, so the page never promises one that was not sent.
 create or replace function public.submit_withdrawal(p_name text,p_email text,p_reference text,p_message text default '') returns json
 language plpgsql volatile security definer set search_path='' as $$
 declare n text:=public._line(p_name,160);e text:=lower(public._line(p_email,254));ref text:=public._line(p_reference,200);
  msg text:=public._text(p_message,2000);vh text:=public._visitor_hash();ah text:=public._abuse_hash();w expanse_private.withdrawals;mailid bigint;
- admin_email text;receipt text;ack text;owner_email text;
+ admin_email text;receipt text;ack text;owner_email text;emailed boolean:=false;
 begin
  if n='' or ref='' then raise exception 'invalid:withdrawal';end if;
  if e !~* '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'invalid:email';end if;
@@ -287,16 +291,19 @@ begin
   insert into expanse_private.withdrawals(name,email,reference,message,vhash,ahash) values(n,e,ref,msg,vh,ah) returning * into w;
   receipt:=E'Expanse — withdrawal notice received\nRequest: '||w.id||E'\nReceived (UTC): '||to_char(w.created_at at time zone 'UTC','YYYY-MM-DD HH24:MI:SS')||E'\nName: '||w.name||E'\nEmail: '||w.email||E'\nContract / order reference: '||w.reference||E'\nMessage: '||w.message||E'\n\nWe received your notice that you withdraw from the identified contract. This is an automatic acknowledgement, not confirmation that a refund has been issued. We will check the payment and reply by email. Keep this confirmation. A notice received within 14 days of purchase qualifies for our full-refund policy. Mandatory consumer rights remain unchanged.\nhttps://expanse.nyttolabs.com/terms';
   ack:=E'Expanse — withdrawal notice received\nRequest: '||w.id||E'\nReceived (UTC): '||to_char(w.created_at at time zone 'UTC','YYYY-MM-DD HH24:MI:SS')
+    ||case when w.name ~ '^[[:alpha:][:space:].''-]{1,80}$' and w.name !~* '(www\.|[a-z0-9-]+\.[a-z]{2,})' then E'\nName: '||w.name else '' end
+    ||case when w.reference ~ '^[A-Za-z0-9 _#:./-]{1,64}$' and w.reference !~* '(https?:|www\.|[a-z0-9-]+\.[a-z]{2,})' then E'\nReference given: '||w.reference else E'\nReference given: (kept with your notice; shown on the confirmation page)' end
     ||case when w.purchase_id is not null then E'\nOrder: '||w.purchase_id else E'\nOrder: no order matched the reference given; we will check it by hand.' end
     ||E'\n\nWe received a notice of withdrawal from a contract with Expanse. This is an automatic acknowledgement, not confirmation that a refund has been issued. We will check the payment and reply by email. Keep this confirmation. A notice received within 14 days of purchase qualifies for our full-refund policy. Mandatory consumer rights remain unchanged.\nhttps://expanse.nyttolabs.com/terms';
-  if not exists(select 1 from expanse_private.withdrawals x where x.email=e and x.id<>w.id and x.receipt_outbox_id is not null and x.created_at>now()-interval '24 hours') then
+  if (select count(*) from public.outbox o where o.to_email=e and o.kind='withdrawal_receipt' and o.created_at>now()-interval '24 hours')<3 then
    insert into public.outbox(to_email,subject,body,kind) values(e,'Expanse — withdrawal notice received',ack,'withdrawal_receipt') returning id into mailid;
    update expanse_private.withdrawals set receipt_outbox_id=mailid where id=w.id;
+   emailed:=true;
   end if;
   if w.purchase_id is not null then
    select p.contact_email into owner_email from expanse_private.map_purchases b join public.products p on p.id=b.product_id where b.id=w.purchase_id;
    if owner_email is not null and lower(owner_email)<>e and owner_email not like '%.invalid'
-      and not exists(select 1 from public.outbox o where o.to_email=owner_email and o.kind='withdrawal_receipt' and o.created_at>now()-interval '24 hours') then
+      and (select count(*) from public.outbox o where o.to_email=owner_email and o.kind='withdrawal_receipt' and o.created_at>now()-interval '24 hours')<3 then
     insert into public.outbox(to_email,subject,body,kind) values(owner_email,'Expanse — withdrawal notice received',ack,'withdrawal_receipt');
    end if;
   end if;
@@ -305,8 +312,9 @@ begin
   perform public._kick_worker('mail');
  else
   receipt:=E'Expanse — withdrawal notice received\nRequest: '||w.id||E'\nReceived (UTC): '||to_char(w.created_at at time zone 'UTC','YYYY-MM-DD HH24:MI:SS')||E'\nName: '||w.name||E'\nEmail: '||w.email||E'\nContract / order reference: '||w.reference||E'\nMessage: '||w.message||E'\n\nYour original notice is already recorded. No duplicate notice or refund was created. We will check the payment and reply by email. https://expanse.nyttolabs.com/terms';
+  emailed:=w.receipt_outbox_id is not null;
  end if;
- return json_build_object('ok',true,'id',w.id,'received_at',w.created_at,'receipt',receipt);
+ return json_build_object('ok',true,'id',w.id,'received_at',w.created_at,'receipt',receipt,'emailed',emailed);
 end $$;
 
 -- 5. Reports (DSA Art. 16): an illegal-content reason, a longer explanation, an optional notifier email and a
@@ -322,14 +330,20 @@ alter table public.reports add column if not exists ahash text;
 create index if not exists reports_ahash_idx on public.reports (ahash, created_at) where ahash is not null;
 
 drop function if exists public.report_product(text, text, text);
-create or replace function public.report_product(p_slug text, p_reason text, p_details text, p_email text default null, p_good_faith boolean default false) returns boolean
+drop function if exists public.report_product(text, text, text, text, boolean);
+-- Returns {ok, receipt}: whether an acknowledgement email was queued. Receipts are capped at three a day per
+-- recipient (ignoring +tags) and forty a day in total, so the form cannot be used to email strangers in bulk.
+-- A notice sent again the same day by the same visitor updates the first one (adding an email or a longer
+-- explanation) instead of being dropped.
+create or replace function public.report_product(p_slug text, p_reason text, p_details text, p_email text default null, p_good_faith boolean default false) returns json
 language plpgsql volatile security definer set search_path = '' as $$
 declare
-  v_id bigint; v_name text; v_ah text := public._abuse_hash();
+  v_id bigint; v_name text; v_ah text := public._abuse_hash(); v_vh text := public._visitor_hash();
   v_email text := nullif(lower(btrim(coalesce(p_email, ''))), '');
+  v_norm text;
   v_details text := public._text(p_details, 2000);
   v_admin text := coalesce(public._setting('notify_email') #>> '{}', '');
-  v_new bigint;
+  v_old public.reports; v_rid bigint; v_new_email boolean := false; v_new_notice boolean := false; v_receipt boolean := false;
 begin
   if p_reason not in ('broken_link', 'wrong_info', 'spam', 'illegal', 'other') then raise exception 'invalid:reason'; end if;
   if v_email is not null and (char_length(v_email) > 254 or v_email !~* '^[^@\s]+@[^@\s]+\.[^@\s]+$') then raise exception 'invalid:email'; end if;
@@ -337,34 +351,64 @@ begin
   if p_reason <> 'illegal' and char_length(v_details) > 600 then v_details := left(v_details, 600); end if;
   select id, name into v_id, v_name from public.products where slug = p_slug and status = 'approved';
   if v_id is null then raise exception 'not_found'; end if;
-  if v_ah is not null and (select count(*) from public.reports where ahash = v_ah and created_at > now() - interval '1 hour') >= 10 then raise exception 'slow_down'; end if;
-  if (select count(*) from public.reports where created_at > now() - interval '1 hour') >= 200 then raise exception 'busy'; end if;
-  insert into public.reports (product_id, reason, details, vhash, notifier_email, good_faith, ahash)
-  values (v_id, p_reason, v_details, public._visitor_hash(), v_email, coalesce(p_good_faith, false), v_ah)
-  on conflict do nothing returning id into v_new;
-  if v_new is null then return true; end if;
-  if v_email is not null and public._email_ready()
-     and not exists (select 1 from public.outbox o where o.to_email = v_email and o.kind = 'report_receipt' and o.created_at > now() - interval '24 hours') then
+  select * into v_old from public.reports where product_id = v_id and vhash = v_vh and day = current_date and reason = p_reason;
+  if v_old.id is null then
+    if v_ah is not null and (select count(*) from public.reports where ahash = v_ah and created_at > now() - interval '1 hour') >= 10 then raise exception 'slow_down'; end if;
+    if (select count(*) from public.reports where created_at > now() - interval '1 hour') >= 200 then raise exception 'busy'; end if;
+    insert into public.reports (product_id, reason, details, vhash, notifier_email, good_faith, ahash)
+    values (v_id, p_reason, v_details, v_vh, v_email, coalesce(p_good_faith, false), v_ah)
+    on conflict do nothing returning id into v_rid;
+    if v_rid is null then return json_build_object('ok', true, 'receipt', false); end if;
+    v_new_email := v_email is not null; v_new_notice := true;
+  else
+    v_rid := v_old.id;
+    update public.reports set
+      details = case when char_length(v_details) > char_length(details) then v_details else details end,
+      notifier_email = coalesce(notifier_email, v_email),
+      good_faith = good_faith or coalesce(p_good_faith, false)
+    where id = v_old.id;
+    v_new_email := v_old.notifier_email is null and v_email is not null;
+    v_new_notice := char_length(v_details) > char_length(v_old.details) or v_new_email;
+  end if;
+  v_norm := regexp_replace(coalesce(v_email, ''), '\+[^@]*@', '@');
+  if v_new_email and public._email_ready()
+     and (select count(*) from public.outbox o where regexp_replace(o.to_email, '\+[^@]*@', '@') = v_norm and o.kind = 'report_receipt' and o.created_at > now() - interval '24 hours') < 3
+     and (select count(*) from public.outbox o where o.kind = 'report_receipt' and o.created_at > now() - interval '24 hours') < 40 then
     insert into public.outbox (to_email, subject, body, kind, product_id)
     values (v_email, 'Expanse — we received your report',
-      left(E'We received your report about “' || v_name || E'” on Expanse (report ' || v_new || ', ' ||
+      left(E'We received your report about “' || v_name || E'” on Expanse (report ' || v_rid || ', ' ||
         to_char(now() at time zone 'UTC', 'YYYY-MM-DD HH24:MI') || E' UTC).\n\nA person checks every report. We will tell you what we decided and why. ' ||
         E'If you did not send this report, you can ignore this email.\n\n— Expanse\nhttps://expanse.nyttolabs.com/terms', 6000),
       'report_receipt', v_id);
+    v_receipt := true;
   end if;
-  if p_reason = 'illegal' and v_admin <> '' then
+  if p_reason = 'illegal' and v_new_notice and v_admin <> '' then
     insert into public.outbox (to_email, subject, body, kind, product_id, reply_to)
     values (v_admin, 'Expanse — illegal content notice: ' || left(v_name, 80),
-      left(E'An illegal-content notice was filed (DSA Art. 16).\nProduct: ' || v_name || ' (' || p_slug || E')\nReport: ' || v_new ||
-        E'\nNotifier email: ' || coalesce(v_email, 'not given') || E'\nGood-faith statement: yes\n\nExplanation:\n' || v_details ||
-        E'\n\nDecide in https://expanse.nyttolabs.com/admin and inform the notifier and the maker of the decision and the reasons.', 6000),
-      'report_admin', v_id, v_email);
+      left(E'An illegal-content notice was filed (DSA Art. 16).\nProduct: ' || v_name || ' (' || p_slug || E')\nReport: ' || v_rid ||
+        E'\nNotifier email: ' || coalesce(v_email, v_old.notifier_email, 'not given') || E'\nGood-faith statement: yes\n\nExplanation:\n' || v_details ||
+        E'\n\nDecide in https://expanse.nyttolabs.com/admin#reports and inform the notifier and the maker of the decision and the reasons.', 6000),
+      'report_admin', v_id, coalesce(v_email, v_old.notifier_email));
   end if;
-  if v_email is not null or p_reason = 'illegal' then perform public._kick_worker('mail'); end if;
-  return true;
+  if v_receipt or (p_reason = 'illegal' and v_new_notice) then perform public._kick_worker('mail'); end if;
+  return json_build_object('ok', true, 'receipt', v_receipt);
 end $$;
 revoke all on function public.report_product(text, text, text, text, boolean) from public;
 grant execute on function public.report_product(text, text, text, text, boolean) to anon, authenticated;
+
+-- The admin sees who asked to hear the decision, and whether a notice carries the good-faith statement.
+create or replace function public.admin_reports(p_key text) returns json
+language plpgsql volatile security definer set search_path = '' as $$
+begin
+  perform public._admin(p_key);
+  return coalesce((select json_agg(t order by t.resolved, t.created_at desc) from (
+    select x.id, x.reason, x.details, x.created_at, x.resolved, x.vhash = 'system' as automatic,
+           x.notifier_email, x.good_faith,
+           p.slug, p.name, p.status, p.url
+    from public.reports x join public.products p on p.id = x.product_id
+    where not x.resolved or x.created_at > now() - interval '30 days'
+    order by x.resolved, x.created_at desc limit 300) t), '[]'::json);
+end $$;
 
 -- Retention: a notifier's email goes with the report (resolved reports are deleted after 90 days; an open report's
 -- explanation and email are cleared after a year).
