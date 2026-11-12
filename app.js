@@ -21,7 +21,10 @@ const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
 const WORLD_R = 150, CORE_R = 14, CELL = 16, ZMIN = .025, ZMAX = 6, MAX_R = WORLD_R + 25;
 const OWNED_KEY = 'expanse.owned.v1', REF_KEY = 'expanse.ref', RECOVER_KEY = 'expanse.recover.v1', DRAFT_KEY = 'expanse.draft.v1', FOLLOW_KEY = 'expanse.follow.v1';
 const VOTER_KEY = 'expanse.voter.v1', VOTES_KEY = 'expanse.votes.v1';
-const SAVED_KEY = 'expanse.saved.v1', ACTIVITY_KEY = 'expanse.activity.v1';
+const SAVED_KEY = 'expanse.saved.v1', ACTIVITY_KEY = 'expanse.activity.v1', PERSONAL_KEY = 'expanse.personal.v1';
+// How a maker found Expanse (a product link opened during this visit). Kept in memory only: nothing is stored in the
+// browser for it, so it needs no consent and ends with the visit.
+let LANDING_REF = null;
 
 /* Keep in sync with the category / pricing / platform checks on public.products. */
 const CATS = {
@@ -308,7 +311,7 @@ function prepProduct(p) {
 async function loadProducts() {
   try {
     const list = await rpc('public_products');
-    if (Array.isArray(list)) { PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); return true; }
+    if (Array.isArray(list)) { setTimeout(() => { const idea = topNeeds(1)[0]; if (idea) qIn.placeholder = `What do you need? Try “${idea}”`; }); PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); return true; }
   } catch (e) {}
   return false;
 }
@@ -953,6 +956,12 @@ async function copy(text) {
 /* Shared links always use the real domain, whichever address the visitor came in on. */
 const SITE = 'https://expanse.nyttolabs.com';
 const productUrl = slug => SITE + '/p/' + slug;
+/* Opens X's own composer with a prepared post; the person edits and posts it themselves. */
+function postOnX(text, url) {
+  const a = el('a', { href: 'https://x.com/intent/post?' + new URLSearchParams(url ? { text, url } : { text }), target: '_blank', rel: 'noopener noreferrer' });
+  document.body.append(a); a.click(); a.remove();
+}
+const xBtn = (label, onclick, cls = 'btn btn-ghost btn-sm', aria) => el('button', { type: 'button', class: cls, onclick, ...(aria ? { 'aria-label': aria } : {}) }, el('span', { 'aria-hidden': 'true', text: '𝕏' }), ' ' + label);
 async function shareUrl(url, title, text, okMsg) {
   if (coarse && navigator.share) { try { await navigator.share({ title, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
   toast((await copy(url)) ? okMsg : 'Copy the link: ' + url, 4200);
@@ -1039,7 +1048,8 @@ function openProduct(p, opts) {
     el('div', { class: 'pmeta mono', text: `${p.domain} · ${z.label} · ${p.size}×${p.size}` }),
     imgs,
     el('div', { class: 'pact' }, visit, demoBtn),
-    el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), stackBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share')),
+    el('div', { class: 'ptools' }, voteBtn(p), saveBtn(p), stackBtn(p), followBtn(p), el('button', { class: 'chip-btn', type: 'button', 'aria-label': 'Share ' + p.name, onclick: () => shareUrl(productUrl(p.slug), p.name + ' on Expanse', `${p.name} — ${p.tagline}`, 'Link copied.') }, el('span', { 'aria-hidden': 'true', text: '↗' }), 'Share'),
+      xBtn('Post', () => postOnX(OWNED[p.slug] ? `${p.name} is live on Expanse 🌌\n\n${p.tagline}` : `Found ${p.name} on Expanse: ${p.tagline}`, productUrl(p.slug)), 'chip-btn', `Post ${p.name} on X (opens X in a new tab)`)),
     el('div', { class: 'sec' }, el('h4', { class: 'mono', text: 'Solves' }), el('div', { class: 'needs' }, p.needs.map(n => el('button', { class: 'need', text: n, title: 'Find more products for “' + n + '”', onclick: () => runSearch(n) })))),
     el('div', { class: 'sec' }, el('p', { class: 'pdesc', text: p.description })),
     el('div', { class: 'sec facts' }, facts.map(f => el('div', null, el('small', { text: f[0] }), el('span', { text: f[1] })))),
@@ -1108,7 +1118,7 @@ function voteBtn(p) {
       if (on) delete VOTED[p.slug]; else VOTED[p.slug] = 1;
       p.upvotes = before;
       const m = errCode(e);
-      toast(m === 'already' ? 'Someone on this network already upvoted it today.' : m === 'own_product' ? 'You can’t upvote your own product.' : m === 'slow_down' ? 'That’s a lot of upvotes for one day. Try again tomorrow.' : "Couldn't count that upvote right now. Try again.");
+      toast(m === 'already' ? 'Someone on this network already upvoted it today.' : m === 'own_product' ? 'You can’t upvote your own product.' : m === 'slow_down' ? 'That’s a lot of upvotes for one day. Try again tomorrow.' : m === 'busy' ? 'Lots of upvotes on this product right now. Try again in an hour.' : "Couldn't count that upvote right now. Try again.");
     } finally { b.disabled = false; paint(); }
   };
   paint(); return b;
@@ -1327,14 +1337,14 @@ $('#searchBtn').onclick = () => { searchEl.classList.toggle('open'); if (searchE
 function topNeeds(n) {
   const c = new Map(); for (const p of PRODUCTS) for (const x of p.needs) c.set(x, (c.get(x) || 0) + 1);
   const list = [...c.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]);
-  for (const x of NEED_IDEAS) if (list.length < n && !list.includes(x)) list.push(x);
+  if (!PRODUCTS.length) for (const x of NEED_IDEAS) if (list.length < n && !list.includes(x)) list.push(x);
   return list.slice(0, n);
 }
 function renderResults() {
   const v = qIn.value.trim();
   if (v.length < 2) {
     HL = [];
-    results.replaceChildren(el('div', { class: 'lbl mono', text: PRODUCTS.length ? 'Popular needs' : 'Try a need' }), el('div', { class: 'ideas' }, topNeeds(8).map(n => el('button', { type: 'button', text: n, onclick: () => runSearch(n) }))));
+    { const ideas = topNeeds(8); results.replaceChildren(...(ideas.length ? [el('div', { class: 'lbl mono', text: PRODUCTS.length ? 'Popular needs' : 'Try a need' }), el('div', { class: 'ideas' }, ideas.map(n => el('button', { type: 'button', text: n, onclick: () => runSearch(n) })))] : [el('div', { class: 'lbl mono', text: 'Describe the problem you have' })])); }
     results.hidden = false; return;
   }
   const all = rankAll(v), r = all.slice(0, 6), d = searchDemo(v), kids = [], u = understood(v), anyAi = r.some(x => x.ai);
@@ -1778,11 +1788,10 @@ $('#cSubmit').addEventListener('submit', async e => {
   const stepWithError = wiz.check(['basics', 'fit', 'story']); if (stepWithError) { setStep(2); $('#cExtras').open = true; wiz.bad(stepWithError); return; }
   const btn = $('#cSend'); btn.disabled = true; btn.textContent = 'Sending…';
   try {
-    const ref = store.get(REF_KEY);
-    const r = await rpc('submit_product', { p: Object.assign(wiz.get(), { x: sub.spot.x, y: sub.spot.y, size: sub.size, email, ref: typeof ref === 'string' ? ref : null }) });
+    const r = await rpc('submit_product', { p: Object.assign(wiz.get(), { x: sub.spot.x, y: sub.spot.y, size: sub.size, email, ref: LANDING_REF }) });
     OWNED[r.slug] = { key: r.key, name: r.name }; saveOwned();
     OWNDATA[r.slug] = Object.assign({}, r); delete OWNDATA[r.slug].key;
-    store.del(DRAFT_KEY); store.del(REF_KEY);
+    store.del(DRAFT_KEY);
     sub.result = r; rebuildItems(); loadStats();
     finish(r);
   } catch (err) {
@@ -1809,7 +1818,7 @@ function finish(r) {
   $('#dTitle').textContent = `Founding spot #${fmt(r.number)}.`;
   $('#dText').textContent = `${r.name} is held in the ${z.label} (${r.size}×${r.size}). We review it before it goes live. Your link will be ${productUrl(r.slug).replace(/^https?:\/\//, '')}.`;
   $('#dKey').textContent = r.key;
-  $('#dPlacement').replaceChildren(el('div', { class: 'note', text: sub.plan === 'paid' ? 'Your spot is held during review and for 7 days after approval. Once approved, open My product → Map spot to pay for 12 months. No payment has been taken.' : 'Your free profile is reserved. Add more detail or choose paid placement from your owner panel after review.' }));
+  $('#dPlacement').replaceChildren(el('div', { class: 'note', text: sub.plan === 'paid' ? 'Your spot is held during review and for 7 days after approval. Once approved, open My product (“Mine” on phones) → Map spot to pay for 12 months. No payment has been taken.' : 'Your free profile is reserved. Add more detail or choose paid placement from your owner panel after review.' }));
   if (!store.get(OWNED_KEY)?.[r.slug]) $('#dPlacement').prepend(el('div', { class: 'note', text: 'This browser could not save your owner key. Download it now so you can manage your product later.' }));
   const it = ITEMS.find(i => i.slug === r.slug); if (it) { celebrate(it); setTimeout(() => { if (ui === 'claim' && sub.step === 6) flyTo(it.x + it.w / 2, it.y + it.h / 2, clamp(cam.z * .5, ZMIN, ZMAX), 2200, easeInOut); }, 1200); }
 }
@@ -1817,6 +1826,8 @@ $('#dKeyCopy').onclick = async () => toast((await copy($('#dKey').textContent)) 
 $('#dKeySave').onclick = () => { const r = sub.result; if (r) saveKeyFile(r.slug, r.name, $('#dKey').textContent); };
 $('#dManage').onclick = () => { if (sub.result) openManage(sub.result.slug, 'verify'); };
 $('#dCard').onclick = () => { if (sub.result) openManage(sub.result.slug, 'share'); };
+// The product is in review here, so the post claims the spot, not a live listing, and links to the galaxy itself.
+$('#dX').onclick = () => { const r = sub.result; if (r) postOnX(`I just claimed ${Number.isInteger(r.number) ? `founding spot #${fmt(r.number)}` : 'a spot'} on Expanse for ${r.name} 🌌 It goes live after review.\n\nA galaxy of real products, searched by the problem you have. Ranking can't be bought.\n\n#buildinpublic`, SITE); };
 $('#dExplore').onclick = () => closeUI();
 function saveKeyFile(slug, name, key) {
   download(`expanse-owner-key-${slug}.txt`, new Blob([`Expanse owner key for ${name}\n\nProduct: ${productUrl(slug)}\nOwner key: ${key}\n\nKeep this private. Anyone with this key can edit the listing.\n`], { type: 'text/plain' }));
@@ -2051,6 +2062,22 @@ function repoBox(o) {
     el('p', { class: 'c-text', style: 'font-size:13.5px;margin-top:0', text: 'Connect your public repo: new releases show on your profile and in the updates of everyone who follows you.' }),
     el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Repository' }), inp), status, el('div', { class: 'c-row' }, btn));
 }
+/* "Live on Expanse" badge: an image link back to the product page for the maker's own site. */
+function badgeSection(o) {
+  const slug = o.slug, page = productUrl(slug), theme = el('select', { 'aria-label': 'Badge style' }, el('option', { value: 'dark', text: 'Dark' }), el('option', { value: 'light', text: 'Light' }));
+  const img = el('img', { class: 'badge-preview', alt: o.name + ' on Expanse', width: 230, height: 54 });
+  const code = el('textarea', { rows: 3, readonly: true, 'aria-label': 'Badge HTML' });
+  const src = () => `${SITE}/api/badge?slug=${encodeURIComponent(slug)}${theme.value === 'light' ? '&theme=light' : ''}`;
+  const html = () => `<a href="${page}" target="_blank" rel="noopener"><img src="${src()}" alt="${o.name.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])} on Expanse" width="230" height="54"></a>`;
+  const md = () => `[![${o.name.replace(/[\[\]]/g, '')} on Expanse](${src()})](${page})`;
+  const update = () => { img.src = src(); code.value = html(); };
+  theme.onchange = update; update();
+  return el('div', { class: 'growth-handoff badge-kit' }, el('h4', { text: 'Live on Expanse badge' }),
+    el('p', { class: 'fine', text: 'Put it on your website or README. It shows your live upvotes and links to your profile, so every visitor can find and upvote you.' }),
+    el('div', { class: 'badge-row' }, img, el('label', { class: 'field' }, el('span', { text: 'Style' }), theme)), code,
+    el('div', { class: 'c-row' }, el('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Copy HTML', onclick: async () => toast(await copy(code.value) ? 'Badge HTML copied.' : 'Select the code and copy it.') }),
+      el('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Copy Markdown', onclick: async () => toast(await copy(md()) ? 'Badge Markdown copied for your README.' : 'Select the code and copy it.') })));
+}
 async function renderShare(o) {
  const box=$('#mShare'),slug=mSlug,url=productUrl(slug),G=window.ExpanseGrowth;
  if(o.status!=='approved'){fill(box,el('p',{class:'fine',text:'Your sharing kit is prepared when your product goes live. Your future profile link:'}),el('div',{class:'codeblock',text:url}));return;}
@@ -2062,16 +2089,18 @@ async function renderShare(o) {
  channel.value=marketing.channels.includes(local.channel)?local.channel:'x';kind.value='launch';
  const text=el('textarea',{rows:6,maxlength:3000,'aria-label':'Editable post',value:typeof local.text==='string'?local.text:kit.post_text}),link=el('input',{type:'url',readonly:true,'aria-label':'Trackable product link'}),preview=el('img',{class:'kit-preview',src:'/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision,alt:o.name+' — prepared Expanse share card',width:1080,height:1350}),performance=el('p',{class:'fine'});let activeKit=kit,previewUrl;
  const currentLink=()=>marketing.link(slug,campaign.value,channel.value);
- const update=()=>{link.value=currentLink();store.set(draftKey,{text:text.value,channel:channel.value});const row=campaignRows.find(r=>r.campaign===campaign.value);performance.textContent=row?`${row.views} profile opens · ${row.visits} website clicks · last 30 days, all channels. Not sales.`:'No campaign observations available.';};
+ const xCount=el('span',{class:'fine x-count','aria-live':'polite'}),xPost=()=>{const t=text.value.trim(),l=marketing.link(slug,campaign.value,'x');return {t,l,n:G.xLength(t)+(t.includes(l)?0:24)};};
+ const update=()=>{link.value=currentLink();{const {n}=xPost();xCount.textContent=`${n}/280 on X`;xCount.classList.toggle('over',n>280);}store.set(draftKey,{text:text.value,channel:channel.value});const row=campaignRows.find(r=>r.campaign===campaign.value);performance.textContent=row?`${row.views} profile opens · ${row.visits} website clicks · last 30 days, all channels. Not sales.`:'No campaign observations available.';};
  const image=()=>{if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}if(format.value==='prepared'){activeKit=kit;preview.src='/api/marketing-card?slug='+encodeURIComponent(slug)+'&revision='+kit.revision;}else{const compare=BY_SLUG.get(other.value),svg=G.asset(o,kind.value,format.value,compare);activeKit={...kit,svg,revision:kit.revision+':'+kind.value+':'+format.value+':'+(compare?.slug||'')+':'+(compare?.tagline||'')};previewUrl=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));preview.src=previewUrl;}const dims=format.value==='prepared'?[1080,1350]:G.formats[format.value];preview.width=dims[0];preview.height=dims[1];warm();};const warm=()=>{marketing.png(slug,activeKit).catch(()=>{});};
  const generate=()=>{text.value=G.copy(o,kind.value,channel.value,BY_SLUG.get(other.value));update();};
  channel.onchange=update;text.oninput=update;campaign.onchange=()=>{const row=campaignRows.find(r=>r.campaign===campaign.value);if(row&&kind.value!==row.kind){kind.value=row.kind;image();}update();};kind.onchange=image;format.onchange=image;other.onchange=image;update();
  const name=el('input',{maxlength:60,placeholder:'e.g. Black Friday launch','aria-label':'New campaign name'}),create=el('button',{class:'btn btn-ghost btn-sm',text:'Create tracked campaign',onclick:async()=>{create.disabled=true;try{const row=await rpc('owner_create_campaign',{p_slug:slug,p_key:OWNED[slug].key,p_name:name.value.trim(),p_kind:kind.value});if(!campaignRows.some(x=>x.campaign===row.campaign)){campaignRows.unshift({...row,views:0,visits:0});campaign.append(el('option',{value:row.campaign,text:row.name}));}campaign.value=row.campaign;update();toast('Campaign link ready. Publish it yourself.');}catch(e){toast(errCode(e).includes('slow_down')?'Campaign limit reached for this hour. Try later.':'Could not create campaign. Use a name of 2–60 characters, or reuse an existing campaign.');}finally{create.disabled=false;}}});
  const save=el('button',{class:'btn btn-primary btn-sm',text:coarse?'Save or share image':'Download PNG',onclick:async()=>{save.disabled=true;try{const done=await saveImage(slug+'-'+format.value+'.png',await marketing.png(slug,activeKit));if(done!=='cancelled')studioEvent(slug,'download');if(done==='downloaded')toast(coarse?'Download started. Find the image in your Downloads.':'Image downloaded.');}catch{toast('PNG conversion failed. Try again, or take a screenshot of the preview. The SVG file is for design tools; social networks do not accept SVG.',6000);}finally{save.disabled=false;}}});warm();
  fill(box,el('h3',{text:'Your ready-to-share kit · 2.0'}),el('p',{class:'fine',text:'Prepared from approved public facts. Choose a campaign and format; edit before publishing. Feature-update copy describes listed capabilities, not an invented release. Seasonal templates do not claim a discount.'}),
- el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image (SVG, for design tools)',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
+ el('div',{class:'kit-layout'},el('div',null,preview,el('button',{class:'linkbtn',text:'Download original image (SVG, for design tools)',onclick:()=>download(slug+'-'+format.value+'.svg',new Blob([activeKit.svg],{type:'image/svg+xml'}))})),el('div',null,el('label',{class:'field'},el('span',{text:'Campaign'}),campaign),performance,el('label',{class:'field'},el('span',{text:'Purpose'}),kind),el('label',{class:'field'},el('span',{text:'Create a recognizable campaign'}),name),create,el('label',{class:'field'},el('span',{text:'Channel / copy style'}),channel),el('label',{class:'field'},el('span',{text:'Image format'}),format),el('label',{class:'field'},el('span',{text:'Comparison · approved public facts only'}),other),el('button',{class:'linkbtn',text:'Prepare copy from product facts',onclick:generate}),el('label',{class:'field'},el('span',{text:'Your post · edit freely'}),text),el('label',{class:'field'},el('span',{text:'Trackable profile link'}),link),el('div',{class:'c-row'},save,xBtn('Post on X',()=>{const {t,l,n}=xPost();if(n>280){toast(`Too long for X: ${n}/280. Choose X under “Channel / copy style” and press “Prepare copy from product facts”, or shorten the post.`,6000);return;}postOnX(t,t.includes(l)?'':l);studioEvent(slug,'copy');}),xCount,el('button',{class:'btn btn-ghost btn-sm',text:'Copy post + link',onclick:async()=>{const ok=await copy(marketing.post(text.value,link.value));if(ok)studioEvent(slug,'copy');toast(ok?'Post and link copied.':'Select your post and link to copy.');}}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy link',onclick:async()=>toast(await copy(link.value)?'Tracking link copied.':'Select the link to copy.')})))),
  el('p',{class:'fine',text:'Campaign IDs are generated and validated by Expanse. Names stay in your private studio. Legacy links continue working. Profile views are attributed to the link, not proof of a customer or sale. Cached images and post drafts stay in this browser. No automatic posting.'}),
  el('div',{class:'growth-handoff'},el('h4',{text:'Create a campaign in MakeItReal'}),el('p',{class:'fine',text:'Review and copy your approved public product facts, then paste them into Campaign Studio. No accounts, private analytics or owner keys are shared.'}),el('button',{class:'btn btn-ghost btn-sm',text:'Review campaign brief →',onclick:()=>{const brief=G.brief(o,currentLink()),payload=JSON.stringify(brief,null,2);openDlg(el('h2',{class:'display',text:'Review your public campaign brief'}),el('pre',{class:'codeblock',text:payload}),el('p',{class:'fine',text:'Manual handoff: copy the one-sentence summary into “What is it?” and the website into “Website” in MakeItReal. Review and confirm the facts there. Return to Expanse → Growth Studio to review tracked link visits. No OAuth, automatic project import or sales synchronization is connected.'}),el('div',{class:'c-row'},el('button',{class:'btn btn-primary btn-sm',text:'Copy approved facts',onclick:()=>copy(payload)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy one-sentence summary',onclick:()=>copy(o.name+' — '+o.tagline)}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy website',onclick:()=>copy(o.url)}),el('a',{class:'btn btn-ghost btn-sm',href:'https://makeit-real.vercel.app/en/launch.html',target:'_blank',rel:'noopener',text:'Open MakeItReal Campaign Studio ↗'}),el('button',{class:'btn btn-ghost btn-sm',text:'Back to Expanse',onclick:closeDlg})));}})));
+ box.append(badgeSection(o));
  renderSeasonalForm(box,o);
  }catch{if(mSlug===slug&&mTab==='share')fill(box,el('p',{class:'fine',text:'The prepared kit is unavailable right now. Your product page still works:'}),el('div',{class:'codeblock',text:url}),el('button',{class:'btn btn-ghost btn-sm',text:'Copy profile link',onclick:()=>copy(url)}),el('button',{class:'btn btn-ghost btn-sm',text:'Try again',onclick:()=>{kitCache.delete(slug);renderShare(o);}}));}
 }
@@ -2135,7 +2164,8 @@ async function renderPromote(o) {
     el('div', { class: 'promo' },
       el('h4', { text: 'Sponsored for a year' }),
       el('p', { text: 'For a whole year, your product can show in a card marked “Sponsored” above the results when people search for what it solves, and at the top of the list. It only shows where it fits the search, and it never changes where you rank.' }),
-      el('p', { class: 'fine', text: (price != null ? `${eur(price)} for the year. ` : 'We confirm the price with you before you pay. ') + 'Nothing is charged automatically: you pay once we have confirmed the dates. You get a report of how often the card was shown and clicked, and of your views and clicks compared with the days before.' })),
+      el('p', { class: 'fine', text: (price != null ? `${eur(price)} for the year, including applicable tax. ` : 'We confirm the price, including applicable tax, before you pay. ') + 'A request is free and nothing is binding until you pay: you pay once we have confirmed the dates by email. You get a report of how often the card was shown and clicked, and of your views and clicks compared with the days before.' }),
+      el('p', { class: 'fine' }, el('a', { href: '/terms#sponsored', target: '_blank', rel: 'noopener', text: 'Terms & refunds ↗' }), ' · ', el('a', { href: '/seller', target: '_blank', rel: 'noopener', text: 'Seller details ↗' }), ' · ', el('a', { href: '/withdraw', target: '_blank', rel: 'noopener', text: 'Withdraw ↗' }))),
     open ? null : promoForm(slug, price),
     ...items.map(x => placementItem(slug, x))].filter(Boolean));
 }
@@ -2406,18 +2436,27 @@ function openContact(topic) {
 }
 document.querySelectorAll('[data-contact]').forEach(b => b.onclick = () => openContact());
 function openReport(p) {
-  const reasons = [['broken_link', 'The link is broken'], ['wrong_info', 'Information is wrong'], ['spam', 'Spam, scam or harmful'], ['other', 'Something else']];
+  const reasons = [['broken_link', 'The link is broken'], ['wrong_info', 'Information is wrong'], ['spam', 'Spam or scam'], ['illegal', 'Illegal content'], ['other', 'Something else']];
   const txt = el('textarea', { maxlength: '600', rows: '3', placeholder: 'Anything that helps us check (optional)' });
+  const email = el('input', { type: 'email', maxlength: '254', autocomplete: 'email', placeholder: 'you@example.com' });
+  const faith = el('input', { type: 'checkbox' });
+  const faithRow = el('label', { class: 'check', hidden: true }, faith, el('span', { text: 'I confirm that this notice is accurate and complete to the best of my knowledge, and made in good faith.' }));
   const send = el('button', { class: 'btn btn-primary', type: 'submit', text: 'Send report' });
+  const sync = () => { const illegal = dlgBody.querySelector('input[name=reason]:checked')?.value === 'illegal'; faithRow.hidden = !illegal;
+    txt.maxLength = illegal ? 2000 : 600;
+    txt.placeholder = illegal ? 'Explain why the content is illegal, and where on the profile it is (required)' : 'Anything that helps us check (optional)'; };
   openDlg(el('div', { class: 'mono kick', text: 'Report a problem' }), el('h2', { class: 'display', text: p.name }),
-    el('form', { onsubmit: async e => {
+    el('form', { onchange: sync, onsubmit: async e => {
       e.preventDefault(); const r = dlgBody.querySelector('input[name=reason]:checked'); if (!r) { toast('Pick what’s wrong.'); return; }
+      if (r.value === 'illegal' && (txt.value.trim().length < 30 || !faith.checked)) { toast('For illegal content, explain why (at least 30 characters) and confirm the statement.'); return; }
       send.disabled = true;
-      try { await rpc('report_product', { p_slug: p.slug, p_reason: r.value, p_details: txt.value }); closeDlg(); toast('Thanks — we’ll take a look.'); }
-      catch (err) { toast("Couldn't send the report right now."); } finally { send.disabled = false; }
+      try { const res = await rpc('report_product', { p_slug: p.slug, p_reason: r.value, p_details: txt.value, p_email: email.value.trim() || null, p_good_faith: faith.checked }); closeDlg(); toast(res && res.receipt ? 'Thanks — we’ve emailed you a receipt and will tell you what we decide.' : email.value.trim() ? 'Thanks — we have your report and email, and will tell you what we decide.' : 'Thanks — we’ll take a look.'); }
+      catch (err) { const m = errCode(err); toast(m === 'invalid:email' ? 'Check the email address, or leave it empty.' : m === 'invalid:notice' ? 'For illegal content, explain why (at least 30 characters) and confirm the statement.' : m === 'slow_down' || m === 'busy' ? 'Too many reports right now. Try again in a while.' : "Couldn't send the report right now."); } finally { send.disabled = false; }
     } }, el('div', { class: 'radios' }, reasons.map(([v, l]) => el('label', null, el('input', { type: 'radio', name: 'reason', value: v }), l))),
-      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Details' }), txt), el('div', { class: 'c-row' }, send)),
-    el('p', { class: 'fine', text: 'Reports are anonymous. We check them by hand.' }));
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Details' }), txt),
+      el('label', { class: 'field' }, el('span', { class: 'mono', text: 'Your email · optional' }), email), faithRow,
+      el('div', { class: 'c-row' }, send)),
+    el('p', { class: 'fine' }, 'Reports are anonymous unless you give your email; then you get a receipt and our decision. A person checks every report. ', el('a', { href: '/terms', target: '_blank', rel: 'noopener', text: 'How we handle reports ↗' })));
 }
 
 $('#seasonalBrowse').onclick=showSeasonalOffers;
@@ -2480,6 +2519,9 @@ function persistPersonal(key, value) {
   if (!persisted) toast('This browser blocked saving. Your collection will last only until this page closes.',5500);
   return persisted;
 }
+// Local history is a feature the visitor chooses: it is kept in this browser once they save, follow or build a stack,
+// or turn it on in My space. Until then it lasts only for the visit.
+const personalOn = () => { try { return store.get(PERSONAL_KEY) === true || SAVED.length > 0 || STACKS.length > 0 || Object.keys(FOLLOW.slugs || {}).length > 0; } catch { return store.get(PERSONAL_KEY) === true; } };
 function rememberActivity(slug, kind) {
   if (!isSlug(slug) || !['view','visit','demo'].includes(kind)) return;
   const p = BY_SLUG.get(slug); if (!p) return;
@@ -2488,7 +2530,7 @@ function rememberActivity(slug, kind) {
   row.name=p.name; row.tagline=p.tagline; row.at=new Date().toISOString();
   const key = kind === 'view' ? 'views' : 'clicks'; row[key] = Math.min(1000000,Math.max(0,Number(row[key]) || 0)+1);
   ACTIVITY.sort((a,b)=>String(b.at).localeCompare(String(a.at))); ACTIVITY.splice(100);
-  persistPersonal(ACTIVITY_KEY,ACTIVITY);
+  if (personalOn()) persistPersonal(ACTIVITY_KEY,ACTIVITY);
 }
 function saveBtn(p) {
   const b=el('button',{class:'chip-btn save-btn',type:'button'});
@@ -2548,7 +2590,8 @@ function openMySpace(tab='saved',focusTab=false) {
   } else if(entries.length)panel.append(el('div',{class:'space-list'},entries.map(([s,p])=>spaceItem(s,p,tab))));else panel.append(el('p',{class:'fine',text:empty[tab]}));
   if(tab==='following')panel.prepend(el('button',{class:'btn btn-ghost btn-sm',text:'Open updates feed',onclick:openFollowing}));
   if(tab==='owned'&&!entries.length)panel.append(el('button',{class:'btn btn-ghost btn-sm',text:'Sign in to my product',onclick:()=>openOwnerLogin()}));
-  if(tab==='history'&&entries.length)panel.append(el('button',{class:'linkbtn',style:'margin-top:16px',text:'Clear local activity history',onclick:()=>{ACTIVITY.splice(0);store.del(ACTIVITY_KEY);openMySpace('history');}}));
+  if(tab==='history'&&!personalOn())panel.append(el('p',{class:'fine',text:'History lasts only for this visit until you choose to keep it in this browser.'}),el('button',{class:'btn btn-ghost btn-sm',text:'Keep history in this browser',onclick:()=>{store.set(PERSONAL_KEY,true);persistPersonal(ACTIVITY_KEY,ACTIVITY);openMySpace('history');}}));
+  if(tab==='history'&&entries.length)panel.append(el('button',{class:'linkbtn',style:'margin-top:16px',text:'Clear local activity history',onclick:()=>{ACTIVITY.splice(0);store.del(ACTIVITY_KEY);store.del(PERSONAL_KEY);openMySpace('history');}}));
   openDlg(el('div',{class:'mono kick',text:'Your private collection'}),el('h2',{class:'display',text:'My space'}),el('p',{class:'fine',text:'Save tools you want to return to. Follow releases. Keep your votes and activity in one place.'}),el('div',{class:'space-kpis'},counter(SAVED.length,'saved apps'),counter(Object.keys(FOLLOW.slugs).filter(isSlug).length,'following'),counter(Object.keys(VOTED).filter(isSlug).length,'your upvotes'),counter(activityCount('clicks'),'your website/demo clicks')),tabs,panel,el('p',{class:'fine',style:'margin-top:20px',text:'Saved apps, follows, votes and activity belong to this browser. They are not a public profile and do not sync across devices. Activity totals cover your latest 100 products. Maker statistics come from Expanse and count other visitors separately.'}));
   dlg.classList.add('my-space');
   if (opener) modalOrigins.set(dlg, opener);
@@ -2640,7 +2683,7 @@ function saveFollow() { persistPersonal(FOLLOW_KEY, FOLLOW); renderFollowBtn(); 
 function toggleFollow(p) {
   const now = new Date().toISOString();
   if (isFollowed(p.slug)) { delete FOLLOW.slugs[p.slug]; toast(`Stopped following ${p.name}.`); }
-  else { FOLLOW.slugs[p.slug] = now; if (!FOLLOW.seen) FOLLOW.seen = now; toast(`Following ${p.name}. Its releases and changes show up under ★ Following.`, 4200); }
+  else { FOLLOW.slugs[p.slug] = now; if (!FOLLOW.seen) FOLLOW.seen = now; toast(`Following ${p.name}. Its releases and changes show up in My space → Following.`, 4200); }
   saveFollow(); loadUpdates(); kick();
   if (view === 'list') renderList();
 }
@@ -2734,14 +2777,16 @@ let deepSlug = null, deepSpot = null;
   const pm = location.pathname.match(/^\/p\/([a-z0-9-]{1,48})\/?$/), qp = new URLSearchParams(location.search);
   deepSlug = pm ? pm[1] : isSlug(qp.get('p')) ? qp.get('p') : null;
   const ref = qp.get('ref');
-  if (deepSlug && !OWNED[deepSlug]) store.set(REF_KEY, deepSlug);
-  else if (isSlug(ref) && !OWNED[ref]) store.set(REF_KEY, ref);
+  store.del(REF_KEY); // stored by earlier versions; attribution is now kept in memory only
+  if (!personalOn()) store.del(ACTIVITY_KEY); // history saved by earlier versions without a choice stays for this visit only
+  if (deepSlug && !OWNED[deepSlug]) LANDING_REF = deepSlug;
+  else if (isSlug(ref) && ref !== 'maker' && !OWNED[ref]) LANDING_REF = ref;
   const h = location.hash, ms = h.match(/^#s=([\w-]{4,800})$/);
   if (ms) { // links shared from the earlier version of the site
     try {
       const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(ms[1].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))));
       if (d && Number.isInteger(d.x) && Number.isInteger(d.y)) deepSpot = { x: d.x, y: d.y };
-      if (d && typeof d.r === 'string' && /^[\w-]{6,20}$/.test(d.r)) store.set(REF_KEY, d.r);
+      if (d && typeof d.r === 'string' && /^[\w-]{6,20}$/.test(d.r)) LANDING_REF = d.r;
     } catch (e) {}
   }
   if (h === '#demo') setDemo(true);

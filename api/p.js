@@ -1,8 +1,15 @@
 'use strict';
 const {SITE,isSlug,esc,https,page,rpc,metadata,content,send,failure} = require('../lib/public-pages');
+const {cardUrl,cardSupported} = require('../lib/og-card');
 function withProduct(html, p, url) {
-  const description = [p.tagline, (p.needs || []).length ? `Solves: ${p.needs.join(', ')}` : '', p.description].filter(Boolean).join('. ').replace(/\s+/g,' ').slice(0,220);
-  html = metadata(html,{title:`${p.name} — ${p.tagline} · Expanse`,description,url,image:(p.images || []).find(https)});
+  // The tagline is already in the title, so the description adds what it solves; parts are joined without doubled
+  // punctuation and cut at a word, so previews never read "deploy.. Solves: … ch".
+  const strip = s => String(s || '').replace(/\s+/g,' ').trim().replace(/[\s.!?…:;,]+$/,'');
+  let description = [(p.needs || []).length ? `Solves: ${p.needs.map(strip).join(', ')}` : '', strip(p.description)].filter(Boolean).join('. ') || strip(p.tagline);
+  if (description.length > 220) description = description.slice(0,220).replace(/\s+\S*$/,'').replace(/[\s,.;:–—-]+$/,'') + '…';
+  // The generated card when its fonts can draw the name; otherwise the maker's own image, or the site image.
+  const card = cardSupported(p) ? cardUrl(p) : null, image = (p.images || []).find(https);
+  html = metadata(html,{title:`${p.name} — ${p.tagline} · Expanse`,description,url,card,image,alt:card || image ? `${p.name} on Expanse: ${p.tagline}` : undefined});
   const website = https(p.url), demo = https(p.demo_url);
   const needs = (p.needs || []).length ? `<h2>What it solves</h2><ul>${p.needs.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '';
   const pricing = {free:'Free',freemium:'Free plan',trial:'Free trial',paid:'Paid'}[p.pricing];
