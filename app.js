@@ -939,12 +939,10 @@ function setDemo(on) {
   if (demo === !!on) return;
   demo = !!on; texDirty = true; SPARKS.length = 0; PULSES.length = 0; hoverDemo = null;
   if (sel && sel.demo) closeUI();
-  app.classList.toggle('demo', demo); $('#demoBar').hidden = !demo; $('#demoBtn').setAttribute('aria-pressed', String(demo));
+  app.classList.toggle('demo', demo); $('#demoBar').hidden = !demo;
   tickN = 0; nextTick(); kick();
 }
-$('#demoBtn').onclick = () => { setDemo(!demo); if (demo) { setView('map'); toast('Demo mode: example products only. Nothing here is real.', 3200); } };
 $('#demoExit').onclick = () => setDemo(false);
-$('#demoHero').onclick = () => { setDemo(true); markExplore(); const h = home(); flyTo(-6, -4, h.z * 3.2, 1600, easeInOut); };
 
 /* ================= TOAST / SHARE ================= */
 const toastEl = $('#toast'); let toastT = 0;
@@ -1461,7 +1459,7 @@ function renderList() {
     cardsEl.replaceChildren(el('div', { class: 'empty' },
       el('h3', { text: none ? 'The universe is wide open.' : listQ ? `No convincing match for “${listQ}” yet.` : 'No products match these filters.' }),
       el('p', { text: none ? 'No products are live yet. Every maker can add a free profile under the same review rules.' : 'This is a small, reviewed catalog. Try one specific task, remove a filter, or save your need for future matches.' }),
-      el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), listQ ? el('button',{class:'btn btn-ghost btn-sm',text:'Save need & check new matches',onclick:()=>openNeedForm(listQ)}):null, none ? el('button', { class: 'btn btn-ghost btn-sm', text: 'See the demo universe', onclick: () => { setView('map'); $('#demoHero').click(); } }) : null)));
+      el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), listQ ? el('button',{class:'btn btn-ghost btn-sm',text:'Save need & check new matches',onclick:()=>openNeedForm(listQ)}):null)));
     if(!none){cardsEl.append(el('div',{class:'discovery-suggestions'},...PRODUCTS.flatMap(p=>p.needs||[]).slice(0,4).map(n=>el('button',{class:'chip-btn',text:n,onclick:()=>runSearch(n)})),el('button',{class:'chip-btn',text:'Clear filters & browse all real products',onclick:()=>{$('#fClear').click();listQ='';qIn.value='';renderList();}})));}
     return;
   }
