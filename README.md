@@ -25,7 +25,7 @@ Vercel deploys the repo root: every push to `main` goes to production, every oth
 - **Live products** — glowing squares in their category colour. Only products that passed review are shown.
 - **Held spots** — white beacons: products still in review, and founding reservations from the earlier version of the site.
 - **Galaxy dust** — the faint stars that give the galaxy its shape. They are decoration, not products.
-- **Demo mode** (the DEMO button, or `#demo` in the URL) fills the galaxy with about 13,000 clearly labelled example squares
+- **Demo mode** (available only via `#demo` in the URL; no public demo buttons) fills the galaxy with about 13,000 clearly labelled example squares
   from a fixed seed, to show what a full universe looks like. Nothing in demo mode is real, and examples never block a real spot.
 
 ## Search and list
