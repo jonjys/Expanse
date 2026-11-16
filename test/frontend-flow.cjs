@@ -19,6 +19,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  const noop=()=>{};const ctx=new Proxy({measureText:t=>({width:t.length*7}),createRadialGradient:()=>({addColorStop:noop}),createLinearGradient:()=>({addColorStop:noop})},{get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>(t[k]=v,true)});
  w.URL.createObjectURL=()=> 'blob:fixture-only';w.URL.revokeObjectURL=()=>{};w.HTMLCanvasElement.prototype.getContext=()=>ctx;w.HTMLCanvasElement.prototype.toDataURL=()=>'';
  w.fetch=async(url,opts)=>{const method=url.split('/').at(-1),body=JSON.parse(opts?.body||'{}');calls.push({method,body});let r;
+ if(scenario.rpc){const response=await scenario.rpc(method,body,opts);if(response)return response;}
  if(method==='search'&&scenario.search)return scenario.search(body,opts);
  const defaults={public_seller:{ready:true,legal_name:'Fixture <seller>',registration_number:'TEST-ONLY',address:'Test street\nSweden',email:'support@example.invalid',phone:'TEST-PHONE'},public_products:[product],public_spots:[],public_placements:[],public_spotlight:{picks:[]},founding_stats:{live:1,reserved:1,recent:[]},public_commerce:{enabled:true,prices:[]},public_updates:[],public_releases:[],owner_get:product,owner_map_status:{state:'free',can_pay:true,amount_cents:300},owner_acquisition_stats:{totals:{impressions:0,views:0,visits:0,demos:0,verified_purchases:null},sources:[{source:'list',impressions:0,views:0,visits:0}],campaigns:[]},owner_marketing_kit:{revision:'a'.repeat(20),campaign:'mk-123456abcdef',svg:'<svg xmlns="http://www.w3.org/2000/svg"/>',post_text:'Maker post from public profile',prepared_at:'2026-10-21T12:00:00Z'},owner_need_preferences:{enabled:false},owner_need_matches:[],public_tool_needs:[],submit_tool_need:{id:'c3edd38a-1299-4000-8888-555555555555',key:'fixture-private-receipt-key',state:'private',expires_at:'2099-01-01T00:00:00Z',matches:[]},tool_need_status:{id:'c3edd38a-1299-4000-8888-555555555555',text:'I need to explain failed deployment errors',state:'private',expires_at:'2099-01-01T00:00:00Z',matches:[{slug:'fixture',name:'Real Fixture',reason:'Shared terms in the product profile: deployment, errors.'}]},owner_discovery_stats:[],owner_stats:{days:[{view:3,visit:2,demo:1}]}};
  if(method==='ai'){
@@ -37,7 +38,7 @@ function boot(blockStorage=false,url='https://expanse.nyttolabs.com/',html=fs.re
  return {ok:true,status:200,text:async()=>JSON.stringify(r),json:async()=>r};};
  if(blockStorage)Object.defineProperty(w,'localStorage',{get(){throw new Error('blocked')}});
  for(const [key,value] of Object.entries(storage))w.localStorage.setItem(key,value);
- const source=fs.readFileSync(root+'app.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testRank=(q,ps)=>rankAll(q,ps.map(prepProduct));window.testObserve=()=>observeProductCards();window.testOwner=(slug,tab)=>openManage(slug,tab);window.testMapPick = spot => startSubmit(spot,true);})();');
+ const source=fs.readFileSync(root+'app.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testRefresh=()=>refreshAll();window.testRank=(q,ps)=>rankAll(q,ps.map(prepProduct));window.testObserve=()=>observeProductCards();window.testOwner=(slug,tab)=>openManage(slug,tab);window.testMapPick = spot => startSubmit(spot,true);})();');
  w.eval(fs.readFileSync(root+'growth.js','utf8'));w.eval(fs.readFileSync(root+'marketing.js','utf8'));w.eval(source);return dom;
 }
 const tick=()=>new Promise(r=>setTimeout(r,20));
@@ -117,6 +118,40 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  press('Escape');assert.equal(kd.activeElement,contact,'closing a nested action restores focus inside the information dialog');
  assert.ok(sheet.classList.contains('open'));press('Escape');assert.equal(kd.activeElement,info);
  keyboard.window.close();
+ // A failed catalog is different from a successfully loaded empty catalog, and can recover without a reload.
+ const response=(value,status=200)=>({ok:status<400,status,text:async()=>JSON.stringify(value),json:async()=>value});
+ let catalogDown=true,emptyCatalog=false;
+ const outage=boot(false,undefined,undefined,{}, {rpc:async method=>method==='public_products'?(catalogDown?response({message:'unavailable'},503):emptyCatalog?response([]):undefined):undefined});await tick();
+ const od=outage.window.document;od.querySelector('#vList').click();assert.match(od.querySelector('#cards').textContent,/temporarily unavailable/i);assert.doesNotMatch(od.querySelector('#cards').textContent,/No products are live yet/);
+ catalogDown=false;[...od.querySelectorAll('#cards button')].find(b=>b.textContent==='Retry catalog').click();await tick();assert.match(od.querySelector('#cards').textContent,/Real Fixture/);
+ catalogDown=true;await outage.window.testRefresh();assert.match(od.querySelector('#cards').textContent,/Showing the last loaded catalog/);assert.match(od.querySelector('#cards').textContent,/Real Fixture/);
+ catalogDown=false;emptyCatalog=true;await outage.window.testRefresh();assert.match(od.querySelector('#cards').textContent,/No products are live yet/);assert.doesNotMatch(od.querySelector('#cards').textContent,/unavailable/i);outage.window.close();
+
+ // Delayed saves must stay attached to their product and preserve edits typed after the request started.
+ let finishSave;const ownerStorage={'expanse.owned.v1':JSON.stringify({fixture:{name:'Real Fixture',key:'owner-key-fixture'},second:{name:'Second Fixture',key:'owner-key-second'}})};
+ const editing=boot(false,undefined,undefined,ownerStorage,{rpc:async(method,body)=>{
+   if(method==='owner_get')return response({...product,slug:body.p_slug,name:body.p_slug==='second'?'Second Fixture':'Real Fixture'});
+   if(method==='owner_update')return new Promise(resolve=>{finishSave=()=>resolve(response({...product,...body.p,slug:body.p_slug}));});
+ }});await tick();const ew=editing.window,ed=ew.document;
+ await ew.testOwner('fixture','edit');const editName=()=>ed.querySelector('#eBasics input[maxlength="40"]');
+ editName().value='First saved name';editName().dispatchEvent(new ew.Event('input',{bubbles:true}));ed.querySelector('#eSave').click();await tick();
+ editName().value='Newer unsaved name';editName().dispatchEvent(new ew.Event('input',{bubbles:true}));finishSave();await tick();
+ assert.equal(editName().value,'Newer unsaved name','saving must not discard typing done while the request was pending');
+ ed.querySelector('#eSave').click();await tick();await ew.testOwner('second','edit');
+ editName().value='Second unsaved name';editName().dispatchEvent(new ew.Event('input',{bubbles:true}));
+ assert.equal(ed.querySelector('#eSave').disabled,false,'one product saving must not disable another product');finishSave();await tick();
+ assert.equal(editName().value,'Second unsaved name','an earlier product response must not replace the current editor');
+ assert.equal(ed.querySelector('#mName').textContent,'Second Fixture');
+ const owned=JSON.parse(ew.localStorage.getItem('expanse.owned.v1'));assert.equal(owned.fixture.name,'Newer unsaved name');assert.equal(owned.second.name,'Second Fixture');editing.window.close();
+
+ let reads=0,finishRead;
+ const staleRead=boot(false,undefined,undefined,{'expanse.owned.v1':JSON.stringify({fixture:{name:product.name,key:'owner-key-fixture'}})},{rpc:async(method,body)=>{
+   if(method==='owner_get'&&++reads===2)return new Promise(resolve=>{finishRead=()=>resolve(response(product));});
+   if(method==='owner_update')return response({...product,...body.p});
+ }});await tick();const rw=staleRead.window,rdoc=rw.document;
+ const opening=rw.testOwner('fixture','edit');const nameField=rdoc.querySelector('#eBasics input[maxlength="40"]');nameField.value='Latest saved profile';nameField.dispatchEvent(new rw.Event('input',{bubbles:true}));rdoc.querySelector('#eSave').click();await tick();
+ finishRead();await opening;assert.equal(nameField.value,'Latest saved profile','a slow profile read cannot roll back a completed save');assert.equal(rdoc.querySelector('#mName').textContent,'Latest saved profile');staleRead.window.close();
+
  assert.equal(errors.length,0,errors.join('\n'));
  // AI profile drafts are explicitly reviewed, preserve manual edits and never submit.
  const ai=boot(false,'https://expanse.nyttolabs.com/add');await tick();const aw=ai.window,ad=aw.document;

@@ -199,6 +199,7 @@ const fadeOf = q => q.last <= 30 ? 1 : q.last <= 90 ? 1 - (q.last - 30) / 60 * .
    product: an approved product · spot: a held spot without a live profile · mine: your own product in review */
 const ITEMS = [], occ = new Map();
 let PRODUCTS = [], BY_SLUG = new Map(), SPOTS = [], OWNED = store.get(OWNED_KEY) || {}, OWNDATA = {}, PLACEMENTS = [];
+let catalogLoaded = false, catalogFailed = false;
 /* The Spotlight: 8 places in the core, earned by real use (see public_spotlight). Placed in a ring around the centre. */
 let SPOTLIGHT = { picks: [] };
 const SPOT_SLOTS = Array.from({ length: 8 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI / 4; return { x: Math.round(Math.cos(a) * 8.5 - 2), y: Math.round(Math.sin(a) * 8.5 - 2) }; });
@@ -298,8 +299,9 @@ function track(slug, kind, source) {
   rpc('track', { p_slug: slug, p_kind: kind }, { keepalive: true }).catch(() => {});
 }
 let STATS = null, COMMERCE = { enabled: false };
-async function loadCommerce() { try { COMMERCE = await rpc('public_commerce'); } catch (e) { COMMERCE = { enabled: false }; } }
-async function loadStats() { try { STATS = await rpc('founding_stats'); } catch (e) { STATS = null; } renderLive(); }
+const readRequest = () => ({ signal: AbortSignal.timeout(12000) });
+async function loadCommerce() { try { COMMERCE = await rpc('public_commerce', {}, readRequest()); } catch (e) { COMMERCE = { enabled: false }; } }
+async function loadStats() { try { STATS = await rpc('founding_stats', {}, readRequest()); } catch (e) { STATS = null; } renderLive(); }
 function prepProduct(p) {
   const words = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').split(/[^a-z0-9+#.]+/).filter(Boolean).map(stem);
   p._name = words(p.name); p._needs = (p.needs || []).map(n => ({ n, w: words(n), s: normQ(n) }));
@@ -310,30 +312,44 @@ function prepProduct(p) {
 }
 async function loadProducts() {
   try {
-    const list = await rpc('public_products');
-    if (Array.isArray(list)) { setTimeout(() => { const idea = topNeeds(1)[0]; if (idea) qIn.placeholder = `What do you need? Try “${idea}”`; }); PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); return true; }
+    const list = await rpc('public_products', {}, readRequest());
+    if (Array.isArray(list)) { setTimeout(() => { const idea = topNeeds(1)[0]; if (idea) qIn.placeholder = `What do you need? Try “${idea}”`; }); PRODUCTS = list.filter(p => p && isSlug(p.slug) && Number.isInteger(p.x) && Number.isInteger(p.y) && [1, 2, 4, 8].includes(p.size)).map(prepProduct); BY_SLUG = new Map(PRODUCTS.map(p => [p.slug, p])); catalogLoaded = true; catalogFailed = false; return true; }
   } catch (e) {}
+  catalogFailed = true;
   return false;
 }
 async function loadSpots() {
-  try { const s = await rpc('public_spots'); if (Array.isArray(s)) SPOTS = s.filter(v => v && Number.isInteger(v.x) && Number.isInteger(v.y) && [1, 2, 4, 8].includes(v.size) && Math.hypot(v.x + v.size / 2, v.y + v.size / 2) < MAX_R); } catch (e) {}
+  try { const s = await rpc('public_spots', {}, readRequest()); if (Array.isArray(s)) SPOTS = s.filter(v => v && Number.isInteger(v.x) && Number.isInteger(v.y) && [1, 2, 4, 8].includes(v.size) && Math.hypot(v.x + v.size / 2, v.y + v.size / 2) < MAX_R); } catch (e) {}
 }
 async function loadOwned() {
   const slugs = Object.keys(OWNED).filter(isSlug), lost = [];
   await Promise.all(slugs.map(async slug => {
-    try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: OWNED[slug].key }); OWNED[slug].name = OWNDATA[slug].name; }
-    catch (e) { if (errCode(e) === 'bad_key') { lost.push(OWNED[slug].name || slug); delete OWNED[slug]; delete OWNDATA[slug]; } }
+    const key = OWNED[slug].key, version = ownerVersions.get(slug) || 0;
+    const current = () => OWNED[slug]?.key === key && (ownerVersions.get(slug) || 0) === version;
+    try { const data = await rpc('owner_get', { p_slug: slug, p_key: key }, readRequest()); if (current() && !ownerSaves.has(slug)) { OWNDATA[slug] = data; OWNED[slug].name = data.name; } }
+    catch (e) { if (errCode(e) === 'bad_key' && current()) { lost.push(OWNED[slug].name || slug); delete OWNED[slug]; delete OWNDATA[slug]; } }
   }));
   store.set(OWNED_KEY, OWNED); updateMine();
   if (lost.length) toast(`${lost.join(', ')} is no longer signed in on this device. Sign in again with your email, or use “Lost your key?”.`, 6000);
 }
 async function loadPlacements() {
-  try { const l = await rpc('public_placements'); PLACEMENTS = Array.isArray(l) ? l.filter(x => x && Number.isInteger(x.id) && isSlug(x.slug)) : []; } catch (e) { PLACEMENTS = []; }
+  try { const l = await rpc('public_placements', {}, readRequest()); PLACEMENTS = Array.isArray(l) ? l.filter(x => x && Number.isInteger(x.id) && isSlug(x.slug)) : []; } catch (e) { PLACEMENTS = []; }
 }
 async function loadSpotlight() {
-  try { const s = await rpc('public_spotlight'); if (s && Array.isArray(s.picks)) SPOTLIGHT = { picks: s.picks.filter(x => x && isSlug(x.slug)).slice(0, 8), updated_at: s.updated_at }; } catch (e) {}
+  try { const s = await rpc('public_spotlight', {}, readRequest()); if (s && Array.isArray(s.picks)) SPOTLIGHT = { picks: s.picks.filter(x => x && isSlug(x.slug)).slice(0, 8), updated_at: s.updated_at }; } catch (e) {}
 }
-async function refreshAll() { await Promise.all([loadProducts(), loadSpots(), loadPlacements(), loadSpotlight()]); rebuildItems(); if (ui === 'none' && view === 'list') renderList(); }
+async function refreshAll() { await Promise.all([loadProducts(), loadSpots(), loadPlacements(), loadSpotlight(), loadCommerce()]); rebuildItems(); renderLive(); if (ui === 'none' && view === 'list') renderList(); if (!results.hidden) renderResults(); }
+function catalogRetry() {
+  const button = el('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Retry catalog', onclick: async () => {
+    button.disabled = true; button.textContent = 'Retrying…';
+    try { await refreshAll(); } finally { button.disabled = false; button.textContent = 'Retry catalog'; }
+  }});
+  return button;
+}
+function catalogNotice(stale = false) {
+  return el('div', { class: 'empty', role: 'status' }, el('h3', { text: stale ? 'Showing the last loaded catalog' : catalogFailed ? 'Products are temporarily unavailable' : 'Loading live products…' }),
+    el('p', { text: stale ? 'We could not refresh the catalog. These details may have changed.' : catalogFailed ? 'We could not load the catalog. Try again to see the real products.' : 'Please wait while we load the reviewed catalog.' }), catalogFailed ? catalogRetry() : null);
+}
 function saveOwned() { store.set(OWNED_KEY, OWNED); updateMine(); }
 
 /* ================= CANVAS ================= */
@@ -1339,6 +1355,7 @@ function topNeeds(n) {
   return list.slice(0, n);
 }
 function renderResults() {
+  if (!catalogLoaded) { HL = []; results.replaceChildren(catalogNotice()); results.hidden = false; return; }
   const v = qIn.value.trim();
   if (v.length < 2) {
     HL = [];
@@ -1432,6 +1449,7 @@ function sponCard(sp) {
   return c;
 }
 function renderList() {
+  if (!catalogLoaded) { $('#lCount').textContent = catalogFailed ? 'Unavailable' : 'Loading…'; $('#lQuery').hidden = true; cardsEl.replaceChildren(catalogNotice()); return; }
   const base = filtered(); let rows, ranked = [];
   if (listQ) {
     ranked = rankAll(listQ, base);
@@ -1451,12 +1469,12 @@ function renderList() {
   }
   $('#lCount').textContent = plural(rows.length, 'product', 'products');
   if (!rows.length && listQ && PRODUCTS.length && AI.has(listQ.replace(/\s+/g, ' ').trim().toLowerCase()) && !aiCached(listQ)) {
-    cardsEl.replaceChildren(el('div', { class: 'empty' }, el('h3', { text: 'Searching by meaning…' }), el('p', { text: 'No product uses those exact words — checking what they mean.' })));
+    cardsEl.replaceChildren(...(catalogFailed ? [catalogNotice(true)] : []), el('div', { class: 'empty' }, el('h3', { text: 'Searching by meaning…' }), el('p', { text: 'No product uses those exact words — checking what they mean.' })));
     return;
   }
   if (!rows.length) {
     const none = !PRODUCTS.length;
-    cardsEl.replaceChildren(el('div', { class: 'empty' },
+    cardsEl.replaceChildren(...(catalogFailed ? [catalogNotice(true)] : []), el('div', { class: 'empty' },
       el('h3', { text: none ? 'The universe is wide open.' : listQ ? `No convincing match for “${listQ}” yet.` : 'No products match these filters.' }),
       el('p', { text: none ? 'No products are live yet. Every maker can add a free profile under the same review rules.' : 'This is a small, reviewed catalog. Try one specific task, remove a filter, or save your need for future matches.' }),
       el('div', { class: 'c-row' }, el('button', { class: 'btn btn-primary btn-sm', text: 'Add your product', onclick: () => startSubmit(null) }), listQ ? el('button',{class:'btn btn-ghost btn-sm',text:'Save need & check new matches',onclick:()=>openNeedForm(listQ)}):null)));
@@ -1464,7 +1482,7 @@ function renderList() {
     return;
   }
   const sps = sponsoredFor(listQ, ranked, base);
-  cardsEl.replaceChildren(...sps.map(sponCard), ...rows.map(r => card(r.p, r.why)));
+  cardsEl.replaceChildren(...(catalogFailed ? [catalogNotice(true)] : []), ...sps.map(sponCard), ...rows.map(r => card(r.p, r.why)));
   observeProductCards();
   for (const sp of sps) trackSpon(sp, 'impression');
 }
@@ -1909,7 +1927,11 @@ async function renderPurchaseHistory(box,slug) {
 }
 
 /* ================= OWNER PANEL ================= */
-const mform = makeForm(); let mDirty = false; mform.onChange(() => { mDirty = true; });
+const mform = makeForm(); let mDirty = false, editRevision = 0, editSession = 0;
+const ownerSaves = new Set();
+const ownerVersions = new Map();
+mform.onChange(() => { mDirty = true; editRevision++; });
+function paintOwnerSave() { const saving = ownerSaves.has(mSlug); $('#eSave').disabled = saving; $('#eSave').textContent = saving ? 'Saving…' : 'Save changes'; }
 $('#eBasics').append(...mform.groups.basics); $('#eFit').append(...mform.groups.fit); $('#eStory').append(...mform.groups.story);
 let mSlug = null, mTab = 'stats';
 function updateMine() {
@@ -1925,14 +1947,16 @@ $('#mineBtn').onclick = () => {
 };
 async function openManage(slug, tab) {
   const own = OWNED[slug]; if (!own) { openOwnerLogin(slug); return; }
+  const session = ++editSession;
+  const version = ownerVersions.get(slug) || 0;
   closeSheet(); closeDlg(); if (view === 'list') setView('map');
   if (slug !== mSlug) mDirty = false;
   mSlug = slug; mTab = tab || (OWNDATA[slug] && OWNDATA[slug].status === 'approved' ? 'stats' : 'verify');
   renderManage();
   openPanel(manageEl, 'manage'); markExplore();
   const it = ITEMS.find(i => i.slug === slug); if (it) { sel = it; centerOn(it); }
-  try { OWNDATA[slug] = await rpc('owner_get', { p_slug: slug, p_key: own.key }); kitCache.delete(slug); own.name = OWNDATA[slug].name; saveOwned(); if (mSlug === slug) renderManage(); }
-  catch (e) { if (errCode(e) === 'bad_key') { delete OWNED[slug]; saveOwned(); closeUI(); toast('That key no longer works. Sign in again with your email, or use “Lost your key?”.', 5000); } }
+  try { const data = await rpc('owner_get', { p_slug: slug, p_key: own.key }); if ((ownerVersions.get(slug) || 0) === version && !ownerSaves.has(slug) && OWNED[slug]?.key === own.key) { OWNDATA[slug] = data; kitCache.delete(slug); own.name = data.name; saveOwned(); if (mSlug === slug && editSession === session) renderManage(); } }
+  catch (e) { if (errCode(e) === 'bad_key' && OWNED[slug]?.key === own.key) { delete OWNED[slug]; saveOwned(); if (mSlug === slug && editSession === session) { closeUI(); toast('That key no longer works. Sign in again with your email, or use “Lost your key?”.', 5000); } } }
 }
 function renderManage() {
   const o = OWNDATA[mSlug] || { name: (OWNED[mSlug] || {}).name || mSlug, status: '' };
@@ -1954,6 +1978,7 @@ function renderManage() {
   if (mTab === 'promote') renderPromote(o);
   if (mTab === 'placement') renderMapPlacement(o);
   if (mTab === 'key') renderKey(o);
+  paintOwnerSave();
 }
 $('#mTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; mTab = b.dataset.tab; renderManage(); });
 let growthDays=30,growthRequest=0;
@@ -2236,21 +2261,25 @@ async function confirmRemove(o) {
     } }), el('button', { class: 'btn btn-ghost btn-sm', text: 'Cancel', onclick: closeDlg })));
 }
 $('#eSave').onclick = async () => {
+  const slug = mSlug, own = OWNED[slug]; if (!own || ownerSaves.has(slug)) return;
   const bad = mform.check(['basics', 'fit', 'story']); if (bad) return;
-  const b = $('#eSave'); b.disabled = true; b.textContent = 'Saving…';
+  const session = editSession, revision = editRevision, data = mform.get(), before = OWNDATA[slug]?.status;
+  const current = () => ui === 'manage' && mSlug === slug && editSession === session;
+  ownerSaves.add(slug); paintOwnerSave();
   try {
-    const before = OWNDATA[mSlug] && OWNDATA[mSlug].status;
-    OWNDATA[mSlug] = await rpc('owner_update', { p_slug: mSlug, p_key: OWNED[mSlug].key, p: mform.get() });
-    mDirty = false; kitCache.delete(mSlug);
-    OWNED[mSlug].name = OWNDATA[mSlug].name; saveOwned();
-    await refreshAll(); renderManage();
-    toast(before === 'approved' && OWNDATA[mSlug].status === 'pending' ? 'Saved. Your new link or images go to review before they show.' : before === 'rejected' ? 'Saved and sent for review again.' : 'Saved.', 4500);
+    const saved = await rpc('owner_update', { p_slug: slug, p_key: own.key, p: data });
+    OWNDATA[slug] = saved; ownerVersions.set(slug, (ownerVersions.get(slug) || 0) + 1); kitCache.delete(slug);
+    if (current() && editRevision === revision) mDirty = false;
+    if (OWNED[slug]?.key === own.key) { OWNED[slug].name = saved.name; saveOwned(); }
+    await refreshAll();
+    if (current()) { renderManage(); toast(mDirty ? 'Saved earlier changes. Your newer edits are still unsaved.' : before === 'approved' && saved.status === 'pending' ? 'Saved. Your new link or images go to review before they show.' : before === 'rejected' ? 'Saved and sent for review again.' : 'Saved.', 4500); }
   } catch (err) {
+    if (!current()) { toast('Could not save changes to ' + data.name + '. Open that product and try again.'); return; }
     const m = errCode(err);
-    if (m.startsWith('invalid:')) { mform.bad(m.slice(8)); toast('Check the highlighted field.'); }
+    if (m.startsWith('invalid:')) { if (editRevision === revision) mform.bad(m.slice(8)); toast('Check the highlighted field.'); }
     else if (m === 'hidden') toast('This product is hidden while it is being checked.');
     else toast("Couldn't save right now — try again.");
-  } finally { b.disabled = false; b.textContent = 'Save changes'; }
+  } finally { ownerSaves.delete(slug); paintOwnerSave(); }
 };
 
 /* ================= DIALOGS: owner key, recovery, report ================= */
@@ -2729,7 +2758,8 @@ function renderLive() {
   const hp = $('#heroProducts'); hp.replaceChildren(...PRODUCTS.slice().sort((a,b) => dayRot(a.slug) - dayRot(b.slug)).slice(0, 3).map(p => el('button', { type: 'button', 'data-exposure':p.slug, 'data-source':'home', onclick: () => openProduct(p, { source: 'home' }) }, el('i', { style: '--pc:' + (CATS[p.category] || CATS.other).color }), p.name, p.verified_at ? ' ✓' : '')));
   observeProductCards();
   const hc = $('#heroCounts'); hc.replaceChildren();
-  if (live) hc.append(el('b', { text: fmt(live) }), live === 1 ? ' product live' : ' products live', ' · listing is ', el('b', { text: 'free' }));
+  if (!catalogLoaded) { hc.append(catalogFailed ? 'Catalog temporarily unavailable ' : 'Loading live products…'); if (catalogFailed) hc.append(catalogRetry()); }
+  else if (live) hc.append(el('b', { text: fmt(live) }), live === 1 ? ' product live' : ' products live', ' · listing is ', el('b', { text: 'free' }));
   else hc.append('Open to every maker · ', el('b', { text: 'same rules for everyone' }));
   const dock = $('#dockTxt'); dock.replaceChildren(el('b', { text: 'Your product, discoverable.' }), ' Free profile · optional paid placement');
 }
@@ -2818,7 +2848,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
     const p = BY_SLUG.get(deepSlug);
     if (p) { const it = ITEMS.find(i => i.slug === deepSlug); app.classList.add('explore'); explored = true; if (it) { cam.x = it.x + it.w / 2; cam.y = it.y + it.h / 2; cam.z = it.size >= 4 ? 1.6 : 2.4; } openProduct(p, { noFly: true, source: 'shared' }); $('#serverContent')?.remove(); }
     else if (OWNED[deepSlug]) openManage(deepSlug);
-    else if (!$('#serverContent')) { setPath('/'); toast('That product isn’t live yet — it may still be in review.', 4500); }
+    else if (!$('#serverContent')) { if (productsLoaded) setPath('/'); toast(productsLoaded ? 'That product isn’t live yet — it may still be in review.' : 'We could not load this product. Please retry the catalog or reload the page.', 4500); }
   } else if (location.pathname === '/add') {
     startSubmit();
   } else if (location.pathname === '/stack') {
